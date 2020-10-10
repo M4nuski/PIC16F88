@@ -1,0 +1,14 @@
+
+#ignore thumbnails created by windows
+Thumbs.db
+#Ignore files build by Visual Studio
+*.obj
+*.exe
+*.LST
+*.XRF
+*.HEX
+*.ERR
+*.COD
+*.this
+*.PEN
+*.BIN
