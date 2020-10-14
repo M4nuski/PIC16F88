@@ -68,16 +68,21 @@ BCD		EQU	0x25 ; 0x26 0x27 0x28
 count_BCD1	EQU	0x29
 count_BCD2	EQU	0x2A
 
-serialBufStart	EQU	0x30 ; start of serial read circular buffer
-serialBufEnd	EQU	0x50 ; end of serial circular buffer
+RXBufStart	EQU	0x30 ; circular RX buffer start
+RXBufEnd	EQU	0x50 ; circular RX buffer end
 
+TXBufStart	EQU	0x50 ; circular TX buffer start
+TXBufEnd	EQU	0x70 ; circular TX buffer end
 
 ;#############################################################################
 ;	Shared Files 0x70 - 0x7F
 ;#############################################################################
 
-serialBuf_rp	EQU	0x70 ; circular buffer read pointer
-serialBuf_wp	EQU	0x71 ; circular buffer write pointer
+RXBuf_rp	EQU	0x70 ; circular RX buffer read pointer
+RXBuf_wp	EQU	0x71 ; circular RX buffer write pointer
+
+TXBuf_rp	EQU	0x72 ; circular TX buffer read pointer
+TXBuf_wp	EQU	0x73 ; circular TX buffer write pointer
 
 ;SCRATCH		EQU	0x7A
 ; For ISR context
@@ -118,21 +123,21 @@ ISR_RX:
 	BTFSC	RCSTA, FERR	;	check for framing error
 	BSF	FrameError_yellow
 ISR_RX1:
-	MOVF	serialBuf_wp, W	
+	MOVF	RXBuf_wp, W	
 	MOVWF	FSR		;	FSR = writePtr
 
 	MOVF	RCREG, W	;	w = RXdata
 	MOVWF	INDF		;	@writePtr = RXdata	
 	
-	INCF	serialBuf_wp, F;	writePtr++		
-	MOVF	serialBuf_wp, W;	w = writePtr
-	SUBLW	serialBufEnd	;	w = serialBufEnd - writePtr
+	INCF	RXBuf_wp, F;	writePtr++		
+	MOVF	RXBuf_wp, W;	w = writePtr
+	SUBLW	RXBufEnd	;	w = RXBufEnd - writePtr
 	
-	BTFSS	STATUS, Z	;	if (serialBufEnd != writePtr)
+	BTFSS	STATUS, Z	;	if (RXBufEnd != writePtr)
 	GOTO	ISR_RX2		;	check if another byte is ready
 	
-	MOVLW	serialBufStart	;	else
-	MOVWF	serialBuf_wp	;	writePtr = serialBufStart
+	MOVLW	RXBufStart	;	else
+	MOVWF	RXBuf_wp	;	writePtr = RXBufStart
 
 ISR_RX2:
 	BTFSC	PIR1, RCIF	;	loop back if interrupt flag is still set
@@ -242,9 +247,9 @@ SETUP:
 	CLRF	PORTB
 	
 ; initialize circular buffer pointers
-	MOVLW	serialBufStart
-	MOVWF	serialBuf_rp
-	MOVWF	serialBuf_wp
+	MOVLW	RXBufStart
+	MOVWF	RXBuf_rp
+	MOVWF	RXBuf_wp
 	
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
@@ -279,16 +284,16 @@ SEND_BYTE:
 	RETURN
 
 AVAIL_BYTE:	; check if a RX byte is available, return with 1 in W if avail, 0 in W if not
-	MOVF	serialBuf_wp, W
-	SUBWF	serialBuf_rp, W
+	MOVF	RXBuf_wp, W
+	SUBWF	RXBuf_rp, W
 	BTFSC	STATUS, Z
 	RETLW	0x00
 	RETLW	0x01
 
 WAIT_BYTE:
 	BSF	WaitRX_red
-	MOVF	serialBuf_wp, W
-	SUBWF	serialBuf_rp, W
+	MOVF	RXBuf_wp, W
+	SUBWF	RXBuf_rp, W
 	BTFSC	STATUS, Z
 	GOTO	WAIT_BYTE	
 	BCF	WaitRX_red
@@ -296,15 +301,15 @@ WAIT_BYTE:
 
 READ_BYTE:
 	; read current rx buffer, advance pointer, return with data in W
-	MOVF	serialBuf_rp, W
+	MOVF	RXBuf_rp, W
 	MOVWF	FSR
-	INCF	serialBuf_rp, F
-	MOVF	serialBuf_rp, W
-	SUBLW	serialBufEnd
+	INCF	RXBuf_rp, F
+	MOVF	RXBuf_rp, W
+	SUBLW	RXBufEnd
 	BTFSS	STATUS, Z
 	GOTO	READ_BYTE_R
-	MOVLW	serialBufStart
-	MOVWF	serialBuf_rp
+	MOVLW	RXBufStart
+	MOVWF	RXBuf_rp
 READ_BYTE_R:
 	MOVF	INDF, W
 	RETURN

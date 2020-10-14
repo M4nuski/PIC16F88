@@ -21,11 +21,12 @@ BANK3	MACRO
 ; b byte 8bit
 ; s short 16bit
 ; c color 24bit
-; w word  32bit
+; i int  32bit
 ; d double 64bit
 
 ; f file
 ; l literal
+; w w register
 ; u unsigned
 ; s signed
 
@@ -38,12 +39,12 @@ COMP_l_f	MACRO lit, file	; literal vs file
 	SUBLW	lit			; w = l - f(w)
 	ENDM
 	
-COMP_f_f	MACRO file1, file2	; file vs file
+COMP_f_f	MACRO file1, file2	; file1 vs file2
 	MOVF	file2, W		; w = f2
 	SUBWF	file1, W		; w = f1 - f2(w)
 	ENDM
 
-COMP_f_w	MACRO file		; w vs file
+COMP_f_w	MACRO file		; file vs w
 	SUBWF	file, W			; w = f - w
 	ENDM
 
@@ -94,103 +95,211 @@ TEST_w	MACRO		; test w
 	ANDLW	0xFF
 	ENDM
 	
-
 BR_ZE	MACRO	dest	; zero
 	BTFSC	STATUS, Z
 	GOTO	dest
+	ENDM
+SK_ZE	MACRO
+	BTFSS	STATUS, Z
 	ENDM
 	
 BR_NZ	MACRO	dest	; not zero
 	BTFSS	STATUS, Z
 	GOTO	dest
 	ENDM
+SK_NZ	MACRO
+	BTFSC	STATUS, Z
+	ENDM
 
 BR_CA	MACRO	dest	; carry
 	BTFSC	STATUS, C
 	GOTO	dest
+	ENDM
+SK_CA	MACRO
+	BTFSS	STATUS, C
 	ENDM
 	
 BR_NC	MACRO	dest	; no carry
 	BTFSS	STATUS, C
 	GOTO	dest
 	ENDM
+SK_NC	MACRO
+	BTFSC	STATUS, C
+	ENDM
 	
 BR_BO	MACRO	dest	; borrow
 	BTFSS	STATUS, C
 	GOTO	dest
+	ENDM
+SK_BO	MACRO
+	BTFSC	STATUS, C
 	ENDM
 	
 BR_NB	MACRO	dest	; no borrow
 	BTFSC	STATUS, C
 	GOTO	dest
 	ENDM
-	
+SK_NB	MACRO
+	BTFSS	STATUS, C
+	ENDM
 
-BR_FBS	MACRO	file, bit, dest	; branch if file bit set
+BTFBS	MACRO	file, bit, dest	; bit test file, brach if set
 	BTFSC	file, bit
 	GOTO	dest
 	ENDM
 	
-BR_FBC	MACRO	file, bit, dest	; branch if file bit clear
+BTFBC	MACRO	file, bit, dest	; bit test file, branch if clear
 	BTFSS	file, bit
 	GOTO	dest
 	ENDM
 
-;BR_WBS	MACRO	bit, dest		; brach if w bit set
-;	MOVWF	SCRATCH
-;	BTFSC	SCRATCH, bit
-;	GOTO	dest
-;	ENDM
-	
-;BR_WBC	MACRO	bit, dest		; brach if w bit set
-;	MOVWF	SCRATCH
-;	BTFSS	SCRATCH, bit
-;	GOTO	dest
-;	ENDM
-	
-	
-	
-	
-	
-	
-; Short
-MOV_short 	MACRO from_byte, to_byte
-	MOVF from_byte, W
-	MOVWF to_byte
-	MOVF from_byte + 1, W
-	MOVWF to_byte + 1
+BTWBS	MACRO	bit, dest		; bit test w, branch if set
+	MOVWF	SCRATCH
+	BTFSC	SCRATCH, bit
+	GOTO	dest
 	ENDM
 	
-ADD_short	MACRO increm, dest ;dest = dest + increm
-	MOVF increm, W
-	ADDWF dest, F
-	BTFSC STATUS, C
-	INCF dest+1, F
-	MOVF increm+1, W
-	ADDWF dest+1, F
+BTWBC	MACRO	bit, dest		; bit test w, branch if clear
+	MOVWF	SCRATCH
+	BTFSS	SCRATCH, bit
+	GOTO	dest
 	ENDM
 	
-SUB_short	MACRO decrem, dest ;dest = dest - decrem
-	MOVF decrem, W
-	SUBWF dest, F
-	BTFSS STATUS, C
-	DECF dest+1, F; ???
-	MOVF decrem+1, W
-	SUBWF dest+1, F; 
+	
+	
+MOV	MACRO	from, to
+	MOVF	from, W
+	MOVWF	to
+
+MOVs 	MACRO	from, to
+	MOVF	from, W
+	MOVWF	to
+	MOVF	from + 1, W
+	MOVWF	to + 1
 	ENDM
 	
-BR_FF_NE	MACRO var1, var2, dest	;branch file-file not equal
-	MOVF var1, W
-	XORWF var2, W
-	BTFSS STATUS, Z ; EQ: z=1, NEQ: Z=0;
-	GOTO dest
+MOVc 	MACRO from, to
+	MOVF	from, W
+	MOVWF	to
+	MOVF	from + 1, W
+	MOVWF	to + 1
+	MOVF	from + 2, W
+	MOVWF	to + 2
 	ENDM
 	
-BR_FF_EQ	MACRO var1, var2, dest	;branch file-file equal
-	MOVF var1, W
-	XORWF var2, W
-	BTFSC STATUS, Z
-	GOTO dest
+MOVi 	MACRO	from, to
+	MOVF	from, W
+	MOVWF	to
+	MOVF	from + 1, W
+	MOVWF	to + 1
+	MOVF	from + 2, W
+	MOVWF	to + 2
+	MOVF	from + 3, W
+	MOVWF	to + 3
+	ENDM
+
+ADD	MACRO	a, b	; a = a + b
+	MOVF	b, W
+	ADDWF	a, F
+	ENDM
+
+SUB	MACRO	a, b	; a = a - b
+	MOVF	b, W
+	SUBWF	a, F
+	ENDM
+	
+ADDs	MACRO	a, b	; a = a + b
+	MOVF	b, W
+	ADDWF 	a, F
+	SK_NC
+	INCF	a + 1, F
+	MOVF	b + 1, W
+	ADDWF	a + 1, F
+	ENDM
+
+SUBs	MACRO	a, b	; a = a - b
+	MOVF	b, W
+	SUBWF	a, F
+	SK_NB
+	DECF	a + 1, F
+	MOVF	b + 1, W
+	SUBWF	a + 1, F
+	ENDM
+
+ADDc	MACRO	a, b	; a = a + b
+	MOVF	b, W
+	ADDWF 	a, F
+	SK_NC
+	INCF	a + 1, F
+	SK_NC
+	INCF	a + 2, F
+	MOVF	b + 1, W
+	ADDWF	a + 1, F
+	SK_NC
+	INCF	a + 2, F
+	MOVF	b + 2, W
+	ADDWF	a + 2, F	
+	ENDM
+	
+SUBc	MACRO	a, b	; a = a - b
+	MOVF	b, W
+	SUBWF	a, F
+	SK_NB
+	DECF	a + 1, F
+	SK_NB
+	DECF	a + 2, F
+	MOVF	b + 1, W
+	SUBWF	a + 1, F
+	SK_NB
+	DECF	a + 2, F
+	MOVF	b + 2, W
+	SUBWF	a + 2, F
+	ENDM
+	
+ADDi	MACRO	a, b	; a = a + b
+	MOVF	b, W
+	ADDWF 	a, F
+	SK_NC
+	INCF	a + 1, F
+	SK_NC
+	INCF	a + 2, F
+	SK_NC
+	INCF	a + 3, F
+	MOVF	b + 1, W
+	ADDWF	a + 1, F
+	SK_NC
+	INCF	a + 2, F
+	SK_NC
+	INCF	a + 3, F
+	MOVF	b + 2, W
+	ADDWF	a + 2, F
+	SK_NC	
+	INCF	a + 3, F
+	MOVF	b + 3, W
+	ADDWF	a + 3, F
+	ENDM
+	
+SUBi	MACRO	a, b	; a = a - b
+	MOVF	b, W
+	SUBWF	a, F
+	SK_NB
+	DECF	a + 1, F
+	SK_NB
+	DECF	a + 2, F
+	SK_NB
+	DECF	a + 3, F
+	MOVF	b + 1, W
+	SUBWF	a + 1, F
+	SK_NB
+	DECF	a + 2, F
+	SK_NB
+	DECF	a + 3, F
+	MOVF	b + 2, W
+	SUBWF	a + 2, F
+	SK_NB
+	DECF	a + 3, F
+	MOVF	b + 3, W
+	SUBWF	a + 3, F
 	ENDM
 	
 BR_W_LT_W	MACRO word1, word2, dest	;branch to dest if word1 < word2 
@@ -258,21 +367,7 @@ BRWWEQW:
 ;C: Carry/borrow bit (ADDWF, ADDLW, SUBLW and SUBWF instructions)(1,2)
 ;1 = A carry-out from the Most Significant bit of the result occurred
 ;0 = No carry-out from the Most Significant bit of the result occurred
-	
-BR_LF_NE	MACRO lit1, var2, dest ;branch literate-file not equal
-	MOVLW lit1
-	XORWF var2, W
-	BTFSS STATUS, Z
-	GOTO dest
-	ENDM
-	
-BR_LF_EQ	MACRO lit1, var2, dest ;branch literate-file equal
-	MOVLW lit1
-	XORWF var2, W
-	BTFSC STATUS, Z
-	GOTO dest
-	ENDM	
-	
+
 READ_TMR0	MACRO destH, destL
 	LOCAL CONTINUE_READ_TMR0
 	MOVF TMR1H, W ; Read high byte
@@ -315,14 +410,14 @@ POP	MACRO
 	SWAPF	STACK_W, W
 	ENDM
 	
-qPUSH	MACRO
+PUSHq	MACRO
 	MOVWF	STACK_W
 	SWAPF	STATUS, W
 	CLRF	STATUS
 	MOVWF	STACK_STATUS
 	ENDM
 
-qPOP	MACRO
+POPq	MACRO
 	SWAPF	STACK_STATUS, W
 	MOVWF	STATUS
 	SWAPF	STACK_W, F
