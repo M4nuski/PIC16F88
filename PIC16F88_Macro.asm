@@ -62,10 +62,29 @@ BR_NE	MACRO	dest
 	GOTO	dest
 	ENDM
 
-; BR_GT
-; BR_GE
-; BR_LT
-; BR_LE
+BR_GT	MACRO 	dest
+	BTFSC	STATUS, C
+	GOTO	dest
+	ENDM
+
+BR_GE	MACRO 	dest
+	BTFSC	STATUS, C
+	GOTO	dest
+	BTFSC	STATUS, Z
+	GOTO	dest
+	ENDM
+	
+BR_LT	MACRO	dest
+	BTFSS	STATUS, C
+	GOTO	dest
+	ENDM
+
+BR_LE	MACRO 	dest
+	BTFSS	STATUS, C
+	GOTO	dest
+	BTFSC	STATUS, Z
+	GOTO	dest
+	ENDM
 
 TEST_f	MACRO	file	; test file
 	MOVF	file, F

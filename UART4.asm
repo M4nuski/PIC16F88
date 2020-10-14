@@ -51,10 +51,10 @@
 ;#############################################################################
 
 ; Bank #    SFR           GPR               SHARED GPR's			total 368 bytes of GPR, 16 shared between banks
-; Bank 0    0x00-0x1F     0x20-0x7F         target area 0x70-0x7F		96 0x70 to 0x7F are shared
-; Bank 1    0x80-0x9F     0xA0-0xEF         0xF0-0xFF  			80 + top 16 shared with bank 0
-; Bank 2    0x100-0x10F   0x110-0x16F       0x170-0x17F			80 + top 16 shared with bank 0
-; Bank 3    0x180-0x18F   0x190-0x1EF       0x1F0-0x1FF			80 + top 16 shared with bank 0
+; Bank 0    0x00-0x1F     0x20-0x7F         target area 0x70-0x7F		96
+; Bank 1    0x80-0x9F     0xA0-0xEF         0xF0-0xFF  			80 + 16 shared with bank 0
+; Bank 2    0x100-0x10F   0x110-0x16F       0x170-0x17F			16 + 80 + 16 shared with bank 0
+; Bank 3    0x180-0x18F   0x190-0x1EF       0x1F0-0x1FF			16 + 80 + 16 shared with bank 0
 	
 ;#############################################################################
 ;	File Variables and Constants
