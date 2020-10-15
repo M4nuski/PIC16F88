@@ -302,6 +302,48 @@ SUBi	MACRO	a, b	; a = a - b
 	SUBWF	a + 3, F
 	ENDM
 	
+
+; TODO handle status C 
+COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
+	CLRF	SCRATCH
+	BSF	SCRATCH, Z
+	
+	MOVF	file, W
+	XORLW	low (lit), W
+	SK_ZE
+	BCF	SCRATCH, Z
+	
+	MOVF	file + 1, W
+	XORLW	high (lit), W
+	BTFSS	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+	
+COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
+	CLRF	SCRATCH
+	BSF	SCRATCH, Z
+	
+	MOVF	file1, W
+	XORWF	file2, W
+	SK_ZE
+	BCF	SCRATCH, Z
+	
+	MOVF	file1 + 1, W
+	XORWF	file2 + 1, W
+	BTFSS	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+
+;COMPc_l_f
+;COMPc_f_f
+
+;COMPi_l_f
+;COMPi_f_f
+
+;TESTs_f
+;TESTc_f
+;TESTi_f
+	
 BR_W_LT_W	MACRO word1, word2, dest	;branch to dest if word1 < word2 
 	LOCAL BRWLTW1
 	LOCAL BRWLTW2
@@ -387,6 +429,11 @@ READ_TMR0	MACRO destH, destL
 CONTINUE_READ_TMR0:  ; Continue with your code
 	ENDM
 	
+	
+; TODO push and pop scratch reg
+; split op
+; move to bank3 to free shared gprs
+
 PUSH	MACRO
 	MOVWF	STACK_W
 	SWAPF	STATUS, W
