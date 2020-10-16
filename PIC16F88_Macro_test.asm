@@ -15,13 +15,13 @@ F8	EQU	0x3C
 	
 	MOVLW	0x20	;start loc 0x20
 	MOVWF	FSR
-	MOVLW	0x20	;count 32
+	MOVLW	0x40	;count 64
 	MOVWF	0x7F
 	MOVLW	0x99	;buzz content
 buzzmem:
 	MOVWF	INDF	
-	INCF	FSR
-	DECFSZ	0x7F
+	INCF	FSR, F
+	DECFSZ	0x7F, F
 	GOTO buzzmem
 
 	BANK0
@@ -45,15 +45,21 @@ buzzmem:
 	CLRF	F1
 	CLRFs	F2
 	CLRFc	F3
-	CLRFi	F4
+	CLRFi	F4	
+
+	STR	0x12, F1
+	STRs	0x1234, F2
+	STRc	0x123456, F3
+	STRi	0x12345678, F4
 	
-	MOVLW	0x00	
+	MOVLW	0xAA
 	NEGw
 	NEG	F1
 	NEGs	F2
 	NEGc	F3
 	NEGi	F4
 	
+	MOVLW	0x55
 	NEGw
 	NEG	F1
 	NEGs	F2
@@ -61,26 +67,26 @@ buzzmem:
 	NEGi	F4
 	
 	MOVLW	0x00
-	TEST_w
 	MOVWF	F1
-	TEST_f	F1
+	TESTw
+	TEST	F1
 
 	MOVLW	0xFF
-	TEST_w	
 	MOVWF	F1
-	TEST_f	F1
+	TESTw	
+	TEST	F1
 	
-	TESTs_f	F2
-	TESTc_f	F3
-	TESTi_f	F4
+	TESTs	F2
+	TESTc	F3
+	TESTi	F4
 	
 	CLRFs	F2
 	CLRFc	F3
 	CLRFi	F4
 	
-	TESTs_f F2
-	TESTc_f F3
-	TESTi_f F4
+	TESTs F2
+	TESTc F3
+	TESTi F4
 
 LockLoop:
 	GOTO LockLoop

@@ -88,11 +88,11 @@ BR_LE	MACRO 	dest
 	ENDM
 
 ; Test (check if Zero)
-TEST_f	MACRO	file
+TEST	MACRO	file
 	MOVF	file, F
 	ENDM
 	
-TEST_w	MACRO
+TESTw	MACRO
 	ANDLW	0xFF
 	ENDM
 	
@@ -419,7 +419,6 @@ NEGs	MACRO	file
 	INCF	file, F
 	SK_NC
 	INCF	file + 1, F
-	INCF	file + 1, F
 	ENDM
 	
 NEGc	MACRO	file
@@ -431,19 +430,13 @@ NEGc	MACRO	file
 	INCF	file + 1, F
 	SK_NC
 	INCF	file + 2, F
-	INCF	file + 1, F
-	SK_NC
-	INCF	file + 2, F
-	INCF	file + 2, F
 	ENDM
 	
 NEGi	MACRO	file
-	; invert
-	COMF	file, F
+	COMF	file, F		; invert
 	COMF	file + 1, F
 	COMF	file + 2, F
-	COMF	file + 3, F
-	
+	COMF	file + 3, F	
 	INCF	file, F		; inc byte 0		
 	SK_NC			; propagate carry
 	INCF	file + 1, F
@@ -451,18 +444,6 @@ NEGi	MACRO	file
 	INCF	file + 2, F
 	SK_NC
 	INCF	file + 3, F
-	
-	INCF	file + 1, F	; inc byte 1	
-	SK_NC			; propagate carry
-	INCF	file + 2, F
-	SK_NC
-	INCF	file + 3, F	
-
-	INCF	file + 2, F	; inc byte 2	
-	SK_NC			; propagate carry
-	INCF	file + 3, F	
-
-	INCF	file + 3, F	; inc byte 3
 	ENDM
 
 ; Clear file
@@ -548,7 +529,7 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 ;COMPi_l_f
 ;COMPi_f_f
 
-TESTs_f		MACRO file
+TESTs	MACRO file
 	CLRF	SCRATCH
 	MOVF	file, F
 	SK_ZE
@@ -558,7 +539,7 @@ TESTs_f		MACRO file
 	BCF	STATUS, Z
 	ENDM
 
-TESTc_f		MACRO file
+TESTc	MACRO file
 	CLRF	SCRATCH
 	MOVF	file, F
 	SK_ZE
@@ -571,7 +552,7 @@ TESTc_f		MACRO file
 	BCF	STATUS, Z
 	ENDM
 	
-TESTi_f		MACRO file
+TESTi	MACRO file
 	CLRF	SCRATCH
 	MOVF	file, F
 	SK_ZE
