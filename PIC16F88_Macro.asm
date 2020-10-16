@@ -30,7 +30,7 @@ BANK3	MACRO
 ; u unsigned
 ; s signed
 
-; SCRATCH		EQU 0x7A
+; SCRATCH		EQU 0x7F
 ; STACK_SCRATCH	EQU 0x7B
 
 ; 8 bit compare
@@ -165,7 +165,48 @@ BTWBC	MACRO	bit, dest		; bit test w, branch if clear
 	GOTO	dest
 	ENDM
 	
+BTWSS	MACRO	bit			; bit test w, skip if set
+	MOVWF	SCRATCH
+	BTFSS	SCRATCH, bit
+	ENDM
 	
+BTWSC	MACRO	bit			; bit test w, skip if clear
+	MOVWF	SCRATCH
+	BTFSC	SCRATCH, bit
+	ENDM
+
+; store literal to file
+STR	MACRO	lit, to			
+	MOVLW	lit
+	MOVWF	to
+	ENDM
+	
+STRs	MACRO	lit, to
+	MOVLW	low(lit)
+	MOVWF	to
+	MOVLW	high(lit)
+	MOVWF	to + 1
+	ENDM
+	
+STRc	MACRO	lit, to
+	MOVLW	(lit & 0x000000FF) >> 0
+	MOVWF	to
+	MOVLW	(lit & 0x0000FF00) >> 8
+	MOVWF	to + 1
+	MOVLW	(lit & 0x00FF0000) >> 16
+	MOVWF	to + 2
+	ENDM
+	
+STRi	MACRO	lit, to
+	MOVLW	(lit & 0x000000FF) >> 0
+	MOVWF	to
+	MOVLW	(lit & 0x0000FF00) >> 8
+	MOVWF	to + 1
+	MOVLW	(lit & 0x00FF0000) >> 16
+	MOVWF	to + 2
+	MOVLW	(lit & 0xFF000000) >> 24
+	MOVWF	to + 3
+	ENDM
 	
 MOV	MACRO	from, to
 	MOVF	from, W
@@ -209,56 +250,83 @@ SUB	MACRO	a, b	; a = a - b
 	ENDM
 	
 ADDs	MACRO	a, b	; a = a + b
+	CLRF	SCRATCH	; scratch register to keep track of STATUS Z flag, inverted to reduce setup time
 	MOVF	b, W
 	ADDWF 	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NC
 	INCF	a + 1, F
 	MOVF	b + 1, W
 	ADDWF	a + 1, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z	; clear status Z flag if any of the add instruction didn't produce a Z
 	ENDM
 
 SUBs	MACRO	a, b	; a = a - b
+	CLRF	SCRATCH	
 	MOVF	b, W
 	SUBWF	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NB
 	DECF	a + 1, F
 	MOVF	b + 1, W
 	SUBWF	a + 1, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
 	ENDM
 
 ADDc	MACRO	a, b	; a = a + b
+	CLRF	SCRATCH	
 	MOVF	b, W
 	ADDWF 	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NC
 	INCF	a + 1, F
 	SK_NC
 	INCF	a + 2, F
 	MOVF	b + 1, W
 	ADDWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NC
 	INCF	a + 2, F
 	MOVF	b + 2, W
-	ADDWF	a + 2, F	
+	ADDWF	a + 2, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z	
 	ENDM
 	
 SUBc	MACRO	a, b	; a = a - b
+	CLRF	SCRATCH	
 	MOVF	b, W
 	SUBWF	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NB
 	DECF	a + 1, F
 	SK_NB
 	DECF	a + 2, F
 	MOVF	b + 1, W
 	SUBWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NB
 	DECF	a + 2, F
 	MOVF	b + 2, W
 	SUBWF	a + 2, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
 	ENDM
 	
 ADDi	MACRO	a, b	; a = a + b
+	CLRF	SCRATCH	
 	MOVF	b, W
 	ADDWF 	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NC
 	INCF	a + 1, F
 	SK_NC
@@ -267,21 +335,30 @@ ADDi	MACRO	a, b	; a = a + b
 	INCF	a + 3, F
 	MOVF	b + 1, W
 	ADDWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NC
 	INCF	a + 2, F
 	SK_NC
 	INCF	a + 3, F
 	MOVF	b + 2, W
 	ADDWF	a + 2, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NC	
 	INCF	a + 3, F
 	MOVF	b + 3, W
 	ADDWF	a + 3, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
 	ENDM
 	
 SUBi	MACRO	a, b	; a = a - b
+	CLRF	SCRATCH	
 	MOVF	b, W
 	SUBWF	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NB
 	DECF	a + 1, F
 	SK_NB
@@ -290,18 +367,45 @@ SUBi	MACRO	a, b	; a = a - b
 	DECF	a + 3, F
 	MOVF	b + 1, W
 	SUBWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NB
 	DECF	a + 2, F
 	SK_NB
 	DECF	a + 3, F
 	MOVF	b + 2, W
 	SUBWF	a + 2, F
+	SK_ZE
+	BSF	SCRATCH, Z
 	SK_NB
 	DECF	a + 3, F
 	MOVF	b + 3, W
 	SUBWF	a + 3, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
 	ENDM
 	
+; negate, two's complement
+NEG	MACRO 	file
+	COMF	file, F
+	INCF	file, F
+	ENDM
+	
+NEGw	MACRO
+	XORLW	0xFF
+	ADDLW	0x01
+	ENDM
+
+;NEGs
+;NEGc
+;NEGi
+
+
+
+
+
+
+
 
 ; TODO handle status C 
 COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
