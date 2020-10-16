@@ -30,10 +30,10 @@ BANK3	MACRO
 ; u unsigned
 ; s signed
 
-; SCRATCH		EQU 0x7F
-; STACK_SCRATCH	EQU 0x7B
+SCRATCH		EQU 0x7F
+;STACK_SCRATCH	EQU 0x7B
 
-; 8 bit compare
+; Compare a vs b (Sets Z and C)
 COMP_l_f	MACRO lit, file	; literal vs file
 	MOVF	file, W			; w = f
 	SUBLW	lit			; w = l - f(w)
@@ -52,7 +52,7 @@ COMP_l_w	MACRO lit		; literal vs w
 	SUBLW	lit			; w = l - w
 	ENDM
 	
-; 8 bit branch
+; Branch from COMP result
 BR_EQ	MACRO	dest
 	BTFSC	STATUS, Z
 	GOTO	dest
@@ -87,14 +87,16 @@ BR_LE	MACRO 	dest
 	GOTO	dest
 	ENDM
 
-TEST_f	MACRO	file	; test file
+; Test (check if Zero)
+TEST_f	MACRO	file
 	MOVF	file, F
 	ENDM
 	
-TEST_w	MACRO		; test w
+TEST_w	MACRO
 	ANDLW	0xFF
 	ENDM
 	
+; Branch and Skip from STATUS
 BR_ZE	MACRO	dest	; zero
 	BTFSC	STATUS, Z
 	GOTO	dest
@@ -143,6 +145,7 @@ SK_NB	MACRO
 	BTFSS	STATUS, C
 	ENDM
 
+; Bit Test File and Branch
 BTFBS	MACRO	file, bit, dest	; bit test file, brach if set
 	BTFSC	file, bit
 	GOTO	dest
@@ -153,6 +156,7 @@ BTFBC	MACRO	file, bit, dest	; bit test file, branch if clear
 	GOTO	dest
 	ENDM
 
+; Bit Test w and Branch
 BTWBS	MACRO	bit, dest		; bit test w, branch if set
 	MOVWF	SCRATCH
 	BTFSC	SCRATCH, bit
@@ -164,7 +168,8 @@ BTWBC	MACRO	bit, dest		; bit test w, branch if clear
 	BTFSS	SCRATCH, bit
 	GOTO	dest
 	ENDM
-	
+
+; Bit Test W and Skip
 BTWSS	MACRO	bit			; bit test w, skip if set
 	MOVWF	SCRATCH
 	BTFSS	SCRATCH, bit
@@ -175,7 +180,7 @@ BTWSC	MACRO	bit			; bit test w, skip if clear
 	BTFSC	SCRATCH, bit
 	ENDM
 
-; store literal to file
+; Store literal to file
 STR	MACRO	lit, to			
 	MOVLW	lit
 	MOVWF	to
@@ -208,6 +213,7 @@ STRi	MACRO	lit, to
 	MOVWF	to + 3
 	ENDM
 	
+; Move file data
 MOV	MACRO	from, to
 	MOVF	from, W
 	MOVWF	to
@@ -239,6 +245,7 @@ MOVi 	MACRO	from, to
 	MOVWF	to + 3
 	ENDM
 
+; Add and Subtract
 ADD	MACRO	a, b	; a = a + b
 	MOVF	b, W
 	ADDWF	a, F
@@ -260,7 +267,7 @@ ADDs	MACRO	a, b	; a = a + b
 	MOVF	b + 1, W
 	ADDWF	a + 1, F
 	BTFSC	SCRATCH, Z
-	BCF	STATUS, Z	; clear status Z flag if any of the add instruction didn't produce a Z
+	BCF	STATUS, Z	; clear status Z flag if any one of the add instruction didn't produce a Z
 	ENDM
 
 SUBs	MACRO	a, b	; a = a - b
@@ -324,21 +331,21 @@ SUBc	MACRO	a, b	; a = a - b
 ADDi	MACRO	a, b	; a = a + b
 	CLRF	SCRATCH	
 	MOVF	b, W
-	ADDWF 	a, F
+	ADDWF 	a, F		; add
 	SK_ZE
-	BSF	SCRATCH, Z
+	BSF	SCRATCH, Z	; save #Z flag for this byte
 	SK_NC
-	INCF	a + 1, F
+	INCF	a + 1, F	; propagate Carry
 	SK_NC
 	INCF	a + 2, F
 	SK_NC
 	INCF	a + 3, F
-	MOVF	b + 1, W
-	ADDWF	a + 1, F
+	MOVF	b + 1, W	; load next byte
+	ADDWF	a + 1, F	; add
 	SK_ZE
-	BSF	SCRATCH, Z
+	BSF	SCRATCH, Z	; save #Z flag
 	SK_NC
-	INCF	a + 2, F
+	INCF	a + 2, F	; propagate Carry
 	SK_NC
 	INCF	a + 3, F
 	MOVF	b + 2, W
@@ -356,20 +363,20 @@ ADDi	MACRO	a, b	; a = a + b
 SUBi	MACRO	a, b	; a = a - b
 	CLRF	SCRATCH	
 	MOVF	b, W
-	SUBWF	a, F
-	SK_ZE
+	SUBWF	a, F		; sub
+	SK_ZE			; save #Z flag
 	BSF	SCRATCH, Z
-	SK_NB
+	SK_NB			; propagate Borrow
 	DECF	a + 1, F
 	SK_NB
 	DECF	a + 2, F
 	SK_NB
 	DECF	a + 3, F
-	MOVF	b + 1, W
-	SUBWF	a + 1, F
-	SK_ZE
+	MOVF	b + 1, W	; next byte
+	SUBWF	a + 1, F	; sub
+	SK_ZE			; save #Z
 	BSF	SCRATCH, Z
-	SK_NB
+	SK_NB			; propagate Borrow
 	DECF	a + 2, F
 	SK_NB
 	DECF	a + 3, F
@@ -385,7 +392,17 @@ SUBi	MACRO	a, b	; a = a - b
 	BCF	STATUS, Z
 	ENDM
 	
-; negate, two's complement
+; TODO ADDl and SUBl (with literal)
+; ADDL
+; ADDls
+; ADDLc
+; ADDLi
+; SUBL
+; SUBLs
+; SUBLc
+; SUBli
+	
+; Negate (two's complement)
 NEG	MACRO 	file
 	COMF	file, F
 	INCF	file, F
@@ -396,45 +413,132 @@ NEGw	MACRO
 	ADDLW	0x01
 	ENDM
 
-;NEGs
-;NEGc
-;NEGi
+NEGs	MACRO	file
+	COMF	file, F
+	COMF	file + 1, F
+	INCF	file, F
+	SK_NC
+	INCF	file + 1, F
+	INCF	file + 1, F
+	ENDM
+	
+NEGc	MACRO	file
+	COMF	file, F
+	COMF	file + 1, F
+	COMF	file + 2, F
+	INCF	file, F
+	SK_NC
+	INCF	file + 1, F
+	SK_NC
+	INCF	file + 2, F
+	INCF	file + 1, F
+	SK_NC
+	INCF	file + 2, F
+	INCF	file + 2, F
+	ENDM
+	
+NEGi	MACRO	file
+	; invert
+	COMF	file, F
+	COMF	file + 1, F
+	COMF	file + 2, F
+	COMF	file + 3, F
+	
+	INCF	file, F		; inc byte 0		
+	SK_NC			; propagate carry
+	INCF	file + 1, F
+	SK_NC
+	INCF	file + 2, F
+	SK_NC
+	INCF	file + 3, F
+	
+	INCF	file + 1, F	; inc byte 1	
+	SK_NC			; propagate carry
+	INCF	file + 2, F
+	SK_NC
+	INCF	file + 3, F	
 
+	INCF	file + 2, F	; inc byte 2	
+	SK_NC			; propagate carry
+	INCF	file + 3, F	
 
+	INCF	file + 3, F	; inc byte 3
+	ENDM
 
+; Clear file
+	
+CLRFs	MACRO	file
+	CLRF	file
+	CLRF	file + 1
+	ENDM
+	
+CLRFc	MACRO	file
+	CLRF	file
+	CLRF	file + 1
+	CLRF	file + 2
+	ENDM
+	
+CLRFi	MACRO	file
+	CLRF	file
+	CLRF	file + 1
+	CLRF	file + 2
+	CLRF	file + 3
+	ENDM
 
+; TODO expanded inc file
+; INCFs
+; INCFc
+; INCFi
 
+; TODO expanded dec file
+; DECFs 
+; DECFc
+; DECFi
 
-
-
-; TODO handle status C 
 COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
 	CLRF	SCRATCH
-	BSF	SCRATCH, Z
 	
 	MOVF	file, W
-	XORLW	low (lit), W
+	SUBLW	low (lit), W		; w = lit - file
 	SK_ZE
-	BCF	SCRATCH, Z
+	BSF	SCRATCH, Z
+	SK_NB
+	BSF	SCRATCH, C		; set C if borrow
 	
-	MOVF	file + 1, W
-	XORLW	high (lit), W
-	BTFSS	SCRATCH, Z
+	CLRW
+	BTFSC	SCRATCH, C		; if borrow
+	MOVLW	0x01			; preset w to 1
+
+	ADDWF	file + 1, W		; w = file if there was no borrow, or file+1 if there was
+					; instead of decreasing the literal for the borrow, the file was increased
+	SUBLW	high (lit), W
+	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 	
 COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 	CLRF	SCRATCH
-	BSF	SCRATCH, Z
 	
-	MOVF	file1, W
-	XORWF	file2, W
+	MOVF	file2, W
+	SUBWF	file1, W		; w = file1 - file2	
 	SK_ZE
-	BCF	SCRATCH, Z
+	BSF	SCRATCH, Z		; save #Z
+	SK_NB
+	BSF	SCRATCH, C		; set C if borrow
 	
-	MOVF	file1 + 1, W
-	XORWF	file2 + 1, W
-	BTFSS	SCRATCH, Z
+	; ################### TODO test and debug
+	CLRW
+	BTFSC	SCRATCH, C
+	MOVLW	0x01			; preload w if borrow
+	
+	ADDWF	file2 + 1, W		; w = (file2) if no borrow on previous byte, or (file2 + 1) if there was 
+	SK_NB
+	ADDLW	0xFF			; decrease by 1 if there was another borrow from last instruction
+	
+	; ###################
+	
+	SUBWF	file2 + 1, W
+	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 
@@ -444,9 +548,48 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 ;COMPi_l_f
 ;COMPi_f_f
 
-;TESTs_f
-;TESTc_f
-;TESTi_f
+TESTs_f		MACRO file
+	CLRF	SCRATCH
+	MOVF	file, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 1, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+
+TESTc_f		MACRO file
+	CLRF	SCRATCH
+	MOVF	file, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 2, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+	
+TESTi_f		MACRO file
+	CLRF	SCRATCH
+	MOVF	file, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 2, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 3, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+	
+	
+	
+	
 	
 BR_W_LT_W	MACRO word1, word2, dest	;branch to dest if word1 < word2 
 	LOCAL BRWLTW1
