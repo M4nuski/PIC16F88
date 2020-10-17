@@ -17,3 +17,5 @@ PIC16F88_Macro_testHex.X/Makefile
 *.xml
 PIC16F88_Macro_testHex.X/nbproject/Makefile-genesis.properties
 *.O
+PIC16F88_Macro_test.X/Makefile
+*.properties
