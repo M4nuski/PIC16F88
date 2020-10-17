@@ -62,8 +62,12 @@ BR_NE	MACRO	dest
 	ENDM
 
 BR_GT	MACRO 	dest
-	BTFSC	STATUS, C
+	LOCAL	_end
+	BTFSC	STATUS, Z	; first test that not equal
+	GOTO	_end
+	BTFSC	STATUS, C	; skip goto if there was no carry (greater)
 	GOTO	dest
+_end:
 	ENDM
 
 BR_GE	MACRO 	dest
@@ -74,8 +78,12 @@ BR_GE	MACRO 	dest
 	ENDM
 	
 BR_LT	MACRO	dest
-	BTFSS	STATUS, C
+	LOCAL	_end
+	BTFSC	STATUS, Z	; test that not equal
+	GOTO	_end
+	BTFSS	STATUS, C	; skip if there was a carry (less)
 	GOTO	dest
+_end:
 	ENDM
 
 BR_LE	MACRO 	dest
@@ -94,7 +102,7 @@ TESTw	MACRO
 	ANDLW	0xFF
 	ENDM
 	
-	TESTs	MACRO file
+TESTs	MACRO file
 	CLRF	SCRATCH
 	MOVF	file, F
 	SK_ZE
@@ -183,36 +191,36 @@ SK_NB	MACRO
 	ENDM
 
 ; Bit Test File and Branch
-BTFBS	MACRO	file, bit, dest	; bit test file, brach if set
+BTFBS	MACRO	file, bit, dest	; brach if set
 	BTFSC	file, bit
 	GOTO	dest
 	ENDM
 	
-BTFBC	MACRO	file, bit, dest	; bit test file, branch if clear
+BTFBC	MACRO	file, bit, dest	; branch if clear
 	BTFSS	file, bit
 	GOTO	dest
 	ENDM
 
 ; Bit Test w and Branch
-BTWBS	MACRO	bit, dest		; bit test w, branch if set
+BTWBS	MACRO	bit, dest		; branch if set
 	MOVWF	SCRATCH
 	BTFSC	SCRATCH, bit
 	GOTO	dest
 	ENDM
 	
-BTWBC	MACRO	bit, dest		; bit test w, branch if clear
+BTWBC	MACRO	bit, dest		; branch if clear
 	MOVWF	SCRATCH
 	BTFSS	SCRATCH, bit
 	GOTO	dest
 	ENDM
 
 ; Bit Test W and Skip
-BTWSS	MACRO	bit			; bit test w, skip if set
+BTWSS	MACRO	bit			; skip if set
 	MOVWF	SCRATCH
 	BTFSS	SCRATCH, bit
 	ENDM
 	
-BTWSC	MACRO	bit			; bit test w, skip if clear
+BTWSC	MACRO	bit			; skip if clear
 	MOVWF	SCRATCH
 	BTFSC	SCRATCH, bit
 	ENDM
@@ -224,23 +232,23 @@ STR	MACRO	lit, to
 	ENDM
 	
 STRs	MACRO	lit, to
-	MOVLW	low(lit)
+	MOVLW	(lit & 0x00FF)
 	MOVWF	to
-	MOVLW	high(lit)
+	MOVLW	(lit & 0xFF00) >> 8
 	MOVWF	to + 1
 	ENDM
 	
 STRc	MACRO	lit, to
-	MOVLW	(lit & 0x000000FF) >> 0
+	MOVLW	(lit & 0x0000FF)
 	MOVWF	to
-	MOVLW	(lit & 0x0000FF00) >> 8
+	MOVLW	(lit & 0x00FF00) >> 8
 	MOVWF	to + 1
-	MOVLW	(lit & 0x00FF0000) >> 16
+	MOVLW	(lit & 0xFF0000) >> 16
 	MOVWF	to + 2
 	ENDM
 	
 STRi	MACRO	lit, to
-	MOVLW	(lit & 0x000000FF) >> 0
+	MOVLW	(lit & 0x000000FF)
 	MOVWF	to
 	MOVLW	(lit & 0x0000FF00) >> 8
 	MOVWF	to + 1
@@ -281,6 +289,8 @@ MOVi 	MACRO	from, to
 	MOVF	from + 3, W
 	MOVWF	to + 3
 	ENDM
+	
+; TODO SWAP
 
 ; Add and Subtract
 ADD	MACRO	a, b	; a = a + b
@@ -484,7 +494,7 @@ NEGi	MACRO	file
 	ENDM
 
 ; Clear file
-	
+; CLRF is standard 8bit instruction
 CLRFs	MACRO	file
 	CLRF	file
 	CLRF	file + 1
@@ -517,7 +527,7 @@ COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
 	CLRF	SCRATCH
 	
 	MOVF	file, W
-	SUBLW	low (lit), W		; w = lit - file
+	SUBLW	(lit & 0x00FF)		; w = lit - file
 	SK_ZE
 	BSF	SCRATCH, Z
 	SK_NB
@@ -529,7 +539,7 @@ COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
 
 	ADDWF	file + 1, W		; w = file if there was no borrow, or file+1 if there was
 					; instead of decreasing the literal for the borrow, the file was increased
-	SUBLW	high (lit), W
+	SUBLW	(lit & 0xFF00) >> 8
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
@@ -574,7 +584,7 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 
 
 READ_TMR1	MACRO dest
-	LOCAL CONTINUE_READ_TMR1
+	LOCAL READ_TMR1_goodread
 	MOVF TMR1H, W ; Read high byte
 	MOVWF dest + 1
 	MOVF TMR1L, W ; Read low byte
@@ -582,14 +592,14 @@ READ_TMR1	MACRO dest
 	MOVF TMR1H, W ; Read high byte
 	SUBWF dest + 1, W ; Sub 1st read with 2nd read
 	BTFSC STATUS, Z ; Is result = 0
-	EXITM
+	GOTO READ_TMR1_goodread
 	; TMR1L may have rolled over between the read of the high and low bytes.
 	; Reading the high and low bytes now will read a good value.
 	MOVF TMR1H, W ; Read high byte again
 	MOVWF dest + 1
 	MOVF TMR1L, W ; Read low byte
 	MOVWF dest ; Re-enable the Interrupt (if required)
-CONTINUE_READ_TMR1:  ; Continue with your code
+READ_TMR1_goodread:  ; Continue with your code
 	ENDM
 
 
@@ -610,6 +620,7 @@ STACK_FSR	EQU	0x7A
 ; should be first to push and last to pop
 ;
 ;ex
+; 	ORG 0x0000
 ; ISR:
 ; 	PUSH
 ; 	PUSHfsr
@@ -622,6 +633,7 @@ STACK_FSR	EQU	0x7A
 ; 	POP
 ; 	REFTIE
 ;
+; 	ORG 0x0004
 
 PUSH	MACRO
 	MOVWF	STACK_W
@@ -683,6 +695,7 @@ ASSERTw		MACRO	val
 	BTFSS	STATUS, Z
 jam:
 	GOTO	jam
+	XORLW	val
 	ENDM
 	
 ASSERTbs	MACRO file, bit

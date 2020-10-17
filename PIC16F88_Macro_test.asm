@@ -2,6 +2,10 @@
 #INCLUDE	<P16F88.INC>		; processor specific variable definitions
 #INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
 
+	__CONFIG	_CONFIG1, _CP_OFF & _CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & _WDT_OFF & _INTRC_IO
+	__CONFIG	_CONFIG2, _IESO_OFF & _FCMEN_OFF
+
+
 F1	EQU	0x20
 F2	EQU	0x24
 F3	EQU	0x28
@@ -10,6 +14,49 @@ F5	EQU	0x30
 F6	EQU	0x34
 F7	EQU	0x38
 F8	EQU	0x3C
+
+; compare result test file location and bit definition
+COMPresult 	EQU	0x40
+COMP_EQ		EQU 	0
+COMP_NE		EQU	1
+COMP_LT		EQU	2
+COMP_LE		EQU	3
+COMP_GT		EQU	4
+COMP_GE		EQU	5
+
+
+READ_COMP_RES	MACRO
+	LOCAL	EQ, NE, LT, LE, GT, GE, READ_COMP_RES_end
+	CLRF 	COMPresult
+	BR_EQ	EQ
+	BR_NE	NE
+	BR_LT	LT
+	BR_LE	LE
+	
+	BR_GT	GT
+	BR_GE	GE
+	GOTO	READ_COMP_RES_end
+EQ:
+	BSF	COMPresult, COMP_EQ
+	GOTO 	READ_COMP_RES_end
+NE:
+	BSF	COMPresult, COMP_NE
+	GOTO 	READ_COMP_RES_end
+LT:
+	BSF	COMPresult, COMP_LT
+	GOTO 	READ_COMP_RES_end
+LE:
+	BSF	COMPresult, COMP_LE
+	GOTO 	READ_COMP_RES_end
+GT:
+	BSF	COMPresult, COMP_GT
+	GOTO 	READ_COMP_RES_end
+GE:
+	BSF	COMPresult, COMP_GE
+	GOTO 	READ_COMP_RES_end
+	
+READ_COMP_RES_end:
+	ENDM
 
 	ORG	0x0000
 	
@@ -58,7 +105,7 @@ buzzmem:
 	STRc	0x123456, F3
 	STRi	0x12345678, F4
 	
-	NOP ;sect 1
+	NOP ;sect 1 negates
 	
 	MOVLW	0xAA
 	NEGw
@@ -85,7 +132,7 @@ buzzmem:
 	ASSERTi	0x12345678, F4
 	
 	NOP
-	NOP ; sect 2
+	NOP ; sect 2 tests
 		
 	MOVLW	0x00
 	MOVWF	F1
@@ -121,26 +168,227 @@ buzzmem:
 	
 	NOP
 	NOP
-	NOP ; sect 3
+	NOP ; sect 3 compares
+	; 8 bit
+	STR	0x55, F1
+	STR	0x54, F2
+	STR	0x55, F3
+	STR	0x56, F4
 	
-	; COMP 8b
+	; literal vs file
+	
+	COMP_l_f	0x55, F1	
+	READ_COMP_RES
+	ASSERTbs	COMPresult, COMP_EQ
+	ASSERTbc	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	COMP_l_f	0x56, F1	
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbc	COMPresult, COMP_LE
+
+	ASSERTbs	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	COMP_l_f	0x54, F1	
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; file vs file
+	
+	COMP_f_f	F3, F1
+	READ_COMP_RES
+	ASSERTbs	COMPresult, COMP_EQ
+	ASSERTbc	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	COMP_f_f	F4, F1	
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbc	COMPresult, COMP_LE
+
+	ASSERTbs	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	COMP_f_f	F2, F1	
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; file vs w
+	MOVLW		0x55
+	COMP_f_w	F1
+	READ_COMP_RES
+	ASSERTbs	COMPresult, COMP_EQ
+	ASSERTbc	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	MOVLW		0x54
+	COMP_f_w	F1
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbc	COMPresult, COMP_LE
+
+	ASSERTbs	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	MOVLW		0x56
+	COMP_f_w	F1
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; literal vs w
+	
+	MOVLW		0x55
+	COMP_l_w	0x55
+	READ_COMP_RES
+	ASSERTbs	COMPresult, COMP_EQ
+	ASSERTbc	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	MOVLW		0x55
+	COMP_l_w	0x56
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbc	COMPresult, COMP_LE
+
+	ASSERTbs	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	MOVLW		0x55
+	COMP_l_w	0x54
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; 16 bit
+	STRs	0x5FFF, F1
+	STRs	0x5FFE, F2
+	STRs	0x5FFF, F3
+	STRs	0x6000, F4
+	
+	COMPs_l_f	0x5FFF, F1
+	READ_COMP_RES
+	ASSERTbs	COMPresult, COMP_EQ
+	ASSERTbc	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	COMPs_l_f	0x6000, F1
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbc	COMPresult, COMP_LE
+
+	ASSERTbs	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	COMPs_l_f	0x5FFE, F1
+	READ_COMP_RES
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; 24 bit
+	
+	; 32 bit
+	STRi	0x55555555, F1
+	STRi	0x55555554, F2
+	STRi	0x55555555, F3
+	STRi	0x55555556, F4
+	
+	STRi	0x5FFFFFFF, F1
+	STRi	0x5FFFFFFE, F2
+	STRi	0x5FFFFFFF, F3
+	STRi	0x60000000, F4
+
 	; COMP 16 24 32
 	
 	NOP
 	NOP
 	NOP
-	NOP ; sect 4
+	NOP ; sect 4 add and subs
 	; ADD
 	; SUB
 	
-	NOP
-	NOP
-	NOP
-	NOP
-	NOP ; sect 5
-	; INC
-	; DEC
+	MOVF	0x20, F
 	
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 inc and dec
+
 	
 
 LockLoop:

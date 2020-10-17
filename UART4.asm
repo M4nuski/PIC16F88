@@ -87,10 +87,10 @@ TXBuf_wp	EQU	0x73 ; circular TX buffer write pointer
 ;SCRATCH		EQU	0x7A
 ; For ISR context
 ;STACK_SCRATCH	EQU	0x7B
-STACK_FSR	EQU	0x7C
-STACK_PCLATH	EQU	0x7D
-STACK_STATUS	EQU	0x7E
-STACK_W		EQU	0x7F
+;STACK_FSR	EQU	0x7C
+;STACK_PCLATH	EQU	0x7D
+;STACK_STATUS	EQU	0x7E
+;STACK_W	EQU	0x7F
 
 ;#############################################################################
 ;	Reset Vector - Main Entry Point
@@ -105,6 +105,7 @@ STACK_W		EQU	0x7F
 
 	ORG	0x0004
 	PUSH
+	PUSHfsr
 	
 	BTFSC	PIR1, RCIF	; 	check if RX interrupt
 	GOTO	ISR_RX
@@ -168,6 +169,7 @@ ISR_END:
 	BCF	isr_RX_SQred
 	BCF	isr_TX_SQgreen
 	
+	POPfsr
 	POP
 	RETFIE
 	
