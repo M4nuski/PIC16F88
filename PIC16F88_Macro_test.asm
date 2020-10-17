@@ -25,38 +25,47 @@ COMP_GT		EQU	4
 COMP_GE		EQU	5
 
 
+; using branch
 READ_COMP_RES	MACRO
-	LOCAL	EQ, NE, LT, LE, GT, GE, READ_COMP_RES_end
-	CLRF 	COMPresult
-	BR_EQ	EQ
+	LOCAL	EQ, NE, LT, LE, GT, GE, _end , _EQ, _NE, _LT, _LE, _GT, _GE
+	
+	BR_EQ	EQ	
+_EQ:
 	BR_NE	NE
+
+_NE:
 	BR_LT	LT
+_LT:
 	BR_LE	LE
 	
+_LE:
 	BR_GT	GT
+_GT:
 	BR_GE	GE
-	GOTO	READ_COMP_RES_end
+_GE:
+	GOTO	_end	
+	
 EQ:
 	BSF	COMPresult, COMP_EQ
-	GOTO 	READ_COMP_RES_end
+	GOTO 	_EQ
 NE:
 	BSF	COMPresult, COMP_NE
-	GOTO 	READ_COMP_RES_end
+	GOTO 	_NE
 LT:
 	BSF	COMPresult, COMP_LT
-	GOTO 	READ_COMP_RES_end
+	GOTO 	_LT
 LE:
 	BSF	COMPresult, COMP_LE
-	GOTO 	READ_COMP_RES_end
+	GOTO 	_LE
 GT:
 	BSF	COMPresult, COMP_GT
-	GOTO 	READ_COMP_RES_end
+	GOTO 	_GT
 GE:
 	BSF	COMPresult, COMP_GE
-	GOTO 	READ_COMP_RES_end
-	
-READ_COMP_RES_end:
+	GOTO 	_GE
+_end:
 	ENDM
+	
 
 	ORG	0x0000
 	
@@ -177,8 +186,10 @@ buzzmem:
 	
 	; literal vs file
 	
-	COMP_l_f	0x55, F1	
+	CLRF 	COMPresult
+	COMP_l_f	0x55, F1
 	READ_COMP_RES
+	
 	ASSERTbs	COMPresult, COMP_EQ
 	ASSERTbc	COMPresult, COMP_NE
 	
@@ -188,8 +199,10 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
-	COMP_l_f	0x56, F1	
+	CLRF 	COMPresult
+	COMP_l_f	0x56, F1	; 0x56 - 0x55 = 0x01, positive, not equal
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -199,8 +212,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
-	COMP_l_f	0x54, F1	
+	CLRF 	COMPresult
+	COMP_l_f	0x54, F1
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -212,8 +227,10 @@ buzzmem:
 	
 	; file vs file
 	
+	CLRF 	COMPresult
 	COMP_f_f	F3, F1
 	READ_COMP_RES
+	
 	ASSERTbs	COMPresult, COMP_EQ
 	ASSERTbc	COMPresult, COMP_NE
 	
@@ -223,8 +240,10 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
+	CLRF 	COMPresult
 	COMP_f_f	F4, F1	
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -234,8 +253,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
+	CLRF 	COMPresult
 	COMP_f_f	F2, F1	
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -246,9 +267,12 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GE
 	
 	; file vs w
+	
 	MOVLW		0x55
+	CLRF 	COMPresult
 	COMP_f_w	F1
 	READ_COMP_RES
+	
 	ASSERTbs	COMPresult, COMP_EQ
 	ASSERTbc	COMPresult, COMP_NE
 	
@@ -259,8 +283,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GE
 	
 	MOVLW		0x54
+	CLRF 	COMPresult
 	COMP_f_w	F1
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -271,8 +297,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GE
 	
 	MOVLW		0x56
+	CLRF 	COMPresult
 	COMP_f_w	F1
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -285,8 +313,10 @@ buzzmem:
 	; literal vs w
 	
 	MOVLW		0x55
+	CLRF 	COMPresult
 	COMP_l_w	0x55
 	READ_COMP_RES
+	
 	ASSERTbs	COMPresult, COMP_EQ
 	ASSERTbc	COMPresult, COMP_NE
 	
@@ -297,8 +327,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GE
 	
 	MOVLW		0x55
+	CLRF 	COMPresult
 	COMP_l_w	0x56
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -309,8 +341,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GE
 	
 	MOVLW		0x55
+	CLRF 	COMPresult
 	COMP_l_w	0x54
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -326,8 +360,10 @@ buzzmem:
 	STRs	0x5FFF, F3
 	STRs	0x6000, F4
 	
+	CLRF 	COMPresult
 	COMPs_l_f	0x5FFF, F1
 	READ_COMP_RES
+	
 	ASSERTbs	COMPresult, COMP_EQ
 	ASSERTbc	COMPresult, COMP_NE
 	
@@ -337,8 +373,10 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
+	CLRF 	COMPresult
 	COMPs_l_f	0x6000, F1
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -348,8 +386,10 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
+	CLRF 	COMPresult
 	COMPs_l_f	0x5FFE, F1
 	READ_COMP_RES
+	
 	ASSERTbc	COMPresult, COMP_EQ
 	ASSERTbs	COMPresult, COMP_NE
 	
@@ -391,6 +431,5 @@ buzzmem:
 
 	
 
-LockLoop:
-	GOTO LockLoop
+	GOTO $
 	END
