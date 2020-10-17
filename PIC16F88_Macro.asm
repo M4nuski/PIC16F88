@@ -17,7 +17,7 @@ BANK3	MACRO
 	BSF	STATUS, RP0
 	BSF	STATUS, RP1
 	ENDM
-	
+
 ; b byte 8bit
 ; s short 16bit
 ; c color 24bit
@@ -30,8 +30,6 @@ BANK3	MACRO
 ; u unsigned
 ; s signed
 
-SCRATCH		EQU 0x7F
-;STACK_SCRATCH	EQU 0x7B
 
 ; Compare a vs b (Sets Z and C)
 COMP_l_f	MACRO lit, file	; literal vs file
@@ -94,6 +92,45 @@ TEST	MACRO	file
 	
 TESTw	MACRO
 	ANDLW	0xFF
+	ENDM
+	
+	TESTs	MACRO file
+	CLRF	SCRATCH
+	MOVF	file, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 1, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+
+TESTc	MACRO file
+	CLRF	SCRATCH
+	MOVF	file, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 2, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+	
+TESTi	MACRO file
+	CLRF	SCRATCH
+	MOVF	file, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 2, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	file + 3, F
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
 	ENDM
 	
 ; Branch and Skip from STATUS
@@ -529,154 +566,73 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 ;COMPi_l_f
 ;COMPi_f_f
 
-TESTs	MACRO file
-	CLRF	SCRATCH
-	MOVF	file, F
-	SK_ZE
-	BSF	SCRATCH, Z
-	MOVF	file + 1, F
-	BTFSC	SCRATCH, Z
-	BCF	STATUS, Z
-	ENDM
 
-TESTc	MACRO file
-	CLRF	SCRATCH
-	MOVF	file, F
-	SK_ZE
-	BSF	SCRATCH, Z
-	MOVF	file + 1, F
-	SK_ZE
-	BSF	SCRATCH, Z
-	MOVF	file + 2, F
-	BTFSC	SCRATCH, Z
-	BCF	STATUS, Z
-	ENDM
-	
-TESTi	MACRO file
-	CLRF	SCRATCH
-	MOVF	file, F
-	SK_ZE
-	BSF	SCRATCH, Z
-	MOVF	file + 1, F
-	SK_ZE
-	BSF	SCRATCH, Z
-	MOVF	file + 2, F
-	SK_ZE
-	BSF	SCRATCH, Z
-	MOVF	file + 3, F
-	BTFSC	SCRATCH, Z
-	BCF	STATUS, Z
-	ENDM
-	
-	
-	
-	
-	
-BR_W_LT_W	MACRO word1, word2, dest	;branch to dest if word1 < word2 
-	LOCAL BRWLTW1
-	LOCAL BRWLTW2
-	; test high byte
-	MOVF word2 + 1, W ; W = word2
-	SUBWF word1 + 1, W ; Subtract W(word2) from f(word1)
-	; w = word1 - word2
-	; if equal Z is set, C is set (borrow is clear)
-	; if word1 > word2 C is set (borrow is clear)
-	; if word1 < word2 C is clear (borrow is set)
-	
-	BTFSS STATUS, C; skip if C is set (borrow is clear, word1 >= word2)
-	GOTO dest; high byte is less
-	
-	BTFSC STATUS, Z; check if equal
-	GOTO BRWLTW1; if high bytes are equal test low bytes
-	GOTO BRWLTW2; otherwise word1 > word2
-	; test low byte
-BRWLTW1:
-	MOVF word2, W
-	SUBWF word1, W	
-	BTFSS STATUS, C
-	GOTO dest
-BRWLTW2:
-	ENDM
-	
-BR_W_GT_W	MACRO word1, word2, dest	;branch to dest if word1 > word2 
-	LOCAL BRWGTW1
-	LOCAL BRWGTW2
-	; test high byte
-	MOVF word1 + 1, W ; W = word1
-	SUBWF word2 + 1, W ; Subtract W(word1) from f(word2)
-	; w = word2 - word1
-	BTFSS STATUS, C; skip if C is set 
-	GOTO dest; high byte is less	
-	BTFSC STATUS, Z; check if equal
-	GOTO BRWGTW1;
-	GOTO BRWGTW2;
-BRWGTW1:
-	MOVF word1, W
-	SUBWF word2, W	
-	BTFSS STATUS, C
-	GOTO dest
-BRWGTW2:
-	ENDM
 
-	
-BR_W_EQ_W	MACRO word1, word2, dest	;branch to dest if word1 == word2
-	LOCAL BRWWEQW
-	; test high byte
-	MOVF word1 + 1, W
-	SUBWF word2 + 1, W
-	BTFSS STATUS, Z
-	GOTO BRWWEQW
-	; test low byte
-	MOVF word1, W
-	SUBWF word2, W
-	BTFSC STATUS, Z
-	GOTO dest
-BRWWEQW:
-	ENDM	
 
-;C: Carry/borrow bit (ADDWF, ADDLW, SUBLW and SUBWF instructions)(1,2)
-;1 = A carry-out from the Most Significant bit of the result occurred
-;0 = No carry-out from the Most Significant bit of the result occurred
 
-READ_TMR0	MACRO destH, destL
-	LOCAL CONTINUE_READ_TMR0
+; Timer1 helper
+
+
+READ_TMR1	MACRO dest
+	LOCAL CONTINUE_READ_TMR1
 	MOVF TMR1H, W ; Read high byte
-	MOVWF destH
+	MOVWF dest + 1
 	MOVF TMR1L, W ; Read low byte
-	MOVWF destL
+	MOVWF dest
 	MOVF TMR1H, W ; Read high byte
-	SUBWF destH, W ; Sub 1st read with 2nd read
+	SUBWF dest + 1, W ; Sub 1st read with 2nd read
 	BTFSC STATUS, Z ; Is result = 0
-	GOTO CONTINUE_READ_TMR0 ; Good 16-bit read
+	EXITM
 	; TMR1L may have rolled over between the read of the high and low bytes.
 	; Reading the high and low bytes now will read a good value.
-	MOVF TMR1H, W ; Read high byte
-	MOVWF destH
+	MOVF TMR1H, W ; Read high byte again
+	MOVWF dest + 1
 	MOVF TMR1L, W ; Read low byte
-	MOVWF destL ; Re-enable the Interrupt (if required)
-CONTINUE_READ_TMR0:  ; Continue with your code
+	MOVWF dest ; Re-enable the Interrupt (if required)
+CONTINUE_READ_TMR1:  ; Continue with your code
 	ENDM
-	
-	
-; TODO push and pop scratch reg
-; split op
-; move to bank3 to free shared gprs
+
+
+
+; Context switching
+
+
+
+; GPR files in shared GPR
+STACK_W		EQU	0x7F
+STACK_STATUS	EQU	0x7E
+STACK_PCLATH	EQU	0x7D
+SCRATCH		EQU	0x7C
+STACK_SCRATCH	EQU	0x7B
+STACK_FSR	EQU	0x7A
+
+; Push and Pop for W, STATUS and PCLATH
+; should be first to push and last to pop
+;
+;ex
+; ISR:
+; 	PUSH
+; 	PUSHfsr
+; 	PUSHscr
+;
+; ...isr...
+;
+; 	POPscr
+; 	POPfsr
+; 	POP
+; 	REFTIE
+;
 
 PUSH	MACRO
 	MOVWF	STACK_W
 	SWAPF	STATUS, W
-	CLRF	STATUS
 	MOVWF	STACK_STATUS
-	MOVF	PCLATH, W
+	CLRF	STATUS
+	MOVF 	PCLATH, W
 	MOVWF	STACK_PCLATH
-	CLRF	PCLATH
-	MOVF	FSR, W
-	MOVWF	STACK_FSR
 	ENDM
 
 POP	MACRO
-	MOVF	STACK_FSR, W
-	MOVWF	FSR
 	MOVF	STACK_PCLATH, W
 	MOVWF 	PCLATH
 	SWAPF	STACK_STATUS, W
@@ -684,17 +640,131 @@ POP	MACRO
 	SWAPF	STACK_W, F
 	SWAPF	STACK_W, W
 	ENDM
+
+; FSR
+; required if ISR uses FSR
+PUSHfsr	MACRO
+	MOVF	FSR, W
+	MOVWF	STACK_FSR
+	ENDM
 	
-PUSHq	MACRO
-	MOVWF	STACK_W
-	SWAPF	STATUS, W
-	CLRF	STATUS
-	MOVWF	STACK_STATUS
+POPfsr	MACRO
+	MOVF	STACK_FSR, W
+	MOVWF	FSR
 	ENDM
 
-POPq	MACRO
-	SWAPF	STACK_STATUS, W
-	MOVWF	STATUS
-	SWAPF	STACK_W, F
-	SWAPF	STACK_W, W
+; Scratch register for expanded instructions
+; required if ISR uses expanded instructions
+PUSHscr	MACRO
+	MOVF	SCRATCH, W
+	MOVWF	STACK_SCRATCH
 	ENDM
+	
+POPscr	MACRO
+	MOVF	STACK_SCRATCH, W
+	MOVWF	SCRATCH
+	ENDM
+
+
+
+
+
+
+; Assertion functions to Test and Debug
+
+
+
+TRUE	EQU	0x00
+FALSE	EQU	0x01
+
+ASSERTw		MACRO	val
+	LOCAL	jam
+	XORLW	val
+	BTFSS	STATUS, Z
+jam:
+	GOTO	jam
+	ENDM
+	
+ASSERTbs	MACRO file, bit
+	LOCAL jam
+	BTFSS	file, bit
+jam:
+	GOTO jam
+	ENDM
+	
+ASSERTbc	MACRO file, bit
+	LOCAL jam
+	BTFSC	file, bit
+jam:
+	GOTO jam
+	ENDM
+	
+ASSERTf		MACRO	val, file
+	LOCAL	jam
+	MOVLW	val
+	XORWF	file, W
+	BTFSS	STATUS, Z
+jam:
+	GOTO	jam
+	ENDM
+
+ASSERTs		MACRO	val, file
+	LOCAL	jam
+	
+	MOVLW	(val & 0x000000FF) >> 0
+	XORWF	file, W
+	BTFSS	STATUS, Z
+jam:
+	GOTO	jam
+	
+	MOVLW	(val & 0x0000FF00) >> 8
+	XORWF	file + 1, W
+	BTFSS	STATUS, Z
+	GOTO	jam	
+	ENDM
+	
+ASSERTc		MACRO	val, file
+	LOCAL	jam
+	
+	MOVLW	(val & 0x000000FF) >> 0
+	XORWF	file, W
+	BTFSS	STATUS, Z
+jam:
+	GOTO	jam
+	
+	MOVLW	(val & 0x0000FF00) >> 8
+	XORWF	file + 1, W
+	BTFSS	STATUS, Z
+	GOTO	jam	
+	
+	MOVLW	(val & 0x00FF0000) >> 16
+	XORWF	file + 2, W
+	BTFSS	STATUS, Z
+	GOTO	jam	
+	ENDM
+	
+ASSERTi		MACRO	val, file
+	LOCAL	jam
+	
+	MOVLW	(val & 0x000000FF) >> 0
+	XORWF	file, W
+	BTFSs	STATUS, Z
+jam:
+	GOTO	jam
+	
+	MOVLW	(val & 0x0000FF00) >> 8
+	XORWF	file + 1, W
+	BTFSS	STATUS, Z
+	GOTO	jam	
+	
+	MOVLW	(val & 0x00FF0000) >> 16
+	XORWF	file + 2, W
+	BTFSS	STATUS, Z
+	GOTO	jam
+
+	MOVLW	(val & 0xFF000000) >> 24
+	XORWF	file + 3, W
+	BTFSS	STATUS, Z
+	GOTO	jam	
+	ENDM
+

@@ -12,7 +12,7 @@ Thumbs.db
 *.this
 *.PEN
 *.BIN
-*.X\
+*.X\*
 PIC16F88_Macro_testHex.X/Makefile
 *.xml
 PIC16F88_Macro_testHex.X/nbproject/Makefile-genesis.properties
