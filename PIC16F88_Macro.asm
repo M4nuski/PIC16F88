@@ -685,99 +685,82 @@ POPscr	MACRO
 ; Assertion functions to Test and Debug
 
 
-
-TRUE	EQU	0x00
-FALSE	EQU	0x01
+#DEFINE STALL		GOTO	$
+#DEFINE TRUE	0x00
+#DEFINE FALSE	0x01
 
 ASSERTw		MACRO	val
-	LOCAL	jam
 	XORLW	val
 	BTFSS	STATUS, Z
-jam:
-	GOTO	jam
+	STALL
 	XORLW	val
 	ENDM
 	
 ASSERTbs	MACRO file, bit
-	LOCAL jam
 	BTFSS	file, bit
-jam:
-	GOTO jam
+	STALL
 	ENDM
 	
 ASSERTbc	MACRO file, bit
-	LOCAL jam
 	BTFSC	file, bit
-jam:
-	GOTO jam
+	STALL
 	ENDM
 	
 ASSERTf		MACRO	val, file
-	LOCAL	jam
 	MOVLW	val
 	XORWF	file, W
 	BTFSS	STATUS, Z
-jam:
-	GOTO	jam
+	STALL
 	ENDM
 
 ASSERTs		MACRO	val, file
-	LOCAL	jam
-	
 	MOVLW	(val & 0x000000FF) >> 0
 	XORWF	file, W
 	BTFSS	STATUS, Z
-jam:
-	GOTO	jam
+	STALL
 	
 	MOVLW	(val & 0x0000FF00) >> 8
 	XORWF	file + 1, W
 	BTFSS	STATUS, Z
-	GOTO	jam	
+	STALL
 	ENDM
 	
 ASSERTc		MACRO	val, file
-	LOCAL	jam
-	
 	MOVLW	(val & 0x000000FF) >> 0
 	XORWF	file, W
 	BTFSS	STATUS, Z
-jam:
-	GOTO	jam
+	STALL
 	
 	MOVLW	(val & 0x0000FF00) >> 8
 	XORWF	file + 1, W
 	BTFSS	STATUS, Z
-	GOTO	jam	
+	STALL
 	
 	MOVLW	(val & 0x00FF0000) >> 16
 	XORWF	file + 2, W
 	BTFSS	STATUS, Z
-	GOTO	jam	
+	STALL
 	ENDM
 	
 ASSERTi		MACRO	val, file
-	LOCAL	jam
-	
 	MOVLW	(val & 0x000000FF) >> 0
 	XORWF	file, W
 	BTFSs	STATUS, Z
-jam:
-	GOTO	jam
+	STALL
 	
 	MOVLW	(val & 0x0000FF00) >> 8
 	XORWF	file + 1, W
 	BTFSS	STATUS, Z
-	GOTO	jam	
+	STALL
 	
 	MOVLW	(val & 0x00FF0000) >> 16
 	XORWF	file + 2, W
 	BTFSS	STATUS, Z
-	GOTO	jam
+	STALL
 
 	MOVLW	(val & 0xFF000000) >> 24
 	XORWF	file + 3, W
 	BTFSS	STATUS, Z
-	GOTO	jam	
+	STALL
 	ENDM
 
