@@ -85,7 +85,9 @@ buzzmem:
 	BANK2
 	BANK3
 	CLRF STATUS
+	NOP ; sect 1 STR, CLR, NEG
 	
+; ############################### STR
 	STR	0x00, F1
 	STR	0xFF, F1
 	
@@ -103,12 +105,14 @@ buzzmem:
 	STRi	0x11223344, F4
 	ASSERTi	0x11223344, F4
 	
+; ############################### CLRF
 	CLRF	F1
 	CLRFs	F2
 	CLRFc	F3
 	CLRFi	F4	
 	ASSERTi	0x00000000, F4
-	
+
+; ############################### NEG
 	STR	0x12, F1
 	STRs	0x1234, F2
 	STRc	0x123456, F3
@@ -140,8 +144,10 @@ buzzmem:
 	NEGi	F4
 	ASSERTi	0x12345678, F4
 	
+; ############################### NEG
 	NOP
 	NOP ; sect 2 tests
+	
 		
 	MOVLW	0x00
 	MOVWF	F1
@@ -175,9 +181,11 @@ buzzmem:
 	TESTi F4
 	ASSERTbs	STATUS, Z
 	
+; ############################### COMP 8
 	NOP
 	NOP
 	NOP ; sect 3 compares
+	MOVLW	0x08 ; 8 bit
 	; 8 bit
 	STR	0x55, F1
 	STR	0x54, F2
@@ -354,6 +362,12 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbc	COMPresult, COMP_GE
 	
+; ############################### COMP 16
+	NOP
+	NOP
+	NOP ; sect 3 compares
+	MOVLW	0x16 ; 16 bit
+	
 	; 16 bit
 	STRs	0x5FFF, F1
 	STRs	0x5FFE, F2
@@ -399,9 +413,21 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbc	COMPresult, COMP_GE
 	
-	; 24 bit
+; ############################### COMP 24
+	NOP
+	NOP
+	NOP ; sect 3 compares
+	MOVLW	0x24 ; 24 bit
 	
-	; 32 bit
+	
+	
+	
+; ############################### COMP 32
+	NOP
+	NOP
+	NOP ; sect 3 compares
+	MOVLW	0x32 ; 32 bit
+	
 	STRi	0x55555555, F1
 	STRi	0x55555554, F2
 	STRi	0x55555555, F3
@@ -412,24 +438,204 @@ buzzmem:
 	STRi	0x5FFFFFFF, F3
 	STRi	0x60000000, F4
 
-	; COMP 16 24 32
-	
-	NOP
-	NOP
-	NOP
-	NOP ; sect 4 add and subs
-	; ADD
-	; SUB
-	
-	MOVF	0x20, F
-	
-	NOP
-	NOP
-	NOP
-	NOP
-	NOP ; sect 5 inc and dec
 
+; ############################### ADD 8
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 add
+	MOVLW	0x08 ; 8 bit
+	
+; ############################### ADD 16
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 add
+	MOVLW	0x16 ; 16 bit
+; ############################### ADD 24
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 add
+	MOVLW	0x24 ; 24 bit
+; ############################### ADD 32
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 add
+	MOVLW	0x32 ; 32 bit
+	
+	
+	
+; ############################### SUB 8
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 sub
+	MOVLW	0x08 ; 8 bit
+; ############################### SUB 16
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 sub
+	MOVLW	0x61 ; 16 bit
+; ############################### SUB 24
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 sub
+	MOVLW	0x42 ; 24 bit
+; ############################### SUB 32
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 sub
+	MOVLW	0x23 ; 32 bit
 	
 
+
+
+
+
+; ############################### INC 16
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 inc
+	MOVLW	0x16 ; 16 bit
+	
+	
+; ############################### INC 24
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 inc
+	MOVLW	0x24 ; 24 bit
+	
+; ############################### INC 32
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 inc
+	MOVLW	0x32 ; 32 bit
+	
+	
+	
+; ############################### DEC 16
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 dec
+	MOVLW	0x61 ; 16 bit
+	
+	
+	
+; ############################### DEC 24
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 inc
+	MOVLW	0x42 ; 24 bit
+	
+	
+	
+; ############################### DEC 32
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 inc
+	MOVLW	0x23 ; 32 bit
+	
+	
+	
+	
+	
+; ############################### ADDL 8
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 addlit
+	
+	MOVLW	0x08 ; 8 bit
+	
+; ############################### ADDL 16
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 addlit
+	
+	MOVLW	0x16 ; 16 bit
+; ############################### ADDL 24
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 addlit
+	MOVLW	0x24 ; 24 bit
+; ############################### ADDL 32
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 addlit
+	MOVLW	0x32 ; 32 bit
+	
+	
+; ############################### SUBL 8
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 sublit
+	MOVLW	0x80 ; 8 bit	
+	
+; ############################### SUBL 16
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 sublit
+	MOVLW	0x61 ; 16 bit
+; ############################### SUBL 24
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 sublit
+	MOVLW	0x42 ; 24 bit
+; ############################### SUBL 32
+	NOP
+	NOP
+	NOP
+	
+	NOP
+	NOP	
+	NOP ; sect 6 sublit
+	MOVLW	0x23 ; 32 bit
+	
+	
+; ###############################
 	GOTO $
 	END
