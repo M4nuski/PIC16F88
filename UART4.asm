@@ -12,8 +12,20 @@
 ;	Configuration	
 ;#############################################################################
 
-	__CONFIG	_CONFIG1, _CP_OFF & _CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & _WDT_OFF & _INTRC_IO
-	__CONFIG	_CONFIG2, _IESO_OFF & _FCMEN_OFF
+	__CONFIG	_CONFIG1, 	_CP_OFF &
+					_CCP1_RB0 &
+					_DEBUG_OFF &	
+					_WRT_PROTECT_OFF &
+					_CPD_OFF &
+					_LVP_OFF &
+					_BODEN_OFF &
+					_MCLR_ON &
+					_PWRTE_OFF &
+					_WDT_OFF &
+					_INTRC_IO
+					
+	__CONFIG	_CONFIG2, 	_IESO_OFF &
+					_FCMEN_OFF
 
 ;#############################################################################
 ;	Pinout
@@ -22,7 +34,7 @@
 ; pin  1 IOA PORTA2	O isr_TX_SQgreen
 ; pin  2 IOA PORTA3	O isr_RX_SQred
 ; pin  3 IOA PORTA4
-; pin  4 I__ PORTA5	MCLR
+; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
 ; pin  6 IO_ PORTB0	O WaitRX_red
 ; pin  7 IO_ PORTB1	O OverrunError_yellow
@@ -31,8 +43,8 @@
 
 ; pin 10 IO_ PORTB4	O FrameError_yellow
 ; pin 11 IOT PORTB5	O TX
-; pin 12 IOA PORTB6	
-; pin 13 IOA PORTB7
+; pin 12 IOA PORTB6	(PGC)
+; pin 13 IOA PORTB7	(PGD)
 ; pin 14 PWR VDD	VCC
 ; pin 15 _O_ PORTA6	
 ; pin 16 I__ PORTA7	
@@ -130,8 +142,8 @@ ISR_RX1:
 	MOVF	RCREG, W	;	w = RXdata
 	MOVWF	INDF		;	@writePtr = RXdata	
 	
-	INCF	RXBuf_wp, F;	writePtr++		
-	MOVF	RXBuf_wp, W;	w = writePtr
+	INCF	RXBuf_wp, F	;	writePtr++		
+	MOVF	RXBuf_wp, W	;	w = writePtr
 	SUBLW	RXBufEnd	;	w = RXBufEnd - writePtr
 	
 	BTFSS	STATUS, Z	;	if (RXBufEnd != writePtr)
