@@ -420,8 +420,6 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
-	; make sure no file content was changed
-	ASSERTs		0x5FFF, F1
 	
 	CLRF 	COMPresult
 	COMPs_l_f	0x6000, F1
@@ -435,9 +433,7 @@ buzzmem:
 
 	ASSERTbs	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
-	
-	; make sure no file content was changed
-	ASSERTs		0x5FFF, F1
+
 	
 	CLRF 	COMPresult
 	COMPs_l_f	0x5FFE, F1
@@ -452,8 +448,78 @@ buzzmem:
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbc	COMPresult, COMP_GE
 	
-	; make sure no file content was changed
-	ASSERTs		0x5FFF, F1	
+	
+	; borrow on byte 0
+	STRs	0x00FF, F6		
+	CLRF 	COMPresult
+	COMPs_l_f	0x00FE, F6
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+		
+	; borrow on byte 1
+	STRs	0xFF00, F6	
+		
+	CLRF 	COMPresult
+	COMPs_l_f	0xFE00, F6
+	READ_COMP_RES	
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+		
+	; borrow on byte 0 and 1
+	STRs	0xFFFF, F6	
+		
+	CLRF 	COMPresult
+	COMPs_l_f	0xFFFE, F6
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+		
+	; borrow on byte 0 and 1
+	STRs	0xFFFF, F6	
+		
+	CLRF 	COMPresult
+	COMPs_l_f	0x00FE, F6
+	READ_COMP_RES
+	
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	
+	
+	
+	
 	
 	; f vs f
 	CLRF 	COMPresult
@@ -508,6 +574,65 @@ buzzmem:
 	ASSERTs		0x5FFE, F2
 	
 	
+	
+	; borrow on byte 0
+	STRs	0x00FE, F7
+	STRs	0x00FF, F8
+	
+	CLRF 	COMPresult
+	COMPs_f_f	F7, F8
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; borrow on byte 1
+	STRs	0xFE00, F7
+	STRs	0xFF00, F8
+	
+	CLRF 	COMPresult
+	COMPs_f_f	F7, F8
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; borrow on both byte
+	STRs	0xFFFE, F7
+	STRs	0xFFFF, F8
+		
+	CLRF 	COMPresult
+	COMPs_f_f	F7, F8
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+
+; PC boundary
+	BSF	PCLATH, 3
+	GOTO	_NEXT_BOUNDARY
+	ORG	0x0800
+_NEXT_BOUNDARY:
+
 ; ############################### COMP 24
 	NOP
 	NOP

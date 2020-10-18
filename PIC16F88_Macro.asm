@@ -524,50 +524,86 @@ CLRFi	MACRO	file
 ; DECFi
 
 COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
+	LOCAL	_NB, _BR, _END
 	CLRF	SCRATCH
 	
 	MOVF	file, W
 	SUBLW	(lit & 0x00FF)		; w = lit - file
 	SK_ZE
-	BSF	SCRATCH, Z
-	SK_NB
-	BSF	SCRATCH, C		; set C if borrow
-	
-	CLRW
-	BTFSC	SCRATCH, C		; if borrow
-	MOVLW	0x01			; preset w to 1
+	BSF	SCRATCH, Z		; #Z propagation
+	BR_NB	_NB
 
-	ADDWF	file + 1, W		; w = file if there was no borrow, or file+1 if there was
-					; instead of decreasing the literal for the borrow, the file was increased
+	; if borrow
+	CLRW
+	ADDLW	(lit & 0xFF00)	>> 8
+	BTFSS	STATUS, Z
+	GOTO	_BR
+	
+	; if high byte of lit == 0
+	BCF	STATUS, Z	; not equal
+	BCF	STATUS, C 	; borrow
+	GOTO	_END
+	
+_BR:
+	MOVF	file + 1, W
+	SUBLW	((lit & 0xFF00) >> 8) - 1
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	GOTO	_END	
+	
+_NB:
+	MOVF	file + 1, W
 	SUBLW	(lit & 0xFF00) >> 8
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
+	
+_END:
 	ENDM
 	
 COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
+	LOCAL	_NB, _BR, _END	
 	CLRF	SCRATCH
 	
 	MOVF	file2, W
 	SUBWF	file1, W		; w = file1 - file2	
 	SK_ZE
 	BSF	SCRATCH, Z		; save #Z
-	SK_NB
-	BSF	SCRATCH, C		; set C if borrow
+	BR_NB	_NB
 	
-	; ################### TODO test and debug
-	CLRW
+	; if borrow
+	MOVF	file1 + 1, F		; test if file1+1 is zero
+	BTFSS	STATUS, Z
+	GOTO	_BR
+	
+	; high byte is zero
+	BCF	STATUS, Z	; not equal
+	BCF	STATUS, C 	; borrow
+	GOTO	_END
+	
+_BR:
+	MOVF	file2 + 1, W
+	DECF	file1 + 1, F
+	SUBWF	file1 + 1, W
+	SK_ZE
+	BSF	SCRATCH, Z		; save #Z
+	SK_NC
+	BSF	SCRATCH, C		; save C
+	INCF	file1 + 1, F
+	
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z	
+	BCF	STATUS, C
 	BTFSC	SCRATCH, C
-	MOVLW	0x01			; preload w if borrow
+	BSF	STATUS, C
+	GOTO	_END
 	
-	ADDWF	file2 + 1, W		; w = (file2) if no borrow on previous byte, or (file2 + 1) if there was 
-	SK_NB
-	ADDLW	0xFF			; decrease by 1 if there was another borrow from last instruction
-	
-	; ###################
-	
-	SUBWF	file2 + 1, W
+_NB:
+	MOVF	file2 + 1, W
+	SUBWF	file1 + 1, W		; w = file1 - file2
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
+	
+_END:
 	ENDM
 
 ;COMPc_l_f
@@ -584,22 +620,22 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 
 
 READ_TMR1	MACRO dest
-	LOCAL READ_TMR1_goodread
-	MOVF TMR1H, W ; Read high byte
-	MOVWF dest + 1
-	MOVF TMR1L, W ; Read low byte
-	MOVWF dest
-	MOVF TMR1H, W ; Read high byte
-	SUBWF dest + 1, W ; Sub 1st read with 2nd read
-	BTFSC STATUS, Z ; Is result = 0
-	GOTO READ_TMR1_goodread
+	LOCAL	_end
+	MOVF	TMR1H, W ; Read high byte
+	MOVWF	dest + 1
+	MOVF	TMR1L, W ; Read low byte
+	MOVWF	dest
+	MOVF	TMR1H, W ; Read high byte
+	SUBWF	dest + 1, W ; Sub 1st read with 2nd read
+	BTFSC	STATUS, Z ; Is result = 0
+	GOTO	_end
 	; TMR1L may have rolled over between the read of the high and low bytes.
 	; Reading the high and low bytes now will read a good value.
-	MOVF TMR1H, W ; Read high byte again
-	MOVWF dest + 1
-	MOVF TMR1L, W ; Read low byte
-	MOVWF dest ; Re-enable the Interrupt (if required)
-READ_TMR1_goodread:  ; Continue with your code
+	MOVF	TMR1H, W ; Read high byte again
+	MOVWF	dest + 1
+	MOVF	TMR1L, W ; Read low byte
+	MOVWF	dest ; Re-enable the Interrupt (if required)
+_end:
 	ENDM
 
 
@@ -745,7 +781,7 @@ ASSERTc		MACRO	val, file
 ASSERTi		MACRO	val, file
 	MOVLW	(val & 0x000000FF) >> 0
 	XORWF	file, W
-	BTFSs	STATUS, Z
+	BTFSS	STATUS, Z
 	STALL
 	
 	MOVLW	(val & 0x0000FF00) >> 8
