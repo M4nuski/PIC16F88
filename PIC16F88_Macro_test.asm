@@ -3,9 +3,10 @@
 ;	Test program for the the PIC16F88 MACRO
 ;#############################################################################
 
-	LIST	p=16F88			; processor model
-#INCLUDE	<P16F88.INC>		; processor specific variable definitions
-#INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
+	LIST	p=16F88			 ; processor model
+#INCLUDE	<P16F88.INC>		 ; processor specific variable definitions
+#INCLUDE	<PIC16F88_Macro.asm>	 ; base macro for banks, context, branchs
+#INCLUDE	<PIC16F88_MacroExt.asm>; macro for 16, 24 and 32 bit instructions
 
 ;#############################################################################
 ;	Configuration	
