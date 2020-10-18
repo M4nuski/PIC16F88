@@ -513,15 +513,80 @@ CLRFi	MACRO	file
 	CLRF	file + 3
 	ENDM
 
-; TODO expanded inc file
-; INCFs
-; INCFc
-; INCFi
+; Increase file
+; INCF is the 8 bit instruction
+INCFs	MACRO	file
 
-; TODO expanded dec file
-; DECFs 
-; DECFc
-; DECFi
+	INCF	file, F
+	
+	SK_NZ
+	INCF	file + 1, F ; msb overflow
+	ENDM
+	
+INCFc	MACRO	file
+	LOCAL	_END
+	
+	INCF	file, F	
+	
+	BR_NZ	_END
+	INCF	file + 1, F ; msb overflow
+	SK_NZ
+	INCF	file + 2, F
+_END:
+	ENDM
+	
+INCFi	MACRO	file
+	LOCAL	_END
+	
+	INCF	file, F	
+	
+	SK_NZ
+	INCF	file + 1, F ; msb overflow
+	SK_NZ
+	INCF	file + 2, F
+	SK_NZ
+	INCF	file + 3, F
+_END:
+	ENDM
+
+; Decrease file
+; DECF is the 8 bit instruction
+DECFs 	MACRO
+
+	MOVLW	0x01
+	SUBWF	file, F
+	
+	SK_NB
+	SUBWF	file + 1, F
+	ENDM
+
+DECFc	MACRO
+	LOCAL	_END
+	
+	MOVLW	0x01
+	SUBWF	file, F
+	
+	BR_NB	_END
+	SUBWF	file + 1, F
+	SK_NB
+	SUBWF	file + 2, F
+_END:
+	ENDM
+
+DECFi	MACRO
+	LOCAL	_END
+	
+	MOVLW	0x01
+	SUBWF	file, F
+	
+	BR_NB	_END
+	SUBWF	file + 1, F
+	BR_NB	_END
+	SUBWF	file + 2, F
+	SK_NB
+	SUBWF	file + 3, F
+_END:
+	ENDM
 
 COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
 	LOCAL	_NB, _BR, _END
@@ -582,19 +647,19 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
 	
 _BR:
 	MOVF	file2 + 1, W
-	DECF	file1 + 1, F
+	DECF	file1 + 1, F		; apply borrow from last byte
 	SUBWF	file1 + 1, W
 	SK_ZE
 	BSF	SCRATCH, Z		; save #Z
 	SK_NC
 	BSF	SCRATCH, C		; save C
-	INCF	file1 + 1, F
+	INCF	file1 + 1, F		; restore file to pre-borrow
 	
 	BTFSC	SCRATCH, Z
-	BCF	STATUS, Z	
+	BCF	STATUS, Z		; restore Z
 	BCF	STATUS, C
-	BTFSC	SCRATCH, C
-	BSF	STATUS, C
+	BTFSC	SCRATCH, C	
+	BSF	STATUS, C		; restore C
 	GOTO	_END
 	
 _NB:
