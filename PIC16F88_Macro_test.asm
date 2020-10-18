@@ -12,7 +12,8 @@
 ;#############################################################################
 
 	__CONFIG	_CONFIG1, 	_CP_OFF &_CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & 				_WDT_OFF & _INTRC_IO
-	__CONFIG	_CONFIG2, 	_IESO_OFF & _FCMEN_OFF					
+	__CONFIG	_CONFIG2, 	_IESO_OFF & _FCMEN_OFF	
+	
 ;#############################################################################
 ;	Pinout
 ;#############################################################################
@@ -23,15 +24,15 @@
 ;	File Variables and Constants
 ;#############################################################################
 
-; test files
-F1	EQU	0x20
-F2	EQU	0x24
-F3	EQU	0x28
-F4	EQU	0x2C
-F5	EQU	0x30
-F6	EQU	0x34
-F7	EQU	0x38
-F8	EQU	0x3C
+; 32 bit test files
+F1	EQU	0x20 ; 1 2 3
+F2	EQU	0x24 ; 5 6 7
+F3	EQU	0x28 ; 9 A B
+F4	EQU	0x2C ; D E F
+F5	EQU	0x30 ; 1 2 3
+F6	EQU	0x34 ; 5 6 7
+F7	EQU	0x38 ; 9 A B
+F8	EQU	0x3C ; D E F
 
 ; compare result test file location and bit definition
 COMPresult 	EQU	0x40
@@ -62,6 +63,7 @@ _LE:
 	BR_GT	GT
 _GT:
 	BR_GE	GE
+	
 _GE:
 	GOTO	_end	
 	
@@ -86,19 +88,24 @@ GE:
 _end:
 	ENDM
 	
-	
 ;#############################################################################
 ;	Reset Vector - Main Entry Point
 ;#############################################################################
-; no interrupts so reset vector 0x0004 is not used
 
 	ORG	0x0000
+	
+;#############################################################################
+;	Interrupt Vector - Interrupt Service Routine
+;#############################################################################
+	; no interrupt so the ISR vector is never used
+	;ORG	0x0004
 	
 	MOVLW	0x20	;start loc 0x20
 	MOVWF	FSR
 	MOVLW	0x40	;count 64
 	MOVWF	0x7F
 	MOVLW	0x99	;buzz content
+	
 buzzmem:
 	MOVWF	INDF	
 	INCF	FSR, F
@@ -397,8 +404,9 @@ buzzmem:
 	STRs	0x5FFF, F1
 	STRs	0x5FFE, F2
 	STRs	0x5FFF, F3
-	STRs	0x6000, F4
+	STRs	0x6000, F4	
 	
+	; l vs f
 	CLRF 	COMPresult
 	COMPs_l_f	0x5FFF, F1
 	READ_COMP_RES
@@ -411,6 +419,9 @@ buzzmem:
 
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
+	
+	; make sure no file content was changed
+	ASSERTs		0x5FFF, F1
 	
 	CLRF 	COMPresult
 	COMPs_l_f	0x6000, F1
@@ -425,6 +436,9 @@ buzzmem:
 	ASSERTbs	COMPresult, COMP_GT
 	ASSERTbs	COMPresult, COMP_GE
 	
+	; make sure no file content was changed
+	ASSERTs		0x5FFF, F1
+	
 	CLRF 	COMPresult
 	COMPs_l_f	0x5FFE, F1
 	READ_COMP_RES
@@ -437,6 +451,62 @@ buzzmem:
 
 	ASSERTbc	COMPresult, COMP_GT
 	ASSERTbc	COMPresult, COMP_GE
+	
+	; make sure no file content was changed
+	ASSERTs		0x5FFF, F1	
+	
+	; f vs f
+	CLRF 	COMPresult
+	COMPs_f_f	F3, F1
+	READ_COMP_RES
+	
+	ASSERTbs	COMPresult, COMP_EQ
+	ASSERTbc	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	; make sure no file content was changed
+	ASSERTs		0x5FFF, F1
+	ASSERTs		0x5FFF, F3
+	
+	CLRF 	COMPresult
+	COMPs_f_f	F4, F1
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbc	COMPresult, COMP_LT
+	ASSERTbc	COMPresult, COMP_LE
+
+	ASSERTbs	COMPresult, COMP_GT
+	ASSERTbs	COMPresult, COMP_GE
+	
+	; make sure no file content was changed
+	ASSERTs		0x5FFF, F1
+	ASSERTs		0x6000, F4
+	
+	CLRF 	COMPresult
+	COMPs_f_f	F2, F1
+	READ_COMP_RES
+	
+	ASSERTbc	COMPresult, COMP_EQ
+	ASSERTbs	COMPresult, COMP_NE
+	
+	ASSERTbs	COMPresult, COMP_LT
+	ASSERTbs	COMPresult, COMP_LE
+
+	ASSERTbc	COMPresult, COMP_GT
+	ASSERTbc	COMPresult, COMP_GE
+	
+	; make sure no file content was changed
+	ASSERTs		0x5FFF, F1
+	ASSERTs		0x5FFE, F2
+	
 	
 ; ############################### COMP 24
 	NOP
@@ -477,12 +547,14 @@ buzzmem:
 	NOP
 	NOP ; sect 4 add
 	MOVLW	0x16 ; 16 bit
+	
 ; ############################### ADD 24
 	NOP
 	NOP
 	NOP
 	NOP ; sect 4 add
 	MOVLW	0x24 ; 24 bit
+	
 ; ############################### ADD 32
 	NOP
 	NOP
@@ -498,18 +570,21 @@ buzzmem:
 	NOP
 	NOP ; sect 4 sub
 	MOVLW	0x08 ; 8 bit
+	
 ; ############################### SUB 16
 	NOP
 	NOP
 	NOP
 	NOP ; sect 4 sub
 	MOVLW	0x61 ; 16 bit
+	
 ; ############################### SUB 24
 	NOP
 	NOP
 	NOP
 	NOP ; sect 4 sub
 	MOVLW	0x42 ; 24 bit
+	
 ; ############################### SUB 32
 	NOP
 	NOP
@@ -588,8 +663,7 @@ buzzmem:
 	
 	NOP
 	NOP	
-	NOP ; sect 6 addlit
-	
+	NOP ; sect 6 addlit	
 	MOVLW	0x08 ; 8 bit
 	
 ; ############################### ADDL 16
@@ -600,8 +674,8 @@ buzzmem:
 	NOP
 	NOP	
 	NOP ; sect 6 addlit
-	
 	MOVLW	0x16 ; 16 bit
+	
 ; ############################### ADDL 24
 	NOP
 	NOP
@@ -611,6 +685,7 @@ buzzmem:
 	NOP	
 	NOP ; sect 6 addlit
 	MOVLW	0x24 ; 24 bit
+	
 ; ############################### ADDL 32
 	NOP
 	NOP
@@ -641,6 +716,7 @@ buzzmem:
 	NOP	
 	NOP ; sect 6 sublit
 	MOVLW	0x61 ; 16 bit
+	
 ; ############################### SUBL 24
 	NOP
 	NOP
@@ -650,6 +726,7 @@ buzzmem:
 	NOP	
 	NOP ; sect 6 sublit
 	MOVLW	0x42 ; 24 bit
+	
 ; ############################### SUBL 32
 	NOP
 	NOP
@@ -658,8 +735,7 @@ buzzmem:
 	NOP
 	NOP	
 	NOP ; sect 6 sublit
-	MOVLW	0x23 ; 32 bit
-	
+	MOVLW	0x23 ; 32 bit	
 	
 ; ###############################
 	GOTO $
