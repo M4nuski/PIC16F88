@@ -290,7 +290,86 @@ MOVi 	MACRO	from, to
 	MOVWF	to + 3
 	ENDM
 	
-; TODO SWAP
+; SWAP content of 2 files
+; not the nibbles like SWAPF
+; can be used to swap bytes in short, or shorts in integer
+SWAP	MACRO	a, b
+	MOVF	a, W		; w = a
+	MOVWF	SCRATCH		; s = a
+	MOVF	b, W		; w = b
+	MOVWF	a		; a = b
+	MOVF	SCRATCH, W	; w = a
+	MOVWF	b		; b = a
+	ENDM
+	
+SWAPs	MACRO	a, b
+	MOVF	a, W		; w = a
+	MOVWF	SCRATCH		; s = a
+	MOVF	b, W		; w = b
+	MOVWF	a		; a = b
+	MOVF	SCRATCH, W	; w = a
+	MOVWF	b		; b = a
+	
+	MOVF	a + 1, W
+	MOVWF	SCRATCH	
+	MOVF	b + 1, W
+	MOVWF	a + 1
+	MOVF	SCRATCH, W
+	MOVWF	b + 1
+	ENDM
+	
+SWAPc	MACRO	a, b
+	MOVF	a, W		; w = a
+	MOVWF	SCRATCH		; s = a
+	MOVF	b, W		; w = b
+	MOVWF	a		; a = b
+	MOVF	SCRATCH, W	; w = a
+	MOVWF	b		; b = a
+	
+	MOVF	a + 1, W
+	MOVWF	SCRATCH	
+	MOVF	b + 1, W
+	MOVWF	a + 1
+	MOVF	SCRATCH, W
+	MOVWF	b + 1
+	
+	MOVF	a + 2, W
+	MOVWF	SCRATCH	
+	MOVF	b + 2, W
+	MOVWF	a + 2
+	MOVF	SCRATCH, W
+	MOVWF	b + 2
+	ENDM
+	
+SWAPi	MACRO	a, b
+	MOVF	a, W		; w = a
+	MOVWF	SCRATCH		; s = a
+	MOVF	b, W		; w = b
+	MOVWF	a		; a = b
+	MOVF	SCRATCH, W	; w = a
+	MOVWF	b		; b = a
+	
+	MOVF	a + 1, W
+	MOVWF	SCRATCH	
+	MOVF	b + 1, W
+	MOVWF	a + 1
+	MOVF	SCRATCH, W
+	MOVWF	b + 1
+	
+	MOVF	a + 2, W
+	MOVWF	SCRATCH	
+	MOVF	b + 2, W
+	MOVWF	a + 2
+	MOVF	SCRATCH, W
+	MOVWF	b + 2
+	
+	MOVF	a + 3, W
+	MOVWF	SCRATCH	
+	MOVF	b + 3, W
+	MOVWF	a + 3
+	MOVF	SCRATCH, W
+	MOVWF	b + 3
+	ENDM
 
 ; Add and Subtract
 ADD	MACRO	a, b	; a = a + b
