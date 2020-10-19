@@ -443,7 +443,7 @@ POPscr	MACRO
 #DEFINE TRUE	0x00
 #DEFINE FALSE	0x01
 
-ASSERTw		MACRO	val		; w == val
+ASSERTw		MACRO val		; w == val
 	XORLW	val
 	BTFSS	STATUS, Z
 	STALL
@@ -465,4 +465,90 @@ ASSERTf		MACRO	val, file	; val == file content
 	XORWF	file, W
 	BTFSS	STATUS, Z
 	STALL
+	ENDM
+
+ASSERT_ZE	MACRO
+	LOCAL	_END
+	BR_ZE	_END
+	STALL
+_END:	
+	ENDM	
+ASSERT_NZ	MACRO
+	LOCAL	_END
+	BR_NZ	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_EQ	MACRO
+	LOCAL	_END
+	BR_EQ	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_NE	MACRO
+	LOCAL	_END
+	BR_NE	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_GT	MACRO
+	LOCAL	_END
+	BR_GT	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_GE	MACRO
+	LOCAL	_END
+	BR_GE	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_LT	MACRO
+	LOCAL	_END
+	BR_LT	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_LE	MACRO
+	LOCAL	_END
+	BR_LE	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_CA	MACRO
+	LOCAL	_END
+	BR_CA	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_NC	MACRO
+	LOCAL	_END
+	BR_NC	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_BO	MACRO
+	LOCAL	_END
+	BR_BO	_END
+	STALL
+_END:	
+	ENDM
+ASSERT_NB	MACRO
+	LOCAL	_END
+	BR_NB	_END
+	STALL
+_END:	
+	ENDM
+
+
+
+;#############################################################################
+;	PC MSB Boundary skip
+;#############################################################################
+
+PC0x800SKIP	MACRO
+	BSF	PCLATH, 3
+	GOTO	_NEXT_BOUNDARY
+	ORG	0x0800
+_NEXT_BOUNDARY:
 	ENDM

@@ -14,11 +14,11 @@
 ;	- s signed (Not yet implemented) 
 ;
 ;	Operations:
-;	TEST
-;	COMP
-;	STR, MOVE, SAWP, NEG, ADD, ADDL, SUB, SUBL, SUBFL
-;	CLRF, INCF, DECF
-;	ASSERT
+;	TESTx
+;	COMPx_x_x
+;	STRx, MOVEx, SAWPx, NEGx, ADDx, ADDLx, SUBx, SUBLx, SUBFLx
+;	CLRFx, INCFx, DECFx
+;	ASSERTx
 ;#############################################################################
 
 
@@ -74,7 +74,7 @@ TESTi	MACRO	file
 ;	Result in STATUS Z and C
 ;#############################################################################
 
-COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
+COMPs_l_f	MACRO	lit, file	; 16bit literal vs file
 	LOCAL	_NB, _BR, _END
 	CLRF	SCRATCH
 	
@@ -87,8 +87,7 @@ COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
 	; if borrow
 	CLRW
 	ADDLW	(lit & 0xFF00)	>> 8
-	BTFSS	STATUS, Z
-	GOTO	_BR
+	BR_NE	_BR
 	
 	; if high byte of lit == 0
 	BCF	STATUS, Z	; not equal
@@ -97,7 +96,7 @@ COMPs_l_f	MACRO	lit, file	; 16bit literal vs file compare
 	
 _BR:
 	MOVF	file + 1, W
-	SUBLW	((lit & 0xFF00) >> 8) - 1
+	SUBLW	((lit & 0xFF00) >> 8) - 1 	; apply borrow to literal
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	GOTO	_END	
@@ -111,7 +110,7 @@ _NB:
 _END:
 	ENDM
 	
-COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2 compare
+COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2
 	LOCAL	_NB, _BR, _END	
 	CLRF	SCRATCH
 	
@@ -155,6 +154,90 @@ _NB:
 	BCF	STATUS, Z
 	
 _END:
+	ENDM
+	
+COMPi_f_f	MACRO	file1, file2	; 32bit file1 vs file2
+	LOCAL	_b1, _b2, _b3, _r1, _r0, _END
+
+#DEFINE sC0	0	; scratch C/#B byte 0
+#DEFINE sC1	1	; scratch C/#B byte 1
+#DEFINE sC2	2	; scratch C/#B byte 2
+#DEFINE sC3	3	; scratch C/#B byte 3
+#DEFINE snZ	4	; scratch #Z
+#DEFINE sfZ	5	; scratch Final Z
+#DEFINE sfC	6	; scratch Final C
+	
+	CLRF	SCRATCH	
+	
+	MOVF	file2, W
+	SUBWF	file1, W
+	SK_ZE
+	BSF	SCRATCH, snZ
+	BR_NB	_b1
+	BSF	SCRATCH, sC0
+	DECF	file1 + 1, F
+	SK_NB
+	DECF	file1 + 2, F
+	SK_NB
+	DECF	file1 + 3, F
+	
+_b1:	;shortcut if no borrow on byte 0
+	MOVF	file2 + 1, W
+	SUBWF	file1 + 1, W
+	SK_ZE
+	BSF	SCRATCH, snZ
+	BR_NB	_b2
+	BSF	SCRATCH, sC1
+	DECF	file1 + 2, F
+	SK_NB
+	DECF	file1 + 3, F
+	
+_b2:	;shortcut if no borrow on byte 1
+	MOVF	file2 + 2, W
+	SUBWF	file1 + 2, W
+	SK_ZE
+	BSF	SCRATCH, snZ
+	BR_NB	_B3
+	BSF	SCRATCH, sC2
+	DECF	file1 + 3, F
+
+_b3:
+	MOVF	file2 + 3, W
+	SUBWF	file1 + 3, W
+	BTFSC	SCRATCH, snZ
+	BCF	STATUS, Z
+	
+	; save final STATUS values
+	SK_NZ
+	BSF	SCRATCH, sfZ
+	SK_NC
+	BSF	SCRATCH, sfC
+	
+	; revert all borrows from file1
+	BTFSC	SCRATCH, sC2
+	INCF	file1 + 3, F
+	
+	BTFBC	SCRATCH, sC1, _r0
+	INCF	file1 + 2, F
+	SK_NC
+	INCF	file1 + 3, F
+
+_r0:	
+	BTFBC	SCRATCH, sC0, _END
+	INCF	file1 + 1, F
+	SK_NC
+	INCF	file1 + 2, F
+	SK_NC
+	INCF	file1 + 3, F
+	
+	
+_END:
+	; restore final STATUS values
+	CLRF	STATUS
+	BTFSC	SCRATCH, sfC
+	BSF	STATUS, C	
+	BTFSC	SCRATCH, sfZ
+	BSF	STATUS, Z
 	ENDM
 
 ; TODO
@@ -212,7 +295,7 @@ MOVs 	MACRO	from, to
 	MOVWF	to + 1
 	ENDM
 	
-MOVc 	MACRO from, to
+MOVc 	MACRO	from, to
 	MOVF	from, W
 	MOVWF	to
 	MOVF	from + 1, W
@@ -283,8 +366,8 @@ SWAPi	MACRO	a, b
 	MOVWF	SCRATCH		; s = a
 	MOVF	b, W		; w = b
 	MOVWF	a		; a = b
-	MOVF	SCRATCH, W	; w = a
-	MOVWF	b		; b = a
+	MOVF	SCRATCH, W	; w = s (a)
+	MOVWF	b		; b = w (a)
 	
 	MOVF	a + 1, W
 	MOVWF	SCRATCH	
@@ -625,14 +708,8 @@ SUBLi	MACRO	a, lit	; a = a - lit
 ;	Subtract target from other file
 ;	 a = b - a
 ;#############################################################################
-
-;SUBF	MACRO	a, b	; a = b - a;
-;	MOVF	a, W
-;	SUBWF	b, W
-;	MOVWF	a
-;	ENDM
-	
-	
+;SUBFs
+;SUBFc
 SUBFi	MACRO	a, b	; a = b - a
 	CLRF	SCRATCH	
 	
@@ -868,19 +945,15 @@ CLRFi	MACRO	file
 ;	 a = a + 1
 ;#############################################################################
 INCFs	MACRO	file
-
-	INCF	file, F
-	
+	INCF	file, F	
 	SK_NZ
-	INCF	file + 1, F ; msb overflow
-	
+	INCF	file + 1, F ; msb overflow	
 	ENDM
 	
 INCFc	MACRO	file
 	LOCAL	_END
 	
-	INCF	file, F	
-	
+	INCF	file, F		
 	BR_NZ	_END
 	INCF	file + 1, F ; msb overflow
 	SK_NZ
@@ -891,11 +964,10 @@ _END:
 INCFi	MACRO	file
 	LOCAL	_END
 	
-	INCF	file, F	
-	
-	SK_NZ
+	INCF	file, F		
+	BR_NZ	_END
 	INCF	file + 1, F ; msb overflow
-	SK_NZ
+	BR_NZ	_END
 	INCF	file + 2, F
 	SK_NZ
 	INCF	file + 3, F
@@ -909,10 +981,8 @@ _END:
 ;	 a = a - 1
 ;#############################################################################
 DECFs 	MACRO
-
 	MOVLW	0x01
-	SUBWF	file, F
-	
+	SUBWF	file, F	
 	SK_NB
 	SUBWF	file + 1, F
 	ENDM
@@ -921,8 +991,7 @@ DECFc	MACRO
 	LOCAL	_END
 	
 	MOVLW	0x01
-	SUBWF	file, F
-	
+	SUBWF	file, F	
 	BR_NB	_END
 	SUBWF	file + 1, F
 	SK_NB
@@ -934,8 +1003,7 @@ DECFi	MACRO
 	LOCAL	_END
 	
 	MOVLW	0x01
-	SUBWF	file, F
-	
+	SUBWF	file, F	
 	BR_NB	_END
 	SUBWF	file + 1, F
 	BR_NB	_END
