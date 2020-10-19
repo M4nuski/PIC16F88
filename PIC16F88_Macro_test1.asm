@@ -1,7 +1,7 @@
 ;#############################################################################
 ;	PIC16F88 MACRO TEST 1
 ;	Test program for the the macro instructions:
-;	BANK CLR STR NEG TEST COMP
+;	BANK CLR STR NEG TEST COMP MOVE SWAP
 ;#############################################################################
 
 	LIST	p=16F88			 ; processor model
@@ -36,60 +36,6 @@ F6	EQU	0x34 ; 5 6 7
 F7	EQU	0x38 ; 9 A B
 F8	EQU	0x3C ; D E F
 
-; compare result test file location and bit definition
-COMPresult 	EQU	0x40
-COMP_EQ		EQU 	0
-COMP_NE		EQU	1
-COMP_LT		EQU	2
-COMP_LE		EQU	3
-COMP_GT		EQU	4
-COMP_GE		EQU	5
-
-;#############################################################################
-;	Macro Definitions
-;#############################################################################
-
-READ_COMP_RES	MACRO
-	LOCAL	EQ, NE, LT, LE, GT, GE, _end , _EQ, _NE, _LT, _LE, _GT, _GE
-	
-	BR_EQ	EQ	
-_EQ:
-	BR_NE	NE
-
-_NE:
-	BR_LT	LT
-_LT:
-	BR_LE	LE
-	
-_LE:
-	BR_GT	GT
-_GT:
-	BR_GE	GE
-	
-_GE:
-	GOTO	_end	
-	
-EQ:
-	BSF	COMPresult, COMP_EQ
-	GOTO 	_EQ
-NE:
-	BSF	COMPresult, COMP_NE
-	GOTO 	_NE
-LT:
-	BSF	COMPresult, COMP_LT
-	GOTO 	_LT
-LE:
-	BSF	COMPresult, COMP_LE
-	GOTO 	_LE
-GT:
-	BSF	COMPresult, COMP_GT
-	GOTO 	_GT
-GE:
-	BSF	COMPresult, COMP_GE
-	GOTO 	_GE
-_end:
-	ENDM
-
 ;#############################################################################
 ;	Reset Vector - Main Entry Point
 ;#############################################################################
@@ -102,26 +48,29 @@ _end:
 	; no interrupt so the ISR vector is never used
 	;ORG	0x0004
 	
+	; fill memory with 0x99 to check for under/overflow
 	MOVLW	0x20	;start loc 0x20
 	MOVWF	FSR
 	MOVLW	0x40	;count 64
 	MOVWF	0x7F
-	MOVLW	0x99	;buzz content
-	
+	MOVLW	0x99	;buzz content	
 buzzmem:
 	MOVWF	INDF	
 	INCF	FSR, F
 	DECFSZ	0x7F, F
 	GOTO buzzmem
+	
+; ############################### BANK
 
 	BANK0
 	BANK1
 	BANK2
 	BANK3
-	CLRF STATUS
+	CLRF STATUS	
+
+; ############################### STR
 	NOP ; sect 1 STR, CLR, NEG
 	
-; ############################### STR
 	STR	0x00, F1
 	STR	0xFF, F1	
 	ASSERTf	0xFF, F1
@@ -230,6 +179,7 @@ buzzmem:
 	NOP
 	NOP ; sect 3 compares
 	MOVLW	0x08 ; 8 bit
+	
 	; 8 bit
 	STR	0x55, F1
 	STR	0x54, F2
@@ -369,7 +319,6 @@ buzzmem:
 	ASSERT_LT
 	ASSERT_LE
 	ASSERTs	0xFFFF, F6	
-	
 		
 	; borrow on byte 0 and 1
 	
@@ -461,7 +410,65 @@ buzzmem:
 	STRi	0x5FFFFFFE, F2
 	STRi	0x5FFFFFFF, F3
 	STRi	0x60000000, F4
+	
+; ############################### MOVE 8
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 MOVE
+	MOVLW	0x08 ; 8 bit
+; ############################### MOVE 16
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 MOVE
+	MOVLW	0x16 ; 16 bit
+; ############################### MOVE 24
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 MOVE
+	MOVLW	0x24 ; 24 bit
+; ############################### MOVE 32
+	NOP
+	NOP
+	NOP
+	NOP ; sect 4 MOVE
+	MOVLW	0x32 ; 32 bit
+	
+	
+; ############################### SWAP 8
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 SWAP
+	MOVLW	0x08 ; 8 bit
+; ############################### SWAP 16
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 SWAP
+	MOVLW	0x16 ; 16 bit
+; ############################### SWAP 24
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 SWAP
+	MOVLW	0x24 ; 24 bit
+; ############################### SWAP 32
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP ; sect 5 SWAP
+	MOVLW	0x32 ; 32 bit
+	
+	
+	
 
-; ###############################
+; ############################### END
 	GOTO $
 	END

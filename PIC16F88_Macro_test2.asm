@@ -1,7 +1,7 @@
 ;#############################################################################
 ;	PIC16F88 MACRO TEST 2
-;	Test program for the the PIC16F88 MACRO
-;	MOVE SWAP ADD ADDL SUB SUBL SUBF SUBFL INCF DECF
+;	Test program for the the macro instructions:
+;	ADD ADDL SUB SUBL SUBF SUBFL INCF DECF
 ;#############################################################################
 
 	LIST	p=16F88			 ; processor model
@@ -114,100 +114,168 @@ buzzmem:
 	DECFSZ	0x7F, F
 	GOTO buzzmem
 
-	BANK0
-	BANK1
-	BANK2
-	BANK3
 	CLRF STATUS
 	
-	NOP ; sect 1 
-
 ; ############################### ADD 8
-	NOP
-	NOP
-	NOP
-	NOP ; sect 4 add
+	NOP ; sect 1 add
 	MOVLW	0x08 ; 8 bit
 	
 ; ############################### ADD 16
-	NOP
-	NOP
-	NOP
-	NOP ; sect 4 add
+	NOP ; sect 1 add
 	MOVLW	0x16 ; 16 bit
 	
 ; ############################### ADD 24
-	NOP
-	NOP
-	NOP
-	NOP ; sect 4 add
+	NOP ; sect 1 add
 	MOVLW	0x24 ; 24 bit
 	
 ; ############################### ADD 32
-	NOP
-	NOP
-	NOP
-	NOP ; sect 4 add
+	NOP ; sect 1 add
 	MOVLW	0x32 ; 32 bit
+	
+	
+	
+; ############################### ADDL 8
+	NOP ; sect 1 addl
+	MOVLW	0x80 ; 8 bit
+	
+; ############################### ADDL 16
+	NOP ; sect 1 addl
+	MOVLW	0x61 ; 16 bit
+	
+; ############################### ADDL 24
+	NOP ; sect 1 addl
+	MOVLW	0x42 ; 24 bit
+	
+; ############################### ADDL 32
+	NOP ; sect 1 addl
+	MOVLW	0x23 ; 32 bit
+	
+	
 	
 	
 	
 ; ############################### SUB 8
 	NOP
-	NOP
-	NOP
-	NOP ; sect 4 sub
+	NOP ; sect 2 sub
 	MOVLW	0x08 ; 8 bit
 	
 ; ############################### SUB 16
 	NOP
-	NOP
-	NOP
-	NOP ; sect 4 sub
-	MOVLW	0x61 ; 16 bit
+	NOP ; sect 2 sub
+	MOVLW	0x16 ; 16 bit
 	
 ; ############################### SUB 24
 	NOP
-	NOP
-	NOP
-	NOP ; sect 4 sub
-	MOVLW	0x42 ; 24 bit
+	NOP ; sect 2 sub
+	MOVLW	0x24 ; 24 bit
 	
 ; ############################### SUB 32
 	NOP
+	NOP ; sect 2 sub
+	MOVLW	0x32 ; 32 bit
+	
+	
+	
+; ############################### SUBL 8
+	NOP
+	NOP ; sect 2 subl
+	MOVLW	0x80 ; 8 bit
+	
+; ############################### SUBL 16
+	NOP
+	NOP ; sect 2 subl
+	MOVLW	0x61 ; 16 bit
+	
+; ############################### SUBL 24
+	NOP
+	NOP ; sect 2 subl
+	MOVLW	0x42 ; 24 bit
+	
+; ############################### SUBL 32
+	NOP
+	NOP ; sect 2 subl
+	MOVLW	0x23 ; 32 bit
+
+
+
+
+
+; ############################### SUBF 8
 	NOP
 	NOP
-	NOP ; sect 4 sub
+	NOP ; sect 3 subf
+	MOVLW	0x08 ; 8 bit
+	
+; ############################### SUBF 16
+	NOP
+	NOP
+	NOP ; sect 3 subf
+	MOVLW	0x16 ; 16 bit
+	
+; ############################### SUBF 24
+	NOP
+	NOP
+	NOP ; sect 3 subf
+	MOVLW	0x24 ; 24 bit
+	
+; ############################### SUBF 32
+	NOP
+	NOP
+	NOP ; sect 3 subf
+	MOVLW	0x32 ; 32 bit
+	
+	
+	
+	
+	
+; ############################### SUBFL 8
+	NOP
+	NOP
+	NOP ; sect 3 subfl
+	MOVLW	0x80 ; 8 bit
+	
+; ############################### SUBFL 16
+	NOP
+	NOP
+	NOP ; sect 3 subfl
+	MOVLW	0x61 ; 16 bit
+	
+; ############################### SUBFL 24
+	NOP
+	NOP
+	NOP ; sect 3 subfl
+	MOVLW	0x42 ; 24 bit
+	
+; ############################### SUBFL 32
+	NOP
+	NOP
+	NOP ; sect 3 subfl
 	MOVLW	0x23 ; 32 bit
 	
-
-
-
+	
+	
+	
 
 
 ; ############################### INC 16
 	NOP
 	NOP
 	NOP
-	NOP
-	NOP ; sect 5 inc
-	MOVLW	0x16 ; 16 bit
-	
+	NOP ; sect 4 inc
+	MOVLW	0x16 ; 16 bit	
 	
 ; ############################### INC 24
 	NOP
 	NOP
 	NOP
-	NOP
-	NOP ; sect 5 inc
+	NOP ; sect 4 inc
 	MOVLW	0x24 ; 24 bit
 	
 ; ############################### INC 32
 	NOP
 	NOP
 	NOP
-	NOP
-	NOP ; sect 5 inc
+	NOP ; sect 4 inc
 	MOVLW	0x32 ; 32 bit
 	
 	
@@ -216,115 +284,25 @@ buzzmem:
 	NOP
 	NOP
 	NOP
-	NOP
-	NOP ; sect 5 dec
-	MOVLW	0x61 ; 16 bit
-	
-	
+	NOP ; sect 4 dec
+	MOVLW	0x61 ; 16 bit	
 	
 ; ############################### DEC 24
 	NOP
 	NOP
 	NOP
-	NOP
-	NOP ; sect 5 inc
-	MOVLW	0x42 ; 24 bit
-	
-	
+	NOP ; sect 4 dec
+	MOVLW	0x42 ; 24 bit	
 	
 ; ############################### DEC 32
 	NOP
 	NOP
 	NOP
-	NOP
-	NOP ; sect 5 inc
+	NOP ; sect 4 dec
 	MOVLW	0x23 ; 32 bit
-	
-	
-	
-	
-	
-; ############################### ADDL 8
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 addlit	
-	MOVLW	0x08 ; 8 bit
-	
-; ############################### ADDL 16
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 addlit
-	MOVLW	0x16 ; 16 bit
-	
-; ############################### ADDL 24
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 addlit
-	MOVLW	0x24 ; 24 bit
-	
-; ############################### ADDL 32
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 addlit
-	MOVLW	0x32 ; 32 bit
-	
-	
-; ############################### SUBL 8
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 sublit
-	MOVLW	0x80 ; 8 bit	
-	
-; ############################### SUBL 16
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 sublit
-	MOVLW	0x61 ; 16 bit
-	
-; ############################### SUBL 24
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 sublit
-	MOVLW	0x42 ; 24 bit
-	
-; ############################### SUBL 32
-	NOP
-	NOP
-	NOP
-	
-	NOP
-	NOP	
-	NOP ; sect 6 sublit
-	MOVLW	0x23 ; 32 bit	
-	
+
+
+
 ; ###############################
 	GOTO $
 	END
