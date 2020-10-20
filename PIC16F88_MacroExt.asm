@@ -20,8 +20,27 @@
 ;	CLRFx, INCFx, DECFx
 ;	ASSERTx
 ;#############################################################################
+; TODO other extensions:
+;	DEFSZsci
+; 	RLFsci, RRFsci
+;	AND, OR, XOR
+; TODO new instructions:
+;	BS, BC with 2 operands as files
+;	BTSS, BTSC with 2 operands as files
+;	SHIFTR SHIFTL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 4/8/12/16/20/24/28/32
+; 	MULT DIV
+;	packed BCD arithmetics, string utilities 
 
-
+SHIFTR	MACRO	file, qty; through carry
+	LOCAL	_top, _end
+	TEST	qty
+	BR_ZE	_end
+_top:
+	RRF	file, F
+	DECFSZ	qty
+	GOTO	_top
+_end:
+	ENDM
 
 ;#############################################################################
 ;	Tests

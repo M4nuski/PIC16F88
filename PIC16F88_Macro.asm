@@ -4,8 +4,8 @@
 ;
 ;	BANK Switching
 ;	TEST and COMP
-;	BRanchs and SKips
-;	Bit Tests
+;	Conditionals BRanchs, CAlls and SKips
+;	Bit Tests conditionals BRanchs, CAlls and SKips
 ;	8 bit file on file instructions:
 ;		STR, NEG, MOV, SWAP, ADD, ADDL, SUB, SUBL, SUBF, SUBFL 
 ;	ISR context switching
@@ -92,7 +92,7 @@ COMP_l_w	MACRO lit		; literal vs w
 ;	CArry, No Carry
 ;	BOrrow, No Borrow
 ;#############################################################################
-
+; from test and comp result
 BR_EQ	MACRO	dest
 	BTFSC	STATUS, Z
 	GOTO	dest
@@ -134,7 +134,8 @@ BR_LE	MACRO 	dest
 	BTFSC	STATUS, Z
 	GOTO	dest
 	ENDM
-
+	
+; from status state
 BR_ZE	MACRO	dest	; zero
 	BTFSC	STATUS, Z
 	GOTO	dest
@@ -165,6 +166,88 @@ BR_NB	MACRO	dest	; no borrow
 	GOTO	dest
 	ENDM
 	
+	
+;#############################################################################
+;	Call
+;#############################################################################
+
+; from test and comp result
+CALL_EQ	MACRO	dest
+	BTFSC	STATUS, Z
+	CALL	dest
+	ENDM
+	
+CALL_NE	MACRO	dest
+	BTFSS	STATUS, Z
+	CALL	dest
+	ENDM
+
+CALL_GT	MACRO 	dest
+	LOCAL	_end
+	BTFSC	STATUS, Z	; first test for not equal
+	GOTO	_end
+	BTFSC	STATUS, C	; skip call if there was no borrow
+	CALL	dest
+_end:
+	ENDM
+
+CALL_GE	MACRO 	dest
+	LOCAL	_call
+	BTFSC	STATUS, Z
+	GOTO	_call
+	BTFSC	STATUS, C
+_call:	
+	CALL	dest
+	ENDM
+	
+CALL_LT	MACRO	dest
+	LOCAL	_end
+	BTFSC	STATUS, Z	; test that not equal
+	GOTO	_end
+	BTFSS	STATUS, C	; skip if there was a carry (less)
+	CALL	dest
+_end:
+	ENDM
+
+CALL_LE	MACRO 	dest
+	LOCAL	_call
+	BTFSC	STATUS, Z
+	GOTO	_call
+	BTFSS	STATUS, C
+_call:
+	CALL	dest
+	ENDM
+
+; from status state
+CALL_ZE	MACRO	dest	; zero
+	BTFSC	STATUS, Z
+	CALL	dest
+	ENDM
+	
+CALL_NZ	MACRO	dest	; not zero
+	BTFSS	STATUS, Z
+	CALL	dest
+	ENDM
+	
+CALL_CA	MACRO	dest	; carry
+	BTFSC	STATUS, C
+	CALL	dest
+	ENDM	
+	
+CALL_NC	MACRO	dest	; no carry
+	BTFSS	STATUS, C
+	CALL	dest
+	ENDM
+
+CALL_BO	MACRO	dest	; borrow
+	BTFSS	STATUS, C
+	CALL	dest
+	ENDM
+	
+CALL_NB	MACRO	dest	; no borrow
+	BTFSC	STATUS, C
+	CALL	dest
+	ENDM
 	
 	
 ;#############################################################################
@@ -222,6 +305,22 @@ BTFBC	MACRO	file, bit, dest	; branch if clear
 
 
 ;#############################################################################
+;	Bit test File and CALL
+;#############################################################################
+
+BTFCS	MACRO	file, bit, dest	; call if set
+	BTFSC	file, bit
+	CALL	dest
+	ENDM
+	
+BTFCC	MACRO	file, bit, dest	; call if clear
+	BTFSS	file, bit
+	CALL	dest
+	ENDM
+	
+	
+	
+;#############################################################################
 ;	Bit test W and Branch
 ;#############################################################################
 
@@ -235,6 +334,24 @@ BTWBC	MACRO	bit, dest		; branch if clear
 	MOVWF	SCRATCH
 	BTFSS	SCRATCH, bit
 	GOTO	dest
+	ENDM
+
+
+
+;#############################################################################
+;	Bit test W and CALL
+;#############################################################################
+
+BTWCS	MACRO	bit, dest		; call if set
+	MOVWF	SCRATCH
+	BTFSC	SCRATCH, bit
+	CALL	dest
+	ENDM
+	
+BTWCC	MACRO	bit, dest		; call if clear
+	MOVWF	SCRATCH
+	BTFSS	SCRATCH, bit
+	CALL	dest
 	ENDM
 
 
