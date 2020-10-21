@@ -1295,7 +1295,8 @@ RRFi	MACRO	file
 ;	bitwise AND, OR, XOR
 ;#############################################################################
 
-ANDs	MACRO	a, b	; a = a & b
+; a = a & b
+ANDs	MACRO	a, b
 	CLRF	SCRATCH
 	MOVF	b, W
 	ANDWF	a, F
@@ -1307,7 +1308,7 @@ ANDs	MACRO	a, b	; a = a & b
 	BCF	STATUS, Z
 	ENDM
 	
-ANDc	MACRO	a, b	; a = a & b
+ANDc	MACRO	a, b
 	CLRF	SCRATCH
 	
 	MOVF	b, W
@@ -1325,6 +1326,87 @@ ANDc	MACRO	a, b	; a = a & b
 	BTFSC	SCRATCH
 	BCF	STATUS, Z
 	ENDM
+	
+ANDi	MACRO	a, b
+	CLRF	SCRATCH
+	
+	MOVF	b, W
+	ANDWF	a, F	
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 1, W
+	ANDWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 2, W
+	ANDWF	a + 2, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 3, W
+	ANDWF	a + 3, F
+	BTFSC	SCRATCH
+	BCF	STATUS, Z
+	ENDM
+
+; a = a | b
+ORs	MACRO	a, b
+	CLRF	SCRATCH
+	MOVF	b, W
+	IORWF	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	b + 1, W
+	IORWF	a + 1, F
+	BTFSC	SCRATCH
+	BCF	STATUS, Z
+	ENDM
+	
+ORc	MACRO	a, b
+	CLRF	SCRATCH
+	
+	MOVF	b, W
+	IORWF	a, F	
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 1, W
+	IORWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 2, W
+	IORWF	a + 2, F
+	BTFSC	SCRATCH
+	BCF	STATUS, Z
+	ENDM
+	
+ORi	MACRO	a, b
+	CLRF	SCRATCH
+	
+	MOVF	b, W
+	IORWF	a, F	
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 1, W
+	IORWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 2, W
+	IORWF	a + 2, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 3, W
+	IORWF	a + 3, F
+	BTFSC	SCRATCH
+	BCF	STATUS, Z
+	ENDM
+
 
 
 ;#############################################################################
