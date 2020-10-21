@@ -1,7 +1,7 @@
 ;#############################################################################
 ;	PIC16F88 MACRO TEST 2
 ;	Test program for the the macro instructions:
-;	ADD ADDL SUB SUBL SUBF SUBFL INCF DECF
+;	ADD ADDL SUB SUBL SUBF SUBFL INCF DECF DECFSZ
 ;#############################################################################
 
 	LIST	p=16F88			 ; processor model

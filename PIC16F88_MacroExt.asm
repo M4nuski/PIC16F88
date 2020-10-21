@@ -16,20 +16,21 @@
 ;	Operations:
 ;	TESTx
 ;	COMPx_x_x
-;	STRx, MOVEx, SAWPx, NEGx, ADDx, ADDLx, SUBx, SUBLx, SUBFLx
-;	CLRFx, INCFx, DECFx
+;	STRx, MOVEx, SAWPx, NEGx, 
+;	ADDx, ADDLx, SUBx, SUBLx, SUBFx, SUBFLx
+;	CLRFx, INCFx, DECFx, DECFSZx
 ;	ASSERTx
 ;#############################################################################
 ; TODO other extensions:
-;	DEFSZsci
-; 	RLFsci, RRFsci
-;	AND, OR, XOR
+; 	RLFx, RRFx
+;	ANDx, ORx, XORx ( d = a op b)
 ; TODO new instructions:
-;	BS, BC with 2 operands as files
+;	BS, BC with 2 operands as files (file to test, file with bit index)
 ;	BTSS, BTSC with 2 operands as files
-;	SHIFTR SHIFTL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 4/8/12/16/20/24/28/32
-; 	MULT DIV
-;	packed BCD arithmetics, string utilities 
+;	SHIFTR, SHIFTL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 4/8/12/16/20/24/28/32
+; 	MULT, DIV
+;	packed BCD arithmetics
+;	string utilities
 
 SHIFTR	MACRO	file, qty; through carry
 	LOCAL	_top, _end
@@ -1194,18 +1195,19 @@ DECFSZc	MACRO	file
 	ENDM
 
 DECFSZi	MACRO	file
+	LOCAL	_b1
 	CLRF	SCRATCH
 	MOVLW	0x01
 	SUBWF	file, F
 	SK_ZE
 	BSF	SCRATCH, Z	; set #Z
-	SK_NB
+	BR_NB	_b1
 	SUBWF	file + 1, F	; propagate borrow
 	SK_NB
 	SUBWF	file + 2, F
 	SK_NB
 	SUBWF	file + 3, F
-	
+_b1:
 	MOVF	file + 1, F	; test b1
 	SK_ZE
 	BSF	SCRATCH, Z
@@ -1218,6 +1220,48 @@ DECFSZi	MACRO	file
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z	; mask Z if #Z was set
 	SK_ZE
+	ENDM
+
+
+
+;#############################################################################
+;	Rotate Right through carry
+;	Rotate Left through carry
+;#############################################################################
+
+RLFs	MACRO	file
+	RLF	file, F
+	RLF	file + 1, F
+	ENDM
+	
+RLFc	MACRO	file
+	RLF	file, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	ENDM
+	
+RLFi	MACRO	file
+	RLF	file, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	ENDM
+	
+RRFs	MACRO	file
+	RRF	file + 1, F	
+	RRF	file, F
+	ENDM
+	
+RRFc	MACRO	file
+	RRF	file + 2, F	
+	RRF	file + 1, F	
+	RRF	file, F
+	ENDM
+RRFi	MACRO	file
+	RRF	file + 3, F
+	RRF	file + 2, F	
+	RRF	file + 1, F	
+	RRF	file, F
 	ENDM
 
 
