@@ -16,14 +16,14 @@
 ;	Operations:
 ;	TESTx
 ;	COMPx_x_x
-;	STRx, MOVEx, SAWPx, NEGx, 
+;	STRx, MOVEx, SAWPx, NEGx
 ;	ADDx, ADDLx, SUBx, SUBLx, SUBFx, SUBFLx
 ;	CLRFx, INCFx, DECFx, DECFSZx
+;	RLFx, RRFx, COMFx, ADDx, ORx, XORx
 ;	ASSERTx
 ;#############################################################################
 ; TODO other extensions:
-; 	RLFx, RRFx
-;	ANDx, ORx, XORx ( d = a op b)
+;	ANDx, ORx, XORx
 ; TODO new instructions:
 ;	BS, BC with 2 operands as files (file to test, file with bit index)
 ;	BTSS, BTSC with 2 operands as files
@@ -1006,6 +1006,31 @@ _b1:
 
 
 ;#############################################################################
+;	Invert (COMF)
+;	 a = (NOT a)
+;#############################################################################
+
+COMFs	MACRO	file
+	COMF	file, F
+	COMF	file + 1, F
+	ENDM
+	
+COMFc	MACRO	file
+	COMF	file, F
+	COMF	file + 1, F
+	COMF	file + 2, F
+	ENDM
+	
+COMFi	MACRO	file
+	COMF	file, F
+	COMF	file + 1, F
+	COMF	file + 2, F
+	COMF	file + 3, F
+	ENDM
+
+
+
+;#############################################################################
 ;	Negate (two's complement)
 ;	 a = (NOT a) + 1
 ;#############################################################################
@@ -1264,6 +1289,42 @@ RRFi	MACRO	file
 	RRF	file, F
 	ENDM
 
+
+
+;#############################################################################
+;	bitwise AND, OR, XOR
+;#############################################################################
+
+ANDs	MACRO	a, b	; a = a & b
+	CLRF	SCRATCH
+	MOVF	b, W
+	ANDWF	a, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	MOVF	b + 1, W
+	ANDWF	a + 1, F
+	BTFSC	SCRATCH
+	BCF	STATUS, Z
+	ENDM
+	
+ANDc	MACRO	a, b	; a = a & b
+	CLRF	SCRATCH
+	
+	MOVF	b, W
+	ANDWF	a, F	
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 1, W
+	ANDWF	a + 1, F
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	MOVF	b + 2, W
+	ANDWF	a + 2, F
+	BTFSC	SCRATCH
+	BCF	STATUS, Z
+	ENDM
 
 
 ;#############################################################################
