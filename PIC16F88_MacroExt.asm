@@ -22,10 +22,10 @@
 ;	RLFx, RRFx, COMFx, ADDx, IORx, XORx
 ;	ASSERTx
 ;	SHIFTRx, SHIFTLx, RRx, RLx (file)target, (file)bit instead of (file)target, (literal)bit
-;	BS, BC (file)target, (file)bit instead of (file)target, (literal)bit
+;	BSetx, BClearx (file)target, (file)bit instead of (file)target, (literal)bit
+;	BTSSx, BTSCx (file)target, (file)bit instead of (file)target, (literal)bit
 ;#############################################################################
-; TODO new instructions:;	
-;	BTSS, BTSC (file)target, (file)bit instead of (file)target, (literal)bit
+; TODO new instructions:
 ; 	MULT, DIV
 ;	packed BCD arithmetics
 ;	string utilities
@@ -34,11 +34,237 @@
 
 
 ;#############################################################################
+;	Bit Test SKip if Set (file)target, (file)bit
+;	Check if a bit is set in a file, skip next
+;#############################################################################
+
+BTSS	MACRO	file, bit
+	LOCAL	_select
+	MOVLW	0x01	;0000 0001 
+	BTFSC	bit, 2	;4
+	MOVLW	0x10	;0001 0000
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	MOVF	file, W
+	
+	ANDWF	SCRATCH, W	
+	BTFSC	STATUS, Z	; if not Z, bit was set
+	ENDM
+	
+BTSSs	MACRO	file, bit	; 16 bit
+	LOCAL	_select
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	BTFSC	bit, 3
+	MOVF	file + 1, W
+	BTFSS	bit, 3
+	MOVF	file + 0, W
+	
+	ANDWF	SCRATCH, W	
+	BTFSC	STATUS, Z	; if not Z, bit was set
+	ENDM
+
+BTSSc	MACRO	file, bit	; 24 bit
+	LOCAL	_select, _8, _end
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	MOVF	file + 2, W
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	MOVF	file + 1, W
+	BTFSS	bit, 3 ; 8
+	MOVF	file + 0, W	
+_end:
+	ANDWF	SCRATCH, W	
+	BTFSC	STATUS, Z	; if not Z, bit was set
+	ENDM
+	
+BTSSi	MACRO	file, bit	; 32 bit
+	LOCAL	_select, _8, _end
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	BTFSC	bit, 3 ; 8
+	MOVF	file + 3, W
+	BTFSS	bit, 3 ; 8
+	MOVF	file + 2, W	
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	MOVF	file + 1, W
+	BTFSS	bit, 3 ; 8
+	MOVF	file + 0, W	
+_end:
+	ANDWF	SCRATCH, W	
+	BTFSC	STATUS, Z	; if not Z, bit was set
+	ENDM
+
+
+
+;#############################################################################
+;	Bit Test SKip if Clear (file)target, (file)bit
+;	Check if a bit is cleared in a file, skip next
+;#############################################################################
+
+BTSC	MACRO	file, bit
+	LOCAL	_select
+	MOVLW	0x01	;0000 0001 
+	BTFSC	bit, 2	;4
+	MOVLW	0x10	;0001 0000
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	MOVF	file, W
+	
+	ANDWF	SCRATCH, W	
+	BTFSS	STATUS, Z	; if Z, bit was cleared
+	ENDM
+	
+BTSCs	MACRO	file, bit	; 16 bit
+	LOCAL	_select
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	BTFSC	bit, 3
+	MOVF	file + 1, W
+	BTFSS	bit, 3
+	MOVF	file + 0, W
+	
+	ANDWF	SCRATCH, W	
+	BTFSS	STATUS, Z	; if Z, bit was cleared
+	ENDM
+
+BTSCc	MACRO	file, bit	; 24 bit
+	LOCAL	_select, _8, _end
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	MOVF	file + 2, W
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	MOVF	file + 1, W
+	BTFSS	bit, 3 ; 8
+	MOVF	file + 0, W	
+_end:
+	ANDWF	SCRATCH, W	
+	BTFSS	STATUS, Z	; if Z, bit was cleared
+	ENDM
+	
+BTSCi	MACRO	file, bit	; 32 bit
+	LOCAL	_select, _8, _end
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_select
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_select:
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	BTFSC	bit, 3 ; 8
+	MOVF	file + 3, W
+	BTFSS	bit, 3 ; 8
+	MOVF	file + 2, W	
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	MOVF	file + 1, W
+	BTFSS	bit, 3 ; 8
+	MOVF	file + 0, W	
+_end:
+	ANDWF	SCRATCH, W	
+	BTFSS	STATUS, Z	; if Z, bit was cleared
+	ENDM
+
+
+
+;#############################################################################
 ;	BitSet
 ;	Set bit in file, bit number is read from file
 ;#############################################################################
 
-BS	MACRO	file, bit
+BSet	MACRO	file, bit
 	LOCAL	_set
 	MOVLW	0x01	;0000 0001 
 	BTFSC	bit, 2	;4
@@ -57,7 +283,7 @@ _set:
 	IORWF	file, F
 	ENDM
 
-BSs	MACRO	file, bit	; 16 bit
+BSets	MACRO	file, bit	; 16 bit
 	LOCAL	_set
 	MOVLW	0x01	;0000 0001 ;0
 	BTFSC	bit, 2
@@ -79,7 +305,7 @@ _set:
 	IORWF	file + 0, F
 	ENDM
 	
-BSc	MACRO	file, bit	; 24 bit
+BSetc	MACRO	file, bit	; 24 bit
 	LOCAL	_set, _8, _end
 	MOVLW	0x01	;0000 0001 ;0
 	BTFSC	bit, 2
@@ -107,7 +333,7 @@ _8:
 _end:
 	ENDM
 
-BSi	MACRO	file, bit	; 32 bit
+BSeti	MACRO	file, bit	; 32 bit
 	LOCAL	_set, _8, _end
 	MOVLW	0x01	;0000 0001 ;0
 	BTFSC	bit, 2
@@ -145,7 +371,7 @@ _end:
 ;	Set bit in file, bit number is read from file
 ;#############################################################################
 
-BS	MACRO	file, bit
+BClear	MACRO	file, bit
 	LOCAL	_set
 	MOVLW	0xFE	;1111 1110 
 	BTFSC	bit, 2	;4
@@ -164,7 +390,7 @@ _set:
 	ANDWF	file, F
 	ENDM
 
-BSs	MACRO	file, bit	; 16 bit
+BClears	MACRO	file, bit	; 16 bit
 	LOCAL	_set
 	MOVLW	0xFE	;1111 1110 
 	BTFSC	bit, 2	;4
@@ -186,7 +412,7 @@ _set:
 	ANDWF	file + 0, F
 	ENDM
 	
-BSc	MACRO	file, bit	; 24 bit
+BClearc	MACRO	file, bit	; 24 bit
 	LOCAL	_set, _8, _end
 	MOVLW	0xFE	;1111 1110 
 	BTFSC	bit, 2	;4
@@ -214,7 +440,7 @@ _8:
 _end:
 	ENDM
 
-BSi	MACRO	file, bit	; 32 bit
+BCleari	MACRO	file, bit	; 32 bit
 	LOCAL	_set, _8, _end
 	MOVLW	0xFE	;1111 1110 
 	BTFSC	bit, 2	;4
