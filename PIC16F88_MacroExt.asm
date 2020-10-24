@@ -21,16 +21,229 @@
 ;	CLRFx, INCFx, DECFx, DECFSZx
 ;	RLFx, RRFx, COMFx, ADDx, IORx, XORx
 ;	ASSERTx
+;	SHIFTRx, SHIFTLx, RRx, RLx (file)target, (file)bit instead of (file)target, (literal)bit
+;	BS, BC (file)target, (file)bit instead of (file)target, (literal)bit
 ;#############################################################################
-; TODO new instructions:
-;	BS, BC with 2 operands as files (file to test, file with bit index)
-;	BTSS, BTSC with 2 operands as files
-;	RR, RL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 8/16/24/32
-;	SHIFTR, SHIFTL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 8/16/24/32
+; TODO new instructions:;	
+;	BTSS, BTSC (file)target, (file)bit instead of (file)target, (literal)bit
 ; 	MULT, DIV
 ;	packed BCD arithmetics
 ;	string utilities
 
+
+
+
+;#############################################################################
+;	BitSet
+;	Set bit in file, bit number is read from file
+;#############################################################################
+
+BS	MACRO	file, bit
+	LOCAL	_set
+	MOVLW	0x01	;0000 0001 
+	BTFSC	bit, 2	;4
+	MOVLW	0x10	;0001 0000
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	IORWF	file, F
+	ENDM
+
+BSs	MACRO	file, bit	; 16 bit
+	LOCAL	_set
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	BTFSC	bit, 3
+	IORWF	file + 1, F
+	BTFSS	bit, 3
+	IORWF	file + 0, F
+	ENDM
+	
+BSc	MACRO	file, bit	; 24 bit
+	LOCAL	_set, _8, _end
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	IORWF	file + 2, F
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	IORWF	file + 1, F
+	BTFSS	bit, 3 ; 8
+	IORWF	file + 0, F	
+_end:
+	ENDM
+
+BSi	MACRO	file, bit	; 32 bit
+	LOCAL	_set, _8, _end
+	MOVLW	0x01	;0000 0001 ;0
+	BTFSC	bit, 2
+	MOVLW	0x10	;0001 0000 ;4
+	MOVWF	SCRATCH
+	BCF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	BTFSC	bit, 3 ; 8
+	IORWF	file + 3, F
+	BTFSS	bit, 3 ; 8
+	IORWF	file + 2, F	
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	IORWF	file + 1, F
+	BTFSS	bit, 3 ; 8
+	IORWF	file + 0, F	
+_end:
+	ENDM
+
+
+
+;#############################################################################
+;	BitClear
+;	Set bit in file, bit number is read from file
+;#############################################################################
+
+BS	MACRO	file, bit
+	LOCAL	_set
+	MOVLW	0xFE	;1111 1110 
+	BTFSC	bit, 2	;4
+	MOVLW	0xEF	;1110 1111
+	MOVWF	SCRATCH
+	BSF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	ANDWF	file, F
+	ENDM
+
+BSs	MACRO	file, bit	; 16 bit
+	LOCAL	_set
+	MOVLW	0xFE	;1111 1110 
+	BTFSC	bit, 2	;4
+	MOVLW	0xEF	;1110 1111
+	MOVWF	SCRATCH
+	BSF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	BTFSC	bit, 3
+	ANDWF	file + 1, F
+	BTFSS	bit, 3
+	ANDWF	file + 0, F
+	ENDM
+	
+BSc	MACRO	file, bit	; 24 bit
+	LOCAL	_set, _8, _end
+	MOVLW	0xFE	;1111 1110 
+	BTFSC	bit, 2	;4
+	MOVLW	0xEF	;1110 1111
+	MOVWF	SCRATCH
+	BSF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	ANDWF	file + 2, F
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	ANDWF	file + 1, F
+	BTFSS	bit, 3 ; 8
+	ANDWF	file + 0, F	
+_end:
+	ENDM
+
+BSi	MACRO	file, bit	; 32 bit
+	LOCAL	_set, _8, _end
+	MOVLW	0xFE	;1111 1110 
+	BTFSC	bit, 2	;4
+	MOVLW	0xEF	;1110 1111
+	MOVWF	SCRATCH
+	BSF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	BTFSS	bit, 4 ; 16
+	GOTO	_8
+	BTFSC	bit, 3 ; 8
+	ANDWF	file + 3, F
+	BTFSS	bit, 3 ; 8
+	ANDWF	file + 2, F	
+	GOTO	_end
+_8:
+	BTFSC	bit, 3 ; 8
+	ANDWF	file + 1, F
+	BTFSS	bit, 3 ; 8
+	ANDWF	file + 0, F	
+_end:
+	ENDM
 
 
 
