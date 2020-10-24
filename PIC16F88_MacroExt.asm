@@ -25,73 +25,37 @@
 ; TODO new instructions:
 ;	BS, BC with 2 operands as files (file to test, file with bit index)
 ;	BTSS, BTSC with 2 operands as files
-;	SHIFTR, SHIFTL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 4/8/12/16/20/24/28/32
+;	RR, RL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 8/16/24/32
+;	SHIFTR, SHIFTL with # of bit shifted from file + optimized to avoid multiple RLF and RRF on 8/16/24/32
 ; 	MULT, DIV
 ;	packed BCD arithmetics
 ;	string utilities
 
-SHIFTRloop	MACRO	file, qty ; fill with Carry
-	LOCAL	_top, _end
-	; zero check, 3 cycles if not 0, 4 if zero
-	TEST	qty
-	BR_ZE	_end
 
-	; context save, 3 cycles
-	MOVF	qty, W		; save qty
-	MOVWF	SCRATCH	
-	MOVF	STATUS, W	; save status( for Carry bit )
-	
-	; 6 cycles to get here qty + no0
-	; 5 cycles -qty
-	; 3 cycles -no0
-	; 2 cycles -qty -no0
-_top:
-	RRF	file, F
-	MOVWF	STATUS
-	DECFSZ	qty
-	GOTO	_top
-	; loop, 5 cycles per loop, 4 for single pass
-	
-	MOVF	SCRATCH, W	; restore qty
-	MOVWF	qty
-	; context restore, 2 cycles
-	; 1 cycles -qty
-_end:
-	ENDM
-; qty	cycles	-qty	-no0	-qty-no0
-; 0	4	4	1029	1027	
-; 1	12	10	9	7
-; 2	17	15	14	12
-; 3	22	10	19	17
-; 4	27	25	24	22
-; 5	32	30	29	27
-; 6	37	35	34	32
-; 7	42	40	39	37
-; 8	47	45	44	42
-;E	240	214	1241/212 1223/196
 
-SHIFTRhash	MACRO	file, qty ; fill with Carry
+
+;#############################################################################
+;	Shift Right(qty)
+;	Fill bits with carry
+;#############################################################################
+
+SHIFTR	MACRO	file, qty 	; 8 bit Shift Right, fill with Carry
 	LOCAL	 _4, _2, _1, _end
 	
 	TEST	qty
 	BR_ZE	_end
-	; zero check, 3 cycles if not 0, 4 if zero
-		
 	MOVF	STATUS, W	; save status( for Carry bit )
-	; context save, 1 cycle
 
-	BTFSS	qty, 3 ; shift by 8 all bits are replaced by C
-	GOTO	_4
+	BTFSS	qty, 3 		; shift by 8: all bits are replaced by C
+	GOTO	_4	
 	CLRW
 	BTFSC	STATUS, C
 	MOVLW	0xFF
 	MOVWF	file
 	GOTO 	_end
-	;8 cycles, 3 if skipped
 _4:
-	BTFSS	qty, 2 ; shift by 4 nibbles are swapped
-	GOTO	_2
-	
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
 	RRF	file, F
 	MOVWF	STATUS
 	RRF	file, F
@@ -99,55 +63,28 @@ _4:
 	RRF	file, F
 	MOVWF	STATUS
 	RRF	file, F	
-	MOVWF	STATUS
-	; shift 4, 10 cycles, 3 if skipped
-				; f = hgfe dcba
-	;MOVLW	0xF0		; w = 1111 0000
-	;ANDWF	file, F		; f = hgfe 0000
-	;SWAPF	file, F		; f = 0000 hgfe
-	;BTFSS	STATUS, C	; if C = 0		if C = 1
-	;MOVLW	0x00		; w = 0000 0000	w = 1111 0000
-	;IORWF	file, F		; f = CCCC hgfe
-	;MOVF	STATUS, W
-	; shift 4, 9 cycles, 3 if skipped
-	
+	MOVWF	STATUS	
 _2:
-	BTFSS	qty, 1 ; shift by 2
+	BTFSS	qty, 1 		; shift by 2
 	GOTO	_1
 	RRF	file, F
 	MOVWF	STATUS
 	RRF	file, F	
-	MOVWF	STATUS
-	; shift 2, 6 cycles, 3 if skipped
+	MOVWF	STATUS	
 _1:
-	BTFSC	qty, 0 ; shift by 1
+	BTFSC	qty, 0 		; shift by 1
 	RRF	file, F	
 _end:
 	ENDM
-; qty	cycles	-no0	swap	swap - no0
-; 0	4	12	4	12
-; 1	15	12	15	12
-; 2	18	15	18	15
-; 3	18	15	18	15
-; 4	22	19	21	18
-; 5	22	19	21	18
-; 6	25	22	24	21
-; 7	25	22	24	21
-; 8	12	9	12	9
-; E	161	145	157	141	
 
-SHIFTRhash16	MACRO	file, qty ; fill with Carry
+SHIFTRs	MACRO	file, qty	; 16 bit Shift Right, fill with Carry
 	LOCAL	 _8, _4, _2, _1, _end
 
 	TEST	qty
 	BR_ZE	_end
-	; 3 if skip to end
-	
 	MOVF	STATUS, W	; save status( for Carry bit )
-	MOVWF	SCRATCH
-	; 5 for full setup
 	
-	BTFSS	qty, 4 ; shift by 16: all bits are replaced by C
+	BTFSS	qty, 4 		; shift by 16: byte1 and byte0 are filled with C
 	GOTO	_8
 	CLRW
 	BTFSC	STATUS, C
@@ -155,23 +92,20 @@ SHIFTRhash16	MACRO	file, qty ; fill with Carry
 	MOVWF	file
 	MOVWF	file + 1
 	GOTO 	_end
-	; 8, 3 if skip
 _8:
-	BTFSS	qty, 3 ; shift by 8: swap high byte with low, replace high with C
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte0, fill byte1 with C
 	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
 	MOVF	file + 1, W
-	MOVWF	file
+	MOVWF	file + 0
 	CLRW
 	BTFSC	STATUS, C
 	MOVLW	0xFF
 	MOVWF	file + 1
 	MOVF	SCRATCH, W
-	; 9, 3 if skip
-	
 _4:
-	BTFSS	qty, 2 ; shift by 4
-	GOTO	_2
-	
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
 	RRF	file + 1, F
 	RRF	file, F
 	MOVWF	STATUS
@@ -184,113 +118,968 @@ _4:
 	RRF	file + 1, F
 	RRF	file, F	
 	MOVWF	STATUS
-	; 14, 3 if skip	
-	
-	
-	; Shift Right ->	;     file + 1     file
-				; f = ponm lkji  hgfe dcba
-	;MOVLW	0xF0		; w = 1111 0000
-	;ANDWF	file, F		; f = ponm lkji  hgfe 0000
-	;SWAPF	file, F		; f = ponm lkji  0000 hgfe
-	
-	;SWAPF	file + 1, F	; f = lkji ponm  0000 hgfe
-	;ANDWF	file + 1, W	; w = lkji 0000
-	;IORWF	file, F		; f = lkji ponm  lkji hgfe	
-	
-	;MOVLW 0x0F		; w = 0000 1111
-	;ANDWF	file + 1, F	; f = 0000 ponm  lkji hgfe
-	;MOVLW 0xF0		; w = 1111 0000
-	;BTFSC	STATUS, C	; 
-	;IORWF	file + 1, F	; f = 1111 ponm  lkji hgfe
-	
-	;MOVF	SCRATCH, W
-	;MOVWF	STATUS, W
-	; 13, 3 if skip
-	
 _2:
-	BTFSS	qty, 1 ; shift by 2
-	GOTO	_1
-	
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1	
 	RRF	file + 1, F
 	RRF	file, F
 	MOVWF	STATUS
 	RRF	file + 1, F
 	RRF	file, F
 	MOVWF	STATUS
-	; 8, 3 if skip 
 _1:
-	BTFSC	qty, 0 ; shift by 1
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RRF	file + 1, F
 	RRF	file, F	
-	; always 2
 _end:
 	ENDM
-;qty	cycles
-; 0	3
-; 1	19
-; 2	24
-; 3	24
-; 4	28
-; 5	28
-; 6	33
-; 7	33
-; 8	25
-; 9	25
-;10	30
-;11	30
-;12	34
-;13	34
-;14	42
-;15	42
-;16	13
-;E	467
-	
-SHIFTRhash16loop	MACRO	file, qty ; fill with Carry
-	LOCAL	_top, _end
+
+SHIFTRc	MACRO	file, qty	; 24 bit Shift Right, fill with Carry
+	LOCAL	_8, _4, _2, _1, _end
 
 	TEST	qty
 	BR_ZE	_end
-	; 3 if skip to end
-	
-	MOVF	qty, W
-	MOVWF	SCRATCH
 	MOVF	STATUS, W	; save status( for Carry bit )
-	; 6 for full setup
-
-_top
+	
+	BTFSS	qty, 4 		; shift by 16: move byte2 to byte0, fill byte1 and byte2 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 2, W
+	MOVWF	file + 0
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 1
+	MOVWF	file + 2
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte0 and byte2 to byte1, fill byte2 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 0
+	MOVF	file + 2, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 2
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RRF	file + 2, F
 	RRF	file + 1, F
 	RRF	file, F
 	MOVWF	STATUS
-	DECFSZ	qty, F
-	GOTO _top
-	;5 pass, 6 loop
-	MOVF	SCRATCH, W
-	MOVWF	qty
-	;2
-_end
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+_end:
 	ENDM
 
-;qty	cycles
-; 0	3
-; 1	13
-; 2	19
-; 3	25
-; 4	31
-; 5	37
-; 6	43
-; 7	49
-; 8	55
-; 9	61
-;10	67
-;11	73
-;12	79
-;13	85
-;14	91
-;15	97
-;16	103
-;E	931
+SHIFTRi	MACRO	file, qty	; 32 bit Shift Right, fill with Carry
+	LOCAL	_16, _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
 	
+	BTFSS	qty, 5 		; shift by 32: replace all by C
+	GOTO	_16
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file
+	MOVWF	file + 1
+	MOVWF	file + 2
+	MOVWF	file + 3
+	GOTO	_end
+_16:
+	BTFSS	qty, 4 		; shift by 16: move byte2 to byte0, byte3 to byte1 fill byte3 and byte2 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 2, W
+	MOVWF	file + 0
+	MOVF	file + 3, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 2
+	MOVWF	file + 3
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte0 and byte2 to byte1, byte3 to byte2, fill byte3 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 0
+	MOVF	file + 2, W
+	MOVWF	file + 1
+	MOVF	file + 3, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 3
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+_end:
+	ENDM
+
+
+
+;#############################################################################
+;	Shift Left(qty)
+;	Fill bits with carry
+;#############################################################################
+
+SHIFTL	MACRO	file, qty 	; 8 bit Shift Left, fill with Carry
+	LOCAL	 _4, _2, _1, _end
 	
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+
+	BTFSS	qty, 3 		; shift by 8: all bits are replaced by C
+	GOTO	_4	
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file
+	GOTO 	_end
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F	
+	MOVWF	STATUS	
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F	
+	MOVWF	STATUS	
+_1:
+	BTFSC	qty, 0 		; shift by 1
+	RLF	file, F	
+_end:
+	ENDM
+
+SHIFTLs	MACRO	file, qty	; 16 bit Shift Left, fill with Carry
+	LOCAL	 _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
 	
+	BTFSS	qty, 4 		; shift by 16: byte0 and byte1 are filled with C
+	GOTO	_8
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	GOTO 	_end
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte0 to byte1, fill byte0 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 0, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1	
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RLF	file, F
+	RLF	file + 1, F
+_end:
+	ENDM
+
+SHIFTLc	MACRO	file, qty	; 24 bit Shift Left, fill with Carry
+	LOCAL	_8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 4 		; shift by 16: move byte0 to byte2, fill byte0 and byte1 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 0, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte2 and byte0 to byte1, fill byte0 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 2
+	MOVF	file + 0, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+_end:
+	ENDM
+
+SHIFTLi	MACRO	file, qty	; 32 bit Shift Left, fill with Carry
+	LOCAL	_16, _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 5 		; shift by 32: replace all by C
+	GOTO	_16
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	MOVWF	file + 2
+	MOVWF	file + 3
+	GOTO	_end
+_16:
+	BTFSS	qty, 4 		; shift by 16: move byte1 to byte3, byte0 to byte2 fill byte0 and byte1 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 3
+	MOVF	file + 0, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte2 to byte3 and byte1 to byte2, byte0 to byte1, fill byte0 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 2, W
+	MOVWF	file + 3
+	MOVF	file + 1, W
+	MOVWF	file + 2
+	MOVF	file + 0, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+_end:
+	ENDM
+
+
+
+;#############################################################################
+;	Rotate Right(qty)
+;	Through carry
+;#############################################################################
+
+RR	MACRO	file, qty 	; 8 bit Rotate Right, through Carry
+	LOCAL	_2, _1, _end
+	
+	TEST	qty
+	BR_ZE	_end
+
+	BTFSC	qty, 3 		; shift by 8: all bits are the same
+	GOTO 	_end
+
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RRF	file, F
+	RRF	file, F
+	RRF	file, F
+	RRF	file, F	
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RRF	file, F
+	RRF	file, F	
+_1:
+	BTFSC	qty, 0 		; shift by 1
+	RRF	file, F	
+_end:
+	ENDM
+
+RRs	MACRO	file, qty 	; 16 bit Rotate Right, through Carry
+	LOCAL	 _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 4 		; shift by 16: byte1 and byte0 are filled with C
+	GOTO	_8
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file
+	MOVWF	file + 1
+	GOTO 	_end
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte0, fill byte1 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 0
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 1
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 1, F
+	RRF	file, F	
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1	
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RRF	file + 1, F
+	RRF	file, F	
+_end:
+	ENDM
+
+RRc	MACRO	file, qty 	; 24 bit Rotate Right, through Carry
+	LOCAL	_8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 4 		; shift by 16: move byte2 to byte0, fill byte1 and byte2 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 2, W
+	MOVWF	file + 0
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 1
+	MOVWF	file + 2
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte0 and byte2 to byte1, fill byte2 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 0
+	MOVF	file + 2, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 2
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+_end:
+	ENDM
+
+RRi	MACRO	file, qty 	; 32 bit Rotate Right, through Carry
+	LOCAL	_16, _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 5 		; shift by 32: replace all by C
+	GOTO	_16
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file
+	MOVWF	file + 1
+	MOVWF	file + 2
+	MOVWF	file + 3
+	GOTO	_end
+_16:
+	BTFSS	qty, 4 		; shift by 16: move byte2 to byte0, byte3 to byte1 fill byte3 and byte2 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 2, W
+	MOVWF	file + 0
+	MOVF	file + 3, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 2
+	MOVWF	file + 3
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte0 and byte2 to byte1, byte3 to byte2, fill byte3 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 0
+	MOVF	file + 2, W
+	MOVWF	file + 1
+	MOVF	file + 3, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 3
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RRF	file + 3, F
+	RRF	file + 2, F
+	RRF	file + 1, F
+	RRF	file, F	
+_end:
+	ENDM
+
+
+
+;#############################################################################
+;	Rotate Left(qty)
+;	Through carry
+;#############################################################################
+
+RL	MACRO	file, qty 	; 8 bit Rotate Left, through Carry
+	LOCAL	 _4, _2, _1, _end
+	
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+
+	BTFSS	qty, 3 		; shift by 8: all bits are replaced by C
+	GOTO	_4	
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file
+	GOTO 	_end
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F	
+	MOVWF	STATUS	
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RLF	file, F
+	MOVWF	STATUS
+	RLF	file, F	
+	MOVWF	STATUS	
+_1:
+	BTFSC	qty, 0 		; shift by 1
+	RLF	file, F	
+_end:
+	ENDM
+
+RLs	MACRO	file, qty 	; 16 bit Rotate Left, through Carry
+	LOCAL	 _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 4 		; shift by 16: byte0 and byte1 are filled with C
+	GOTO	_8
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	GOTO 	_end
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte0 to byte1, fill byte0 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 0, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1	
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+	RLF	file, F
+	RLF	file + 1, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RLF	file, F
+	RLF	file + 1, F
+_end:
+	ENDM
+
+RLc	MACRO	file, qty 	; 24 bit Rotate Left, through Carry
+	LOCAL	_8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 4 		; shift by 16: move byte0 to byte2, fill byte0 and byte1 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 0, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte1 to byte2 and byte0 to byte1, fill byte0 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 2
+	MOVF	file + 0, W
+	MOVWF	file + 1
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2	
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+_end:
+	ENDM
+
+RLi	MACRO	file, qty 	; 32 bit Rotate Left, through Carry
+	LOCAL	_16, _8, _4, _2, _1, _end
+
+	TEST	qty
+	BR_ZE	_end
+	MOVF	STATUS, W	; save status( for Carry bit )
+	
+	BTFSS	qty, 5 		; shift by 32: replace all by C
+	GOTO	_16
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	MOVWF	file + 2
+	MOVWF	file + 3
+	GOTO	_end
+_16:
+	BTFSS	qty, 4 		; shift by 16: move byte1 to byte3, byte0 to byte2 fill byte0 and byte1 with C
+	GOTO	_8
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 1, W
+	MOVWF	file + 3
+	MOVF	file + 0, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVWF	file + 1
+	MOVF	SCRATCH, W
+_8:
+	BTFSS	qty, 3 		; shift by 8: move byte2 to byte3 and byte1 to byte2, byte0 to byte1, fill byte0 with C
+	GOTO	_4
+	MOVWF	SCRATCH		; save w (STATUS)
+	MOVF	file + 2, W
+	MOVWF	file + 3
+	MOVF	file + 1, W
+	MOVWF	file + 2
+	MOVF	file + 0, W
+	MOVWF	file + 2
+	CLRW
+	BTFSC	STATUS, C
+	MOVLW	0xFF
+	MOVWF	file + 0
+	MOVF	SCRATCH, W
+_4:
+	BTFSS	qty, 2 		; shift by 4
+	GOTO	_2
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+_2:
+	BTFSS	qty, 1 		; shift by 2
+	GOTO	_1
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+	MOVWF	STATUS
+_1:
+	BTFSS	qty, 0 		; shift by 1
+	GOTO	_end
+	RLF	file + 0, F
+	RLF	file + 1, F
+	RLF	file + 2, F
+	RLF	file + 3, F
+_end:
+	ENDM
+
 
 ;#############################################################################
 ;	Tests
