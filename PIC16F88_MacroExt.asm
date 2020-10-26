@@ -1,12 +1,13 @@
 ;#############################################################################
 ;	PIC16F88 Extension Macro
 ;	16, 24 and 32 bits operation extensions
-;	Suffixes:
+;	Suffixes (x):
 ;	- s short  16bit
 ;	- c color  24bit
 ;	- i int    32bit
 ;	- d double 64bit (Not yet implemented) 
 ;
+;	Types (t)
 ;	- f file
 ;	- l literal
 ;	- w w register
@@ -14,22 +15,21 @@
 ;	- s signed (Not yet implemented) 
 ;
 ;	Operations:
-;	TESTx
-;	COMPx_x_x
-;	STRx, MOVEx, SAWPx, NEGx
-;	ADDx, ADDLx, SUBx, SUBLx, SUBFx, SUBFLx
-;	CLRFx, INCFx, DECFx, DECFSZx
-;	RLFx, RRFx, COMFx, ADDx, IORx, XORx
-;	ASSERTx
-;	SHIFTRx, SHIFTLx, RRx, RLx (file)target, (file)bit instead of (file)target, (literal)bit
-;	BSetx, BClearx (file)target, (file)bit instead of (file)target, (literal)bit
-;	BTSSx, BTSCx (file)target, (file)bit instead of (file)target, (literal)bit
+;	TESTx f
+;	COMPx_t_t f f
+;	STRx l f, MOVEx f f, SAWPx f f, NEGx f
+;	ADDx f f, ADDLx f l, SUBx f f, SUBLx f l, SUBFx f f, SUBFLx f l 
+;	CLRFx f, INCFx f, DECFx f, DECFSZx f
+;	RLFx f, RRFx f, COMFx f, ANDx f f, IORx f f, XORx f f
+;	ASSERTx l f
+;	SHIFTRx f f, SHIFTLx f f, RRx f f, RLx f f 
+;	BSetx f f, BClearx f f, BTSSx f f, BTSCx f f
 ;#############################################################################
 ; TODO new instructions:
 ; 	MULT, DIV
 ;	packed BCD arithmetics
+;	signed arithmetics
 ;	string utilities
-
 
 
 
@@ -1445,10 +1445,11 @@ TESTs	MACRO	file
 	ENDM
 
 TESTc	MACRO	file
+	LOCAL	_end
 	CLRF	SCRATCH
 	
 	MOVF	file, F
-	SK_ZE
+	BR_NZ	_end
 	BSF	SCRATCH, Z
 	
 	MOVF	file + 1, F
@@ -1458,17 +1459,19 @@ TESTc	MACRO	file
 	MOVF	file + 2, F
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
+_end:
 	ENDM
 	
 TESTi	MACRO	file
+	LOCAL	_end
 	CLRF	SCRATCH
 	
 	MOVF	file, F
-	SK_ZE
+	BR_NZ	_end
 	BSF	SCRATCH, Z
 	
 	MOVF	file + 1, F
-	SK_ZE
+	BR_NZ	_end
 	BSF	SCRATCH, Z
 	
 	MOVF	file + 2, F
@@ -1478,6 +1481,7 @@ TESTi	MACRO	file
 	MOVF	file + 3, F
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
+_end:
 	ENDM
 	
 	
@@ -1522,9 +1526,16 @@ _NB:
 	
 _END:
 	ENDM
-	
+
+
+; TODO
+;COMPc_l_f
+;COMPi_l_f
+
+
+
 COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2
-	LOCAL	_NB, _BR, _END	
+	LOCAL	_NB, _BR, _end	
 	CLRF	SCRATCH
 	
 	MOVF	file2, W
@@ -1541,7 +1552,7 @@ COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2
 	; high byte is zero
 	BCF	STATUS, Z	; not equal
 	BCF	STATUS, C 	; borrow
-	GOTO	_END
+	GOTO	_end
 	
 _BR:
 	MOVF	file2 + 1, W
@@ -1555,10 +1566,11 @@ _BR:
 	
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z		; restore Z
+	
 	BCF	STATUS, C
 	BTFSC	SCRATCH, C	
 	BSF	STATUS, C		; restore C
-	GOTO	_END
+	GOTO	_end
 	
 _NB:
 	MOVF	file2 + 1, W
@@ -1566,16 +1578,78 @@ _NB:
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	
-_END:
+_end:
 	ENDM
+
+COMPc_f_f	MACRO	file1, file2	; 24bit file1 vs file2
+	LOCAL	_b1, _b2, _end
+
+#DEFINE sC0	0	; scratch C/#B byte 0
+#DEFINE sC1	1	; scratch C/#B byte 1
+
+#DEFINE snZ	4	; scratch #Z
+#DEFINE sfZ	5	; scratch Final Z
+#DEFINE sfC	6	; scratch Final C
+	
+	CLRF	SCRATCH	
+	
+	MOVF	file2, W	; comp byte0
+	SUBWF	file1, W
+	SK_ZE
+	BSF	SCRATCH, snZ
+	BR_NB	_b1
+	BSF	SCRATCH, sC0
+	DECF	file1 + 1, F
+	SK_NB
+	DECF	file1 + 2, F
+	
+_b1:	;shortcut if no borrow on byte 0
+	MOVF	file2 + 1, W	; comp byte1
+	SUBWF	file1 + 1, W
+	SK_ZE
+	BSF	SCRATCH, snZ
+	BR_NB	_b2
+	BSF	SCRATCH, sC1
+	DECF	file1 + 2, F
+
+_b2:
+	MOVF	file2 + 2, W	; comp byte2
+	SUBWF	file1 + 2, W
+	BTFSC	SCRATCH, snZ
+	BCF	STATUS, Z
+	
+	; save final STATUS values
+	SK_NZ
+	BSF	SCRATCH, sfZ
+	SK_NC
+	BSF	SCRATCH, sfC
+	
+	; revert all borrows from file1
+	BTFSC	SCRATCH, sC1
+	INCF	file1 + 2, F
+	
+	BTFBC	SCRATCH, sC0, _end
+	INCF	file1 + 1, F
+	SK_NC
+	INCF	file1 + 2, F
+	
+_end:
+	; restore final STATUS values
+	CLRF	STATUS
+	BTFSC	SCRATCH, sfC
+	BSF	STATUS, C	
+	BTFSC	SCRATCH, sfZ
+	BSF	STATUS, Z
+	ENDM
+
 	
 COMPi_f_f	MACRO	file1, file2	; 32bit file1 vs file2
-	LOCAL	_b1, _b2, _b3, _r1, _r0, _END
+	LOCAL	_b1, _b2, _b3, _r0, _end
 
 #DEFINE sC0	0	; scratch C/#B byte 0
 #DEFINE sC1	1	; scratch C/#B byte 1
 #DEFINE sC2	2	; scratch C/#B byte 2
-#DEFINE sC3	3	; scratch C/#B byte 3
+
 #DEFINE snZ	4	; scratch #Z
 #DEFINE sfZ	5	; scratch Final Z
 #DEFINE sfC	6	; scratch Final C
@@ -1636,7 +1710,7 @@ _b3:
 	INCF	file1 + 3, F
 
 _r0:	
-	BTFBC	SCRATCH, sC0, _END
+	BTFBC	SCRATCH, sC0, _end
 	INCF	file1 + 1, F
 	SK_NC
 	INCF	file1 + 2, F
@@ -1644,7 +1718,7 @@ _r0:
 	INCF	file1 + 3, F
 	
 	
-_END:
+_end:
 	; restore final STATUS values
 	CLRF	STATUS
 	BTFSC	SCRATCH, sfC
@@ -1652,13 +1726,6 @@ _END:
 	BTFSC	SCRATCH, sfZ
 	BSF	STATUS, Z
 	ENDM
-
-; TODO
-;COMPc_l_f
-;COMPc_f_f
-
-;COMPi_l_f
-;COMPi_f_f
 
 
 

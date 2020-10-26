@@ -8,7 +8,7 @@
 ;	Bit Tests conditionals BRanchs, CAlls and SKips
 ;	8 bit file on file instructions:
 ;		STR, NEG, MOV, SWAP, ADD, ADDL, SUB, SUBL, SUBF, SUBFL 
-;	ISR context switching
+;	ISR context switching:
 ;		W + STATUS + PCLATH, FSR, SCRATCH
 ;	Timer1 value reader
 ;	Assert:
