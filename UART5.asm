@@ -1,5 +1,5 @@
 ;#############################################################################
-;	UART Test 4
+;	UART Test 5
 ;	Loopback
 ;	RX/TX Circular buffer
 ;#############################################################################
@@ -64,10 +64,6 @@
 count_01ms	EQU	0x20
 count_25ms	EQU	0x21
 count_1s	EQU	0x22
-Result		EQU 	0x23 ; 0x24
-BCD		EQU	0x25 ; 0x26 0x27 0x28
-count_BCD1	EQU	0x29
-count_BCD2	EQU	0x2A
 
 RXTX_Data	EQU	0x2B
 
@@ -243,7 +239,14 @@ SETUP:
 	BSF	RCSTA, CREN	; enable continuous receive
 	BCF	RCSTA, ADDEN	; disable addressing
 	
-
+; initialize circular buffer pointers
+	MOVLW	RXBufStart
+	MOVWF	RXBuf_rp
+	MOVWF	RXBuf_wp
+	
+	MOVLW	TXBufStart
+	MOVWF	TXBuf_rp
+	MOVWF	TXBuf_wp
 
 
 ;welcome message
@@ -261,7 +264,7 @@ SETUP:
 	STR	' ', RXTX_Data	
 	CALL 	BLOCK_SEND_BYTE
 	
-	STR	'4', RXTX_Data	
+	STR	'5', RXTX_Data	
 	CALL 	BLOCK_SEND_BYTE	
 	
 	STR	13, RXTX_Data		;(CR)
@@ -271,15 +274,6 @@ SETUP:
 	
 	CLRF	PORTA
 	CLRF	PORTB
-	
-; initialize circular buffer pointers
-	MOVLW	RXBufStart
-	MOVWF	RXBuf_rp
-	MOVWF	RXBuf_wp
-	
-	MOVLW	TXBufStart
-	MOVWF	TXBuf_rp
-	MOVWF	TXBuf_wp
 	
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
@@ -291,20 +285,21 @@ SETUP:
 ;#############################################################################
 
 LOOP:
-
-	CALL	WAIT_BYTE	; wait until rx buffer.length > 0
-	CALL	READ_BYTE	; read a byte to RXTX_Data
-	
-	CALL	BLOCK_SEND_BYTE	; send the byte from RXTX_Data
-	;COMP_l_f	32, RXTX_Data
-	;BR_GE	nomod		; if 32 >= data skip the mod
-	;INCF	RXTX_Data, F	; modify data
-	;CALL	SEND_BYTE	; send the byte from RXTX_Data
-;nomod:
+	CALL	WAIT_25ms
 	BCF	OverrunError_yellow
 	BCF	FrameError_yellow
-
-	GOTO	LOOP
+read:
+	CALL	AVAIL_BYTE
+	COMP_l_W	TRUE
+	BR_NE	LOOP	
+	CALL	READ_BYTE
+	COMP_l_f	32, RXTX_Data
+	BR_GE	nomod		; if 32 >= data skip the mod
+	INCF	RXTX_Data, F	; modify data
+nomod:
+	CALL	SEND_BYTE	; send the byte from RXTX_Data
+	
+	GOTO	read
 	
 ;#############################################################################
 ;	Subroutines
@@ -345,12 +340,12 @@ BLOCK_SEND_BYTE:
 	BCF	TX_green
 	RETURN
 
-AVAIL_BYTE:	; check if a RX byte is available, return with 1 in W if avail, 0 in W if not
+AVAIL_BYTE:	; check if a RX byte is available, return with 0 in W if avail, 1 in W if not
 	MOVF	RXBuf_wp, W
 	SUBWF	RXBuf_rp, W
-	BTFSC	STATUS, Z
-	RETLW	0x00
-	RETLW	0x01
+	SK_EQ
+	RETLW	TRUE	; pointers are not equal
+	RETLW	FALSE	; both pointers are equal
 
 WAIT_BYTE:
 	BSF	WaitRX_red

@@ -1,7 +1,8 @@
 ;#############################################################################
 ;	UART Test 4
 ;	Loopback
-;	RX Circular buffer
+;	Circular RX buffer
+;	Circular TX buffer
 ;#############################################################################
 
 	LIST	p=16F88			; processor model
@@ -64,10 +65,11 @@
 count_01ms	EQU	0x20
 count_25ms	EQU	0x21
 count_1s	EQU	0x22
-Result		EQU 	0x23 ; 0x24
-BCD		EQU	0x25 ; 0x26 0x27 0x28
-count_BCD1	EQU	0x29
-count_BCD2	EQU	0x2A
+
+;Result		EQU 	0x23 ; 0x24
+;BCD		EQU	0x25 ; 0x26 0x27 0x28
+;count_BCD1	EQU	0x29
+;count_BCD2	EQU	0x2A
 
 RXTX_Data	EQU	0x2B
 
@@ -239,8 +241,7 @@ SETUP:
 	CALL 	SEND_BYTE	
 	
 	STR	' ', RXTX_Data	
-	CALL 	SEND_BYTE
-	
+	CALL 	SEND_BYTE	
 	STR	'4', RXTX_Data	
 	CALL 	SEND_BYTE	
 	
@@ -269,7 +270,7 @@ LOOP:
 	CALL	SEND_BYTE	; send the byte from RXTX_Data
 	
 	COMP_l_f	32, RXTX_Data
-	BR_LT	nomod		; if 32 >= data skip the mod
+	BR_GE	nomod		; if 32 >= data skip the mod
 	INCF	RXTX_Data, F	; modify data
 	CALL	SEND_BYTE	; send the byte from RXTX_Data
 nomod:

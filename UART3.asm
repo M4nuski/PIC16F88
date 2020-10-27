@@ -1,6 +1,7 @@
 ;#############################################################################
 ;	UART Test 3
-;	Interrupt Loopback
+;	Interrupt RX Loopback
+;	Blocking TX
 ;#############################################################################
 
 	LIST		p=16F88		; processor model
@@ -62,10 +63,6 @@
 count_01ms	EQU	0x20
 count_25ms	EQU	0x21
 count_1s	EQU	0x22
-Result		EQU 	0x23 ; 0x24
-BCD		EQU	0x25 ; 0x26 0x27 0x28
-count_BCD1	EQU	0x29
-count_BCD2	EQU	0x2A
 
 serialBufStart	EQU	0x30 ; start of serial read circular buffer
 serialBufEnd	EQU	0x50 ; end of serial circular buffer
@@ -219,8 +216,9 @@ SETUP:
 	BSF	RCSTA, CREN	; enable continuous receive
 	BCF	RCSTA, ADDEN	; disable addressing
 	
-
-
+	MOVLW	serialBufStart
+	MOVWF	serialBuf_rp
+	MOVWF	serialBuf_wp
 
 ;welcome message
 	CALL	WAIT_1s	
