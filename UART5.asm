@@ -109,7 +109,7 @@ TXBuf_wp	EQU	0x73 ; circular TX buffer write pointer
 	BTFSC	PIR1, RCIF	; 	check if RX interrupt
 	GOTO	ISR_RX
 	BTFSC	PIR1, TXIF	; 	check if TX interrupt
-	GOTO	ISR_END
+	GOTO	ISR_TX
 	
 	BSF	isr_RX_SQred
 	BSF	isr_TX_SQgreen
@@ -311,7 +311,15 @@ SEND_BYTE:
 	BCF	PIE1, TXIE	; disable tx interrupts	
 	BANK0
 	BSF	TX_green
+
+	;BTFSS	PIR1, TXIF	; if TX buffer is empty send immediatly
+	;GOTO	SEND_BYTE_ASYNC
 	
+	;MOVF	RXTX_Data, W
+	;MOVWF	TXREG	
+	;GOTO	SEND_BYTE_END
+	
+;SEND_BYTE_ASYNC:
 	MOVF	TXBuf_wp, W	; add data to TX buffer
 	MOVWF	FSR
 	MOVF	RXTX_Data, W
@@ -321,11 +329,11 @@ SEND_BYTE:
 	MOVF	TXBuf_wp, W
 	SUBLW	TXBufEnd
 	BTFSS	STATUS, Z
-	GOTO	SEND_BYTE_R
+	GOTO	SEND_BYTE_END
 	MOVLW	TXBufStart
 	MOVWF	TXBuf_wp
 	
-SEND_BYTE_R:
+SEND_BYTE_END:
 	BANK1
 	BSF	PIE1, TXIE	; enable tx interrupts	
 	BANK0
