@@ -77,10 +77,10 @@ serialBuf_wp	EQU	0x30 ; circular buffer write pointer
 ;#############################################################################
 
 ; For ISR context
-STACK_FSR	EQU	0x7C
-STACK_PCLATH	EQU	0x7D
-STACK_STATUS	EQU	0x7E
-STACK_W		EQU	0x7F
+;STACK_FSR	EQU	0x7C
+;STACK_PCLATH	EQU	0x7D
+;STACK_STATUS	EQU	0x7E
+;STACK_W	EQU	0x7F
 
 ;#############################################################################
 ;	Reset Vector - Main Entry Point
@@ -225,25 +225,20 @@ SETUP:
 ;welcome message
 	CALL	WAIT_1s	
 	
-	MOVLW	'P'
+	MOVLW	'U'
 	CALL 	SEND_BYTE	
-	MOVLW	'I'
+	MOVLW	'A'
 	CALL 	SEND_BYTE
-	MOVLW	'C'
+	MOVLW	'R'
+	CALL 	SEND_BYTE	
+	MOVLW	'T'
 	CALL 	SEND_BYTE
 	
-	MOVLW	'1'
-	CALL 	SEND_BYTE	
-	MOVLW	'6'
+	MOVLW	' '
 	CALL 	SEND_BYTE
 	
-	MOVLW	'F'
+	MOVLW	'3'
 	CALL 	SEND_BYTE
-	
-	MOVLW	'8'
-	CALL 	SEND_BYTE
-	MOVLW	'8'
-	CALL 	SEND_BYTE	
 	
 	MOVLW	13	;(CR)
 	CALL 	SEND_BYTE	
@@ -252,6 +247,7 @@ SETUP:
 	
 	CLRF	PORTA
 	CLRF	PORTB
+	
 	BSF	INTCON, PEIE ; peripheral int
 	BSF	INTCON, GIE  ; global int
 

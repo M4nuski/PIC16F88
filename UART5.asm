@@ -1,7 +1,7 @@
 ;#############################################################################
 ;	UART Test 4
 ;	Loopback
-;	RX Circular buffer
+;	RX/TX Circular buffer
 ;#############################################################################
 
 	LIST	p=16F88			; processor model
@@ -113,7 +113,7 @@ TXBuf_wp	EQU	0x73 ; circular TX buffer write pointer
 	BTFSC	PIR1, RCIF	; 	check if RX interrupt
 	GOTO	ISR_RX
 	BTFSC	PIR1, TXIF	; 	check if TX interrupt
-	GOTO	ISR_TX
+	GOTO	ISR_END
 	
 	BSF	isr_RX_SQred
 	BSF	isr_TX_SQgreen
@@ -159,12 +159,34 @@ ISR_RX2:
 	
 ISR_TX:
 	BSF	isr_TX_SQgreen
-	NOP
-	NOP
-	NOP
-	NOP
-	NOP
-	NOP
+	; if buffer start != buffer end
+	; send byte
+	; else 
+	; disable TX interrupt
+	; 	BCF	TX_green
+	MOVF	TXBuf_rp, W
+	SUBWF	TXBuf_wp, W
+	BR_EQ	ISR_TX_empty
+	
+	MOVF	TXBuf_rp, W
+	MOVWF	FSR
+	MOVF	INDF, W
+	MOVWF	TXREG
+	
+	INCF	TXBuf_rp, F
+	MOVF	TXBuf_rp, W
+	SUBLW	TXBufEnd
+	BTFSS	STATUS, Z
+	GOTO	ISR_END
+	MOVLW	TXBufStart
+	MOVWF	TXBuf_rp
+	GOTO	ISR_END
+	
+ISR_TX_empty:
+	BCF	TX_green
+	BANK1
+	BCF	PIE1, TXIE	; disable tx interrupts	
+	BANK0
 	GOTO	ISR_END
 
 ISR_END:
@@ -208,6 +230,7 @@ SETUP:
 	MOVLW	51		; 9600 bauds
 	MOVWF	SPBRG
 	
+	BANKSEL	PIE1
 	BSF	PIE1, RCIE	; enable rx interrupts
 	BCF	PIE1, TXIE	; disable tx interrupts
 	
@@ -218,44 +241,49 @@ SETUP:
 	BCF	RCSTA, RX9	; 8 bit rx
 	;BSF	RCSTA, SREN	; not used in async - enable single receive
 	BSF	RCSTA, CREN	; enable continuous receive
-	BCF	RCSTA, ADDEN	; disable addressing 12345678
+	BCF	RCSTA, ADDEN	; disable addressing
 	
 
+
+
+;welcome message
+	CALL	WAIT_1s	
+	
+	STR 	'U', RXTX_Data	
+	CALL 	BLOCK_SEND_BYTE	
+	STR	'A', RXTX_Data	
+	CALL 	BLOCK_SEND_BYTE
+	STR	'R', RXTX_Data	
+	CALL 	BLOCK_SEND_BYTE	
+	STR	'T', RXTX_Data	
+	CALL 	BLOCK_SEND_BYTE	
+	
+	STR	' ', RXTX_Data	
+	CALL 	BLOCK_SEND_BYTE
+	
+	STR	'4', RXTX_Data	
+	CALL 	BLOCK_SEND_BYTE	
+	
+	STR	13, RXTX_Data		;(CR)
+	CALL 	BLOCK_SEND_BYTE	
+	STR	10, RXTX_Data		;(LF)
+	CALL 	BLOCK_SEND_BYTE
+	
+	CLRF	PORTA
+	CLRF	PORTB
+	
 ; initialize circular buffer pointers
 	MOVLW	RXBufStart
 	MOVWF	RXBuf_rp
 	MOVWF	RXBuf_wp
 	
-;welcome message
-	CALL	WAIT_1s
-	
-	STR 	'U', RXTX_Data	
-	CALL 	SEND_BYTE	
-	STR	'A', RXTX_Data	
-	CALL 	SEND_BYTE	
-	STR	'R', RXTX_Data	
-	CALL 	SEND_BYTE	
-	STR	'T', RXTX_Data	
-	CALL 	SEND_BYTE	
-	
-	STR	' ', RXTX_Data	
-	CALL 	SEND_BYTE
-	
-	STR	'4', RXTX_Data	
-	CALL 	SEND_BYTE	
-	
-	STR	13, RXTX_Data		;(CR)
-	CALL 	SEND_BYTE	
-	STR	10, RXTX_Data		;(LF)
-	CALL 	SEND_BYTE
-	
-	CLRF	PORTA
-	CLRF	PORTB
+	MOVLW	TXBufStart
+	MOVWF	TXBuf_rp
+	MOVWF	TXBuf_wp
 	
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
 	BSF	INTCON, GIE  ; global int
-
 
 
 ;#############################################################################
@@ -265,14 +293,14 @@ SETUP:
 LOOP:
 
 	CALL	WAIT_BYTE	; wait until rx buffer.length > 0
-	CALL	READ_BYTE	; read a byte to RXTX_Data	
-	CALL	SEND_BYTE	; send the byte from RXTX_Data
+	CALL	READ_BYTE	; read a byte to RXTX_Data
 	
-	COMP_l_f	32, RXTX_Data
-	BR_LT	nomod		; if 32 >= data skip the mod
-	INCF	RXTX_Data, F	; modify data
-	CALL	SEND_BYTE	; send the byte from RXTX_Data
-nomod:
+	CALL	BLOCK_SEND_BYTE	; send the byte from RXTX_Data
+	;COMP_l_f	32, RXTX_Data
+	;BR_GE	nomod		; if 32 >= data skip the mod
+	;INCF	RXTX_Data, F	; modify data
+	;CALL	SEND_BYTE	; send the byte from RXTX_Data
+;nomod:
 	BCF	OverrunError_yellow
 	BCF	FrameError_yellow
 
@@ -282,12 +310,36 @@ nomod:
 ;	Subroutines
 ;#############################################################################
 	
-
-
 SEND_BYTE:
+
+	BANK1
+	BCF	PIE1, TXIE	; disable tx interrupts	
+	BANK0
+	BSF	TX_green
+	
+	MOVF	TXBuf_wp, W	; add data to TX buffer
+	MOVWF	FSR
+	MOVF	RXTX_Data, W
+	MOVWF	INDF
+	
+	INCF	TXBuf_wp, F	; advance pointer
+	MOVF	TXBuf_wp, W
+	SUBLW	TXBufEnd
+	BTFSS	STATUS, Z
+	GOTO	SEND_BYTE_R
+	MOVLW	TXBufStart
+	MOVWF	TXBuf_wp
+	
+SEND_BYTE_R:
+	BANK1
+	BSF	PIE1, TXIE	; enable tx interrupts	
+	BANK0
+	RETURN
+	
+BLOCK_SEND_BYTE:
 	BSF	TX_green
 	BTFSS	PIR1, TXIF
-	GOTO	SEND_BYTE
+	GOTO	BLOCK_SEND_BYTE
 	MOVF	RXTX_Data, W
 	MOVWF	TXREG
 	BCF	TX_green
@@ -305,7 +357,7 @@ WAIT_BYTE:
 	MOVF	RXBuf_wp, W
 	SUBWF	RXBuf_rp, W
 	BTFSC	STATUS, Z
-	GOTO	WAIT_BYTE
+	GOTO	WAIT_BYTE	
 	BCF	WaitRX_red
 	RETURN
 
