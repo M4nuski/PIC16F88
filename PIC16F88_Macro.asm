@@ -3,7 +3,7 @@
 ;	Basic macros for PIC16F88
 ;
 ;	BANK Switching
-;	TEST and COMP
+;	TEST and CMP
 ;	Conditionals BRanchs, CAlls and SKips
 ;	Bit Tests conditionals BRanchs, CAlls and SKips
 ;	8 bit file on file instructions:
@@ -63,21 +63,21 @@ TESTw	MACRO
 ; 	 a vs b (Result is STATUS Z and C)
 ;#############################################################################
 
-COMP_l_f	MACRO lit, file	; literal vs file
+CMP_lf	MACRO lit, file	; literal vs file
 	MOVF	file, W			; w = f
 	SUBLW	lit			; w = l - f(w)
 	ENDM
 	
-COMP_f_f	MACRO file1, file2	; file1 vs file2
+CMP_ff	MACRO file1, file2	; file1 vs file2
 	MOVF	file2, W		; w = f2
 	SUBWF	file1, W		; w = f1 - f2(w)
 	ENDM
 
-COMP_f_w	MACRO file		; file vs w
+CMP_fw	MACRO file		; file vs w
 	SUBWF	file, W			; w = f - w
 	ENDM
 
-COMP_l_w	MACRO lit		; literal vs w
+CMP_lw	MACRO lit		; literal vs w
 	SUBLW	lit			; w = l - w
 	ENDM
 	
@@ -368,6 +368,58 @@ BTWSS	MACRO	bit			; skip if set
 BTWSC	MACRO	bit			; skip if clear
 	MOVWF	SCRATCH
 	BTFSC	SCRATCH, bit
+	ENDM
+
+
+
+;#############################################################################
+;	Branch if W is true/false
+;#############################################################################
+
+BW_True		MACRO	dest
+	ANDLW	0xFF
+	BTFSC	STATUS, Z
+	GOTO	dest
+	ENDM
+	
+BW_False	MACRO	dest
+	ANDLW	0xFF
+	BTFSS	STATUS, Z
+	GOTO	dest
+	ENDM
+
+
+
+;#############################################################################
+;	Call if W is true/false
+;#############################################################################
+
+CW_True		MACRO	dest
+	ANDLW	0xFF
+	BTFSC	STATUS, Z
+	CALL	dest
+	ENDM
+	
+CW_False	MACRO	dest
+	ANDLW	0xFF
+	BTFSS	STATUS, Z
+	CALL	dest
+	ENDM
+
+
+
+;#############################################################################
+;	Skip if W is true/false
+;#############################################################################
+
+SW_True		MACRO
+	ANDLW	0xFF
+	BTFSS	STATUS, Z
+	ENDM
+	
+SW_False	MACRO
+	ANDLW	0xFF
+	BTFSC	STATUS, Z
 	ENDM
 
 

@@ -22,7 +22,7 @@
 
 ; pin  1 IOA PORTA2	O isr_TX_SQgreen
 ; pin  2 IOA PORTA3	O isr_RX_SQred
-; pin  3 IOA PORTA4
+; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
 ; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
 ; pin  6 IO_ PORTB0	O WaitRX_red
@@ -35,13 +35,15 @@
 ; pin 12 IOA PORTB6	(PGC)
 ; pin 13 IOA PORTB7	(PGD)
 ; pin 14 PWR VDD	VCC
-; pin 15 _O_ PORTA6	
-; pin 16 I__ PORTA7	
+; pin 15 _O_ PORTA6	XT
+; pin 16 I__ PORTA7	XT
 ; pin 17 IOA PORTA0	
 ; pin 18 IOA PORTA1
 
 #DEFINE isr_TX_SQgreen	PORTA, 2
 #DEFINE isr_RX_SQred		PORTA, 3
+#DEFINE TZ_Select		PORTA, 4
+
 #DEFINE WaitRX_red 		PORTB, 0
 #DEFINE OverrunError_yellow	PORTB, 1
 #DEFINE TX_green		PORTB, 3
@@ -65,13 +67,25 @@ count_01ms	EQU	0x20
 count_25ms	EQU	0x21
 count_1s	EQU	0x22
 
-RXTX_Data	EQU	0x2B
+RXTX_Data	EQU	0x23
 
-RXBufStart	EQU	0x30 ; circular RX buffer start
-RXBufEnd	EQU	0x50 ; circular RX buffer end
+WaitForChar	EQU	0x24
 
-TXBufStart	EQU	0x50 ; circular TX buffer start
-TXBufEnd	EQU	0x70 ; circular TX buffer end
+TZ_offset	EQU	0x2B
+
+data_H10	EQU	0x25
+data_H01	EQU	0x26
+data_m10	EQU	0x27
+data_m01	EQU	0x28
+data_s10	EQU	0x29
+data_s01	EQU	0x2A
+
+; Bank 1
+RXBufStart	EQU	0xA0 ; circular RX buffer start
+RXBufEnd	EQU	0xC0 ; circular RX buffer end
+
+TXBufStart	EQU	0xC0 ; circular TX buffer start
+TXBufEnd	EQU	0xE0 ; circular TX buffer end
 
 ;#############################################################################
 ;	Shared Files 0x70 - 0x7F
@@ -284,42 +298,105 @@ SETUP:
 ;	Main Loop	
 ;#############################################################################
 
+
+	
 LOOP:
 	CALL	WAIT_25ms
 	BCF	OverrunError_yellow
 	BCF	FrameError_yellow
-read:
-	CALL	AVAIL_BYTE
-	COMP_l_W	TRUE
-	BR_NE	LOOP	
-	CALL	READ_BYTE
-	COMP_l_f	32, RXTX_Data
-	BR_GE	nomod		; if 32 >= data skip the mod
-	INCF	RXTX_Data, F	; modify data
-nomod:
-	CALL	SEND_BYTE	; send the byte from RXTX_Data
+
+;read:
+;	CALL	AVAIL_BYTE
+;	CMP_lW	TRUE
+;	BR_NE	LOOP	
+;	CALL	READ_BYTE
+;	CMP_lf	32, RXTX_Data
+;	BR_GE	nomod		; if 32 >= data skip the mod
+;	INCF	RXTX_Data, F	; modify data
+;nomod:
+;	CALL	SEND_BYTE	; send the byte from RXTX_Data
 	
-	GOTO	read
+;	GOTO	read
+
+	CALL	READ_NEXT_TIME
+	BW_False	NO_TIME
+	
+	MOV	data_H10, RXTX_Data
+	CALL	SEND_BYTE
+	MOV	data_H01, RXTX_Data
+	CALL	SEND_BYTE
+	
+	STR	':', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	MOV	data_m10, RXTX_Data
+	CALL	SEND_BYTE
+	MOV	data_m01, RXTX_Data
+	CALL	SEND_BYTE
+	
+	STR	':', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	MOV	data_s10, RXTX_Data
+	CALL	SEND_BYTE
+	MOV	data_s01, RXTX_Data
+	CALL	SEND_BYTE
+	
+	STR	'Z', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	' ', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	
+	MOVLW	5
+	BTFSC	TZ_Select
+	MOVLW	4
+	MOVWF	TZ_offset
+	
+	CALL	ADJUST_TZ
+	
+	GOTO	LOOP
+	
+NO_TIME:
+	STR	'N', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'o', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	' ', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'T', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'i', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'm', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'e', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	' ', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'D', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'a', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	't', RXTX_Data
+	CALL 	SEND_BYTE
+	STR	'a', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	CALL	WriteEOL
+	
+	GOTO	LOOP
 	
 ;#############################################################################
 ;	Subroutines
 ;#############################################################################
 	
 SEND_BYTE:
-
 	BANK1
 	BCF	PIE1, TXIE	; disable tx interrupts	
 	BANK0
 	BSF	TX_green
-
-	;BTFSS	PIR1, TXIF	; if TX buffer is empty send immediatly
-	;GOTO	SEND_BYTE_ASYNC
 	
-	;MOVF	RXTX_Data, W
-	;MOVWF	TXREG	
-	;GOTO	SEND_BYTE_END
-	
-;SEND_BYTE_ASYNC:
 	MOVF	TXBuf_wp, W	; add data to TX buffer
 	MOVWF	FSR
 	MOVF	RXTX_Data, W
@@ -331,8 +408,7 @@ SEND_BYTE:
 	BTFSS	STATUS, Z
 	GOTO	SEND_BYTE_END
 	MOVLW	TXBufStart
-	MOVWF	TXBuf_wp
-	
+	MOVWF	TXBuf_wp	
 SEND_BYTE_END:
 	BANK1
 	BSF	PIE1, TXIE	; enable tx interrupts	
@@ -363,6 +439,9 @@ WAIT_BYTE:
 	GOTO	WAIT_BYTE	
 	BCF	WaitRX_red
 	RETURN
+	
+; TODO TX_AVAIL
+; TODO TX_WAIT_AVAIL
 
 READ_BYTE:
 	; read current rx buffer, advance pointer, return with data in RXTX_Data
@@ -372,15 +451,251 @@ READ_BYTE:
 	MOVF	RXBuf_rp, W
 	SUBLW	RXBufEnd
 	BTFSS	STATUS, Z
-	GOTO	READ_BYTE_R
+	GOTO	READ_BYTE_END
 	MOVLW	RXBufStart
 	MOVWF	RXBuf_rp
-READ_BYTE_R:
+READ_BYTE_END:
 	MOVF	INDF, W
 	MOVWF	RXTX_Data
 	RETURN
 
 
+BLOCK_READ_BYTE:
+	BSF	WaitRX_red
+	;busy wait
+	CMP_ff	RXBuf_wp, RXBuf_rp
+	BR_EQ	BLOCK_READ_BYTE
+	;set address
+	MOV	RXBuf_rp, FSR
+	;inc address
+	INCF	RXBuf_rp, F	
+	CMP_lf	RXBufEnd, RXBuf_rp
+	BR_NE	BLOCK_READ_BYTE_END
+	STR	RXBufStart, RXBuf_rp
+	;read
+BLOCK_READ_BYTE_END:
+	MOV	INDF, RXTX_Data
+	BCF	WaitRX_red
+	RETURN
+
+
+
+
+; $GPGGA,205654.00,
+READ_NEXT_TIME:
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	'$', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+	
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	'G', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	'P', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+	
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	'G', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+	
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	'G', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+	
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	'A', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+	
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	',', RXTX_Data
+	BR_NE	READ_NEXT_TIME
+	
+	
+	CALL	BLOCK_READ_BYTE
+	CMP_lf	',', RXTX_Data
+	SK_NE
+	RETLW	FALSE
+	MOV	RXTX_Data, data_H10
+	
+	CALL	BLOCK_READ_BYTE
+	MOV	RXTX_Data, data_H01
+	
+	CALL	BLOCK_READ_BYTE
+	MOV	RXTX_Data, data_m10
+	
+	CALL	BLOCK_READ_BYTE
+	MOV	RXTX_Data, data_m01
+	
+	CALL	BLOCK_READ_BYTE
+	MOV	RXTX_Data, data_s10
+	
+	CALL	BLOCK_READ_BYTE
+	MOV	RXTX_Data, data_s01
+	
+	RETLW	TRUE
+	
+ADJUST_TZ:
+	;MOV	data_H10, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+	;MOV	data_H01, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+	; adjust timezone
+	SUBL	data_H01, '0'; ascii to int
+	SUBL	data_H10, '0'; ascii to int
+	
+	;MOV	data_H10, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+	;MOV	data_H01, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+	
+	;CLRF	STATUS
+	;RLF	data_H10, F ; h10  = 2*h10
+	;MOVF	data_H10, W ; w = 2*h10
+	;CLRF	STATUS
+	;RLF	data_H10, F ; h10  = 4*h10
+	
+	MOVF	data_H10, W ; w = 1*h10
+	ADDWF	data_H10, W ; w = 2*h10
+	ADDWF	data_H10, W ; w = 3*h10
+	ADDWF	data_H10, W ; w = 4*h10
+	ADDWF	data_H10, W ; w = 5*h10
+	
+	ADDWF	data_H10, W ; w = 6*h10
+	ADDWF	data_H10, W ; w = 7*h10
+	ADDWF	data_H10, W ; w = 8*h10
+	ADDWF	data_H10, W ; w = 9*h10
+	ADDWF	data_H10, W ; w = 10*h10
+	
+	ADDWF	data_H01, F ; h01 = 10*h10 + h01 = HH(utc)
+	
+	;MOV	data_H01, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+	SUB	data_H01, TZ_offset ; h01 = HH(EDT/EST)
+	BR_NB	ADJUST_TZ_DONE_NB
+	ADDL	data_H01, 24
+ADJUST_TZ_DONE_NB:
+	CLRF	data_H10
+	CMP_lf	10, data_H01
+	BR_GT	ADJUST_TZ_DONE
+	INCF	data_H10, F
+	SUBL	data_H01, 10
+
+	CMP_lf	10, data_H01
+	BR_GT	ADJUST_TZ_DONE
+	INCF	data_H10, F
+	SUBL	data_H01, 10
+	
+	;MOV	data_H10, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+	;MOV	data_H01, WaitForChar
+	;CALL WriteHex
+	;CALL WriteSpace
+	
+ADJUST_TZ_DONE:		
+	ADDL	data_H01, '0'
+	ADDL	data_H10, '0'	
+	
+	MOV	data_H10, RXTX_Data
+	CALL	SEND_BYTE
+	MOV	data_H01, RXTX_Data
+	CALL	SEND_BYTE
+	
+	STR	':', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	MOV	data_m10, RXTX_Data
+	CALL	SEND_BYTE
+	MOV	data_m01, RXTX_Data
+	CALL	SEND_BYTE
+	
+	STR	':', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	MOV	data_s10, RXTX_Data
+	CALL	SEND_BYTE
+	MOV	data_s01, RXTX_Data
+	CALL	SEND_BYTE
+	
+	STR	'E', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	MOVLW	'S'
+	BTFSC	TZ_select
+	MOVLW	'D'
+	MOVWF	RXTX_Data
+	CALL 	SEND_BYTE
+	
+	STR	'T', RXTX_Data
+	CALL 	SEND_BYTE
+	
+	CALL	WriteEOL
+
+	RETURN
+
+
+
+WriteHex:
+	MOVLW	high (NibbleHex)
+	MOVWF	PCLATH
+	SWAPF	WaitForChar, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	RXTX_Data
+	CALL 	SEND_BYTE
+	MOVF	WaitForChar, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	RXTX_Data
+	CALL 	SEND_BYTE
+	RETURN
+
+;	Set PC just after the next 256 byte boundary
+	ORG	( $ & 0xFFFFFF00 ) + 0x100
+NibbleHex:
+	ADDWF	PCL, F
+	RETLW	'0'
+	RETLW	'1'
+	RETLW	'2'
+	RETLW	'3'
+	
+	RETLW	'4'
+	RETLW	'5'
+	RETLW	'6'
+	RETLW	'7'
+	
+	RETLW	'8'
+	RETLW	'9'
+	RETLW	'A'
+	RETLW	'B'
+	
+	RETLW	'C'
+	RETLW	'D'
+	RETLW	'E'
+	RETLW	'F'
+	
+WriteSpace:
+	STR	' ', RXTX_Data
+	CALL 	SEND_BYTE	
+	RETURN
+WriteEOL:
+	STR	13, RXTX_Data		;(CR)
+	CALL 	SEND_BYTE	
+	STR	10, RXTX_Data		;(LF)
+	CALL 	SEND_BYTE
+	RETURN
 
 ;#############################################################################
 ;	Delay routines	
@@ -394,6 +709,16 @@ WAIT_1s_loop:
 	CALL	WAIT_25ms
 	DECFSZ	count_1s, F
 	GOTO	WAIT_1s_loop
+	RETURN
+	
+WAIT_05s:
+	MOVLW	20
+	MOVWF	count_1s
+WAIT_05s_loop:
+	NOP
+	CALL	WAIT_25ms
+	DECFSZ	count_1s, F
+	GOTO	WAIT_05s_loop
 	RETURN
 
 WAIT_25ms:				; call 2 cycles

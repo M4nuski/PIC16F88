@@ -16,7 +16,7 @@
 ;
 ;	Operations:
 ;	TESTx f
-;	COMPx_t_t f f
+;	CMPx_tt f f
 ;	STRx l f, MOVEx f f, SAWPx f f, NEGx f
 ;	ADDx f f, ADDLx f l, SUBx f f, SUBLx f l, SUBFx f f, SUBFLx f l 
 ;	CLRFx f, INCFx f, DECFx f, DECFSZx f
@@ -1491,7 +1491,7 @@ _end:
 ;	Result in STATUS Z and C
 ;#############################################################################
 
-COMPs_l_f	MACRO	lit, file	; 16bit literal vs file
+CMPs_lf	MACRO	lit, file	; 16bit literal vs file
 	LOCAL	_NB, _BR, _END
 	CLRF	SCRATCH
 	
@@ -1534,7 +1534,7 @@ _END:
 
 
 
-COMPs_f_f	MACRO	file1, file2	; 16bit file1 vs file2
+CMPs_ff	MACRO	file1, file2	; 16bit file1 vs file2
 	LOCAL	_NB, _BR, _end	
 	CLRF	SCRATCH
 	
@@ -1581,7 +1581,7 @@ _NB:
 _end:
 	ENDM
 
-COMPc_f_f	MACRO	file1, file2	; 24bit file1 vs file2
+CMPc_ff	MACRO	file1, file2	; 24bit file1 vs file2
 	LOCAL	_b1, _b2, _end
 
 #DEFINE sC0	0	; scratch C/#B byte 0
@@ -1643,7 +1643,7 @@ _end:
 	ENDM
 
 	
-COMPi_f_f	MACRO	file1, file2	; 32bit file1 vs file2
+CMPi_ff	MACRO	file1, file2	; 32bit file1 vs file2
 	LOCAL	_b1, _b2, _b3, _r0, _end
 
 #DEFINE sC0	0	; scratch C/#B byte 0
