@@ -159,13 +159,16 @@ ISR_RX2:
 	GOTO	ISR_RX1
 	
 	BTFSS	RCSTA, OERR	; 	check for buffer overrun error
-	GOTO	ISR_END
+	GOTO	ISR_RX_END
 	BSF	OverrunError_yellow
 	BCF	RCSTA, CREN	; 	reset rx
 	MOVF	RCREG, W	; 	purge receive register
 	MOVF	RCREG, W
 	BSF	RCSTA, CREN	
-	GOTO	ISR_END
+	
+ISR_RX_END
+	BTFSS	PIR1, TXIF	; 	check if also TX interrupt
+	GOTO	ISR_END	
 	
 ISR_TX:
 	BSF	isr_TX_SQgreen
@@ -197,7 +200,7 @@ ISR_TX_empty:
 	BANK1
 	BCF	PIE1, TXIE	; disable tx interrupts	
 	BANK0
-	GOTO	ISR_END
+	;GOTO	ISR_END
 
 ISR_END:
 	BCF	isr_RX_SQred
@@ -261,7 +264,6 @@ SETUP:
 	MOVLW	TXBufStart
 	MOVWF	TXBuf_rp
 	MOVWF	TXBuf_wp
-
 
 ;welcome message
 	CALL	WAIT_1s	
@@ -536,33 +538,17 @@ READ_NEXT_TIME:
 	RETLW	TRUE
 	
 ADJUST_TZ:
-	;MOV	data_H10, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
-	
-	;MOV	data_H01, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
-	
 	; adjust timezone
 	SUBL	data_H01, '0'; ascii to int
 	SUBL	data_H10, '0'; ascii to int
-	
-	;MOV	data_H10, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
-	
-	;MOV	data_H01, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
-	
 	
 	;CLRF	STATUS
 	;RLF	data_H10, F ; h10  = 2*h10
 	;MOVF	data_H10, W ; w = 2*h10
 	;CLRF	STATUS
 	;RLF	data_H10, F ; h10  = 4*h10
-	
+	;RLF	data_H10, F ; h10  = 8*h10
+	;ADDWF	data_H10, W
 	MOVF	data_H10, W ; w = 1*h10
 	ADDWF	data_H10, W ; w = 2*h10
 	ADDWF	data_H10, W ; w = 3*h10
@@ -576,10 +562,6 @@ ADJUST_TZ:
 	ADDWF	data_H10, W ; w = 10*h10
 	
 	ADDWF	data_H01, F ; h01 = 10*h10 + h01 = HH(utc)
-	
-	;MOV	data_H01, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
 	
 	SUB	data_H01, TZ_offset ; h01 = HH(EDT/EST)
 	BR_NB	ADJUST_TZ_DONE_NB
@@ -595,15 +577,6 @@ ADJUST_TZ_DONE_NB:
 	BR_GT	ADJUST_TZ_DONE
 	INCF	data_H10, F
 	SUBL	data_H01, 10
-	
-	;MOV	data_H10, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
-	
-	;MOV	data_H01, WaitForChar
-	;CALL WriteHex
-	;CALL WriteSpace
-	
 ADJUST_TZ_DONE:		
 	ADDL	data_H01, '0'
 	ADDL	data_H10, '0'	
@@ -697,6 +670,19 @@ WriteEOL:
 	CALL 	SEND_BYTE
 	RETURN
 
+;RX_read		read next byte in rx buffer
+;RX_queue_empty
+;RX_queue_available
+;RX_wait		block wait for byte in rx buffer
+;RX_wait_read		block wait and read next byte in rx buffer when available
+;TX_queue_empty
+;TX_write		add byte to tx buffer
+;TX_wait_write		block wait to write to tx buffer when available
+;TX_queue_available	
+;TX_wait		block wait for avaiable byte in tx buffer
+
+;TX_direct_write	block wait to write reg directly, no interrupts
+;RX_direct_read	block wait to read reg directly, no interrupts
 ;#############################################################################
 ;	Delay routines	
 ;#############################################################################
