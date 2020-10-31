@@ -19,7 +19,28 @@
 ;#############################################################################
 ;	Pinout
 ;#############################################################################
-
+	
+WriteString	MACRO string
+	;ORG	( $ & 0xFFFFFF00 ) + 0x100
+	LOCAL	_END, _TABLE, _NEXT
+	MOVLW	high (_TABLE)
+	MOVWF	PCLATH
+	CLRF	Temp
+_NEXT
+	MOVF	Temp, W
+	CALL 	_TABLE
+	ANDLW	0xFF
+	BTFSC	STATUS, Z
+	GOTO	_END
+	MOVWF	Serial_Data
+	CALL	SEND_BYTE
+	INCF	Temp, F
+	GOTO	_NEXT
+_TABLE:
+	ADDWF	PCL, F
+	dt	string, 13, 10, 0
+_END:
+	ENDM
 ; pin  1 IOA PORTA2	O isr_TX_SQgreen
 ; pin  2 IOA PORTA3	O isr_RX_SQred
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
@@ -367,35 +388,17 @@ LOOP:
 	
 	CALL	ADJUST_TZ
 	
+	;MOV	PORTA, WaitForChar
+	;CALL	WriteHex
+	;CALL	WriteSpace
+	;CALL	WriteEOL
+	
 	GOTO	LOOP
 	
+	ORG	( $ & 0xFFFFFF00 ) + 0x100
 NO_TIME:
-	STR	'N', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'o', Serial_Data
-	CALL 	SEND_BYTE
-	STR	' ', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'T', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'i', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'm', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'e', Serial_Data
-	CALL 	SEND_BYTE
-	STR	' ', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'D', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'a', Serial_Data
-	CALL 	SEND_BYTE
-	STR	't', Serial_Data
-	CALL 	SEND_BYTE
-	STR	'a', Serial_Data
-	CALL 	SEND_BYTE
-	
-	CALL	WriteEOL
+	WriteString	"No Time Data!"
+
 	
 	GOTO	LOOP
 	
@@ -634,27 +637,6 @@ ADJUST_TZ_DONE:
 
 ;	Set PC just after the next 256 byte boundary
 	ORG	( $ & 0xFFFFFF00 ) + 0x100
-NibbleHex:
-	ADDWF	PCL, F
-	RETLW	'0'
-	RETLW	'1'
-	RETLW	'2'
-	RETLW	'3'
-	
-	RETLW	'4'
-	RETLW	'5'
-	RETLW	'6'
-	RETLW	'7'
-	
-	RETLW	'8'
-	RETLW	'9'
-	RETLW	'A'
-	RETLW	'B'
-	
-	RETLW	'C'
-	RETLW	'D'
-	RETLW	'E'
-	RETLW	'F'
 	
 WriteHex:
 	MOVLW	high (NibbleHex)
@@ -671,6 +653,31 @@ WriteHex:
 	CALL 	SEND_BYTE
 	RETURN
 	
+NibbleHex:
+	ADDWF	PCL, F
+	dt	"0123456789ABCDEF"
+;	RETLW	'0'
+;	RETLW	'1'
+;	RETLW	'2'
+;	RETLW	'3'
+	
+;	RETLW	'4'
+;	RETLW	'5'
+;	RETLW	'6'
+;	RETLW	'7'
+	
+;	RETLW	'8'
+;	RETLW	'9'
+;	RETLW	'A'
+;	RETLW	'B'
+	
+;	RETLW	'C'
+;	RETLW	'D'
+;	RETLW	'E'
+;	RETLW	'F'
+
+	
+	
 WriteSpace:
 	MOVLW	' '
 	MOVWF	Serial_Data
@@ -684,6 +691,11 @@ WriteEOL:
 	MOVWF	Serial_Data
 	CALL 	SEND_BYTE
 	RETURN
+	
+;Write	table ; send bytes from table until 0
+;WriteLn
+;WriteEE: send bytes form eeprom address until 0
+;WriteEEln
 
 ;Serial_RX_read		busy wait for next available data and read next byte in rx buffer
 ;Serial_RX_isQueueFull
