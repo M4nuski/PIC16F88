@@ -670,19 +670,39 @@ WriteEOL:
 	CALL 	SEND_BYTE
 	RETURN
 
-;RX_read		read next byte in rx buffer
-;RX_queue_empty
-;RX_queue_available
-;RX_wait		block wait for byte in rx buffer
-;RX_wait_read		block wait and read next byte in rx buffer when available
-;TX_queue_empty
-;TX_write		add byte to tx buffer
-;TX_wait_write		block wait to write to tx buffer when available
-;TX_queue_available	
-;TX_wait		block wait for avaiable byte in tx buffer
-
-;TX_direct_write	block wait to write reg directly, no interrupts
-;RX_direct_read	block wait to read reg directly, no interrupts
+;Serial_RX_read		wait for next available data and read next byte in rx buffer
+;Serial_RX_isQueueFull
+;Serial_RX_isByteAvailable
+;Serial_RX_wait		block wait for byte in rx buffer
+;Serial_RX_forceRead		read next byte in buffer immediatly
+;Serial_RX_directRead	block wait to read reg directly, no interrupts
+;Serial_RX_purge
+;Serial_hasError
+;Serial_TX_isQueueFull
+;Serial_TX_forceWrite		add byte to tx buffer even if full
+;Serial_TX_write		block wait to write to tx buffer when available
+;Serial_TX_directWrite	block wait to write reg directly, no interrupts
+;Serial_TX_isByteAvailable	
+;Serial_TX_wait		block wait for avaiable byte in tx buffer
+;Serial_TX_purge
+; Serial_Status
+;Serial_bit_RX_avail 
+;Serial_bit_TX_avail 
+;Serial_bit_RX_frameError 
+;Serial_bit_RX_overrunERror 
+;Serial_bit_TX_bufferOverrun
+;Serial_bit_RX_bufferOverrun 
+;Serial_bit_RX_bufferFull
+;Serial_bit_TX_bufferFull
+; Serial_Data	Byte buffer to get and set data to serial methods
+; Serial_TX_buffer_wp
+; Serial_TX_buffer_rp
+; Serial_RX_buffer_wp
+; Serial_RX_buffer_rp
+;  Serial_TX_buffer_startAddress
+;  Serial_RX_buffer_startAddress
+;  Serial_TX_buffer_endAddress
+;  Serial_RX_buffer_endAddeess
 ;#############################################################################
 ;	Delay routines	
 ;#############################################################################
