@@ -2918,6 +2918,133 @@ XORi	MACRO	a, b
 	BCF	STATUS, Z
 	ENDM
 
+
+
+;#############################################################################
+;	Multiplication
+;#############################################################################
+
+; inline implementation (no loop)
+MULT	MACRO	dest, a, b ;dest is 2 bytes, a and b are 1 byte
+	LOCAL	_1, _2, _3, _4, _5, _6, _7, _END
+	
+	CLRF	dest
+	CLRF	dest + 1
+	CLRF	SCRATCH
+	
+	MOVF	a, F
+	BTFSC	STATUS, Z
+	GOTO	_END
+	MOVF	b, F
+	BTFSC	STATUS, Z
+	GOTO	_END
+	
+	BTFSS	a, 0
+	GOTO	_1
+	
+	MOVF	b, W
+	MOVWF	dest
+_1:
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	BTFSS	a, 1
+	GOTO	_2
+	
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+_2:	
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	BTFSS	a, 2
+	GOTO	_3
+	
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+
+_3:	
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	BTFSS	a, 3
+	GOTO	_4
+	
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+
+_4:	
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	BTFSS	a, 4
+	GOTO	_5
+	
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+
+_5:	
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	BTFSS	a, 5
+	GOTO	_6
+	
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+
+_6:	
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	BTFSS	a, 6
+	GOTO	_7
+	
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+
+_7:	
+	BTFSS	a, 7
+	GOTO	_END
+	
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+
+	MOVF	b, W
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F
+
+_END:
+	ENDM
+
 ;#############################################################################
 ;	Assertion functions to Test and Debug
 ;	Extended to 16, 24 and 32 bits

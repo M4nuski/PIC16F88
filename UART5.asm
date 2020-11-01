@@ -698,15 +698,6 @@ ADJUST_TZ:
 	
 	ADDWF	data_H01, F ; h01 = 10*h10 + h01 = HH(utc)
 	
-	MOVWF	bytetoConvert
-	CALL	WriteHex
-	MOVF	data_H10, W
-	MOVWF	bytetoConvert
-	CALL	WriteHex
-	MOVF	data_H01, W
-	MOVWF	bytetoConvert
-	CALL	WriteHex
-	
 	SUB	data_H01, TZ_offset ; h01 = HH(EDT/EST)
 	BR_NB	ADJUST_TZ_DONE_NB
 	ADDL	data_H01, 24
