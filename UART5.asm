@@ -16,7 +16,7 @@
 	__CONFIG	_CONFIG2, 	_IESO_OFF & _FCMEN_OFF
 
 ;#############################################################################
-;	Pinout
+;	MACRO
 ;#############################################################################
 	
 WRITESTRING_LN	MACRO string
@@ -32,7 +32,7 @@ _NEXT
 	BTFSC	STATUS, Z
 	GOTO	_END
 	MOVWF	Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	INCF	WriteLoop, F
 	GOTO	_NEXT
 _TABLE:
@@ -61,6 +61,11 @@ _TABLE:
 	DT	string, 13, 10, 0
 _END:
 	ENDM
+	
+;#############################################################################
+;	Pinout
+;#############################################################################
+
 ; pin  1 IOA PORTA2	O isr_TX_SQgreen
 ; pin  2 IOA PORTA3	O isr_RX_SQred
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
@@ -117,7 +122,6 @@ _Serial_bit_RX_frameError 		EQU	3	;uart module frame error
 _Serial_bit_RX_overrunError 		EQU	4	;uart module overrun error
 _Serial_bit_TX_bufferOverrun		EQU	5	;TX circular buffer overrun error
 _Serial_bit_RX_bufferOverrun 		EQU	6	;RX circular buffer overrun error
-
 
 ByteToConvert		EQU	0x25
 TZ_offset		EQU	0x26
@@ -226,9 +230,9 @@ ISR_TX:
 	
 ISR_TX_empty:
 	BCF	TX_green
-	BANK1
+	BANK0_1
 	BCF	PIE1, TXIE	; disable tx interrupts	
-	BANK0
+	BANK1_0
 	;GOTO	ISR_END
 
 ISR_END:
@@ -272,7 +276,6 @@ SETUP:
 	MOVLW	51		; 9600 bauds
 	MOVWF	SPBRG
 	
-	BANKSEL	PIE1
 	BSF	PIE1, RCIE	; enable rx interrupts
 	BCF	PIE1, TXIE	; disable tx interrupts
 	
@@ -302,7 +305,6 @@ SETUP:
 	
 	CLRF	PORTA
 	CLRF	PORTB
-	CLRF	Serial_Status
 	
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
@@ -316,39 +318,35 @@ SETUP:
 
 	
 LOOP:
-	CALL	WAIT_25ms
-	BCF	OverrunError_yellow
-	BCF	FrameError_yellow
-
-
 	CALL	READ_NEXT_TIME
 	BW_False	NO_TIME
 	
 	MOV	data_H10, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	MOV	data_H01, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	
 	STR	':', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	MOV	data_m10, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	MOV	data_m01, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	
 	STR	':', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	MOV	data_s10, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	MOV	data_s01, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	
 	STR	'Z', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
+	
 	STR	' ', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	
 	MOVLW	5
@@ -359,37 +357,37 @@ LOOP:
 	CALL	ADJUST_TZ	
 	
 	MOV	data_H10, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	MOV	data_H01, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	
 	STR	':', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	MOV	data_m10, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	MOV	data_m01, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	
 	STR	':', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	MOV	data_s10, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	MOV	data_s01, Serial_Data
-	CALL	Serial_TX_waitWrite
+	CALL	Serial_TX_write
 	
 	STR	'E', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	MOVLW	'S'
 	BTFSC	TZ_select
 	MOVLW	'D'
 	MOVWF	Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	STR	'T', Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	
 	CALL	WriteEOL
 
@@ -397,6 +395,16 @@ LOOP:
 	;CALL	WriteHex
 	;CALL	WriteSpace
 	;CALL	WriteEOL
+	
+	
+	BCF	OverrunError_yellow
+	BTFSC	Serial_Status, _Serial_bit_RX_overrunError
+	BSF	OverrunError_yellow
+	
+	BCF	FrameError_yellow
+	BTFSC	Serial_Status, _Serial_bit_RX_frameError
+	BSF	FrameError_yellow
+	CLRF	Serial_Status
 	
 	
 	GOTO	LOOP
@@ -411,18 +419,20 @@ NO_TIME:
 ;#############################################################################
 ;	Subroutines
 ;#############################################################################
+
+
 	
 ;#############################################################################
 ;	Serial TX
 ;#############################################################################
-	
+
+; check TX buffer is available, return with TRUE(0) in W if avail, FALSE(1) in W if not
 Serial_TX_isByteAvailable:
 	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
 	MOVWF	TX_Temp
 	CMP_lf	_Serial_TX_buffer_endAddress, TX_Temp
 	BR_NE	Serial_TX_isByteAvailable_2
-	MOVLW	_Serial_TX_buffer_startAddress
-	MOVWF	TX_Temp
+	STR	_Serial_TX_buffer_startAddress, TX_Temp
 Serial_TX_isByteAvailable_2:
 	CMP_ff	Serial_TX_buffer_rp, TX_Temp	; compare to current read pointer
 	SK_EQ
@@ -431,87 +441,80 @@ Serial_TX_isByteAvailable_2:
 
 
 
+; block wait for availble space in the TX buffer then write the byte
 Serial_TX_write:
 	BSF	TX_green
-	BANK1
+	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
+	MOVWF	TX_Temp
+	CMP_lf	_Serial_TX_buffer_endAddress, TX_Temp
+	BR_NE	Serial_TX_write_2
+	STR	_Serial_TX_buffer_startAddress, TX_Temp
+Serial_TX_write_2:
+	CMP_ff	Serial_TX_buffer_rp, TX_Temp	; compare to current read pointer
+	BR_EQ	Serial_TX_write
+	
+	BANK0_1
 	BCF	PIE1, TXIE	; disable tx interrupts	
-	BANK0
+	BANK1_0
+	
+	WRITEp	Serial_Data, Serial_TX_buffer_wp	
+	MOV	TX_Temp, Serial_TX_buffer_wp
+
+	BANK0_1
+	BSF	PIE1, TXIE	; enable tx interrupts	
+	BANK1_0
+	RETURN
+
+
+
+; write a byte to the TX buffer regardless of the available space
+Serial_TX_forceWrite:
+	BSF	TX_green
+	BANK0_1
+	BCF	PIE1, TXIE	; disable tx interrupts	
+	BANK1_0
 	
 	WRITEp	Serial_Data, Serial_TX_buffer_wp
 
 	INCF	Serial_TX_buffer_wp, F	; advance pointer
 	CMP_lf	_Serial_TX_buffer_endAddress, Serial_TX_buffer_wp	
-	BR_NE	Serial_TX_write_END
+	BR_NE	Serial_TX_forceWrite_END
 	STR	_Serial_TX_buffer_startAddress, Serial_TX_buffer_wp
-	
-Serial_TX_write_END:
-	BANK1
+Serial_TX_forceWrite_END:
+	BANK0_1
 	BSF	PIE1, TXIE	; enable tx interrupts	
-	BANK0
+	BANK1_0
 	RETURN
 
 
 
-Serial_TX_waitWrite:
-	BSF	TX_green
-	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
-	MOVWF	TX_Temp
-	CMP_lf	_Serial_TX_buffer_endAddress, TX_Temp
-	BR_NE	Serial_TX_waitWrite_2
-	MOVLW	_Serial_TX_buffer_startAddress
-	MOVWF	TX_Temp
-Serial_TX_waitWrite_2:
-	CMP_ff	Serial_TX_buffer_rp, TX_Temp	; compare to current read pointer
-	BR_EQ	Serial_TX_waitWrite
-	
-	BANK1
-	BCF	PIE1, TXIE	; disable tx interrupts	
-	BANK0
-	
-	WRITEp	Serial_Data, Serial_TX_buffer_wp	
-	MOV	TX_Temp, Serial_TX_buffer_wp
-
-	BANK1
-	BSF	PIE1, TXIE	; enable tx interrupts	
-	BANK0
-	RETURN
-
-
-
-	;CMP_ff	Serial_RT_buffer_wp, Serial_RT_buffer_rp ; check for circular buffer overrun
-	;SK_NE	; skip if both buffer are not equal after moving the write pointer forward
-	;BSF	Serial_Status, _Serial_bit_TX_bufferOverrun
-	
-
-	
+; reset TX and buffers
 Serial_TX_purge:
-	BANK1
+	BANK0_1
 	BCF	TXSTA, TXEN	; disable tx
 	BCF	PIE1, TXIE	; disable tx interrupts
-	BANK0
+	BANK1_0
 	MOVLW	_Serial_TX_buffer_startAddress	;reset buffer pointers
 	MOVWF	Serial_TX_buffer_wp
 	MOVWF	Serial_TX_buffer_rp
-	BANK1
+	BANK0_1
 	BSF	PIE1, TXIE	; enable tx interrupts
 	BSF	TXSTA, TXEN	; enable tx
-	BANK0
+	BANK1_0
 	RETURN
 
 
 
+; write data directly to ausart without using interrupts and buffers
 Serial_TX_directWrite:
-	BANK1
+	BANK0_1
 	BCF	PIE1, TXIE	; disable tx interrupts
-	BANK0
+	BANK1_0
 	BSF	TX_green
 	BTFSS	PIR1, TXIF
 	GOTO	Serial_TX_directWrite
 	MOVF	Serial_Data, W
 	MOVWF	TXREG
-	BANK1
-	BSF	PIE1, TXIE	; enable tx interrupts
-	BANK0
 	BCF	TX_green	
 	RETURN
 
@@ -571,17 +574,17 @@ Serial_RX_waitRead:
 ; reset RX and buffers
 Serial_RX_purge:
 	BCF	RCSTA, CREN	; disable rx
-	BANK1
+	BANK0_1
 	BCF	PIE1, RCIE	; disable rx interrupts
-	BANK0
+	BANK1_0
 	MOVLW	_Serial_RX_buffer_startAddress	;reset buffer pointers
 	MOVWF	Serial_RX_buffer_wp
 	MOVWF	Serial_RX_buffer_rp
 	MOVF	RCREG, W	; 	purge receive register
 	MOVF	RCREG, W
-	BANK1
+	BANK0_1
 	BSF	PIE1, RCIE	; enable rx interrupts
-	BANK0
+	BANK1_0
 	BSF	RCSTA, CREN	; enable rx
 	RETURN
 
@@ -590,9 +593,9 @@ Serial_RX_purge:
 ; block wait until data is available from ausart without using interrupts and buffers
 Serial_RX_directRead:
 	BSF	WaitRX_red
-	BANK1
+	BANK0_1
 	BCF	PIE1, RCIE	; disable rx interrupts
-	BANK0
+	BANK1_0
 Serial_RX_directRead_2:
 	BSF	RCSTA, CREN
 	BTFSS	RCSTA, OERR
@@ -611,9 +614,9 @@ Serial_RX_directRead_3:
 	MOVWF	Serial_Data
 	BCF	RCSTA, CREN
 
-	BANK1
+	BANK0_1
 	BSF	PIE1, RCIE	; enable rx interrupts
-	BANK0
+	BANK1_0
 	BCF	WaitRX_red
 	RETURN
 
@@ -685,26 +688,24 @@ ADJUST_TZ:
 	SUBL	data_H01, '0'; ascii to int
 	SUBL	data_H10, '0'; ascii to int
 	
-	;CLRF	STATUS
-	;RLF	data_H10, F ; h10  = 2*h10
-	;MOVF	data_H10, W ; w = 2*h10
-	;CLRF	STATUS
-	;RLF	data_H10, F ; h10  = 4*h10
-	;RLF	data_H10, F ; h10  = 8*h10
-	;ADDWF	data_H10, W
-	MOVF	data_H10, W ; w = 1*h10
-	ADDWF	data_H10, W ; w = 2*h10
-	ADDWF	data_H10, W ; w = 3*h10
-	ADDWF	data_H10, W ; w = 4*h10
-	ADDWF	data_H10, W ; w = 5*h10
-	
-	ADDWF	data_H10, W ; w = 6*h10
-	ADDWF	data_H10, W ; w = 7*h10
-	ADDWF	data_H10, W ; w = 8*h10
-	ADDWF	data_H10, W ; w = 9*h10
-	ADDWF	data_H10, W ; w = 10*h10
+	BCF	STATUS, C
+	RLF	data_H10, F ; h10  = 2*h10
+	MOVF	data_H10, W ; w = 2*h10
+	BCF	STATUS, C
+	RLF	data_H10, F ; h10  = 4*h10
+	RLF	data_H10, F ; h10  = 8*h10
+	ADDWF	data_H10, W
 	
 	ADDWF	data_H01, F ; h01 = 10*h10 + h01 = HH(utc)
+	
+	MOVWF	bytetoConvert
+	CALL	WriteHex
+	MOVF	data_H10, W
+	MOVWF	bytetoConvert
+	CALL	WriteHex
+	MOVF	data_H01, W
+	MOVWF	bytetoConvert
+	CALL	WriteHex
 	
 	SUB	data_H01, TZ_offset ; h01 = HH(EDT/EST)
 	BR_NB	ADJUST_TZ_DONE_NB
@@ -741,12 +742,15 @@ WriteHex:
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	MOVF	ByteToConvert, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
+	MOVLW	' '
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
 	RETURN
 	
 NibbleHex:
@@ -756,54 +760,18 @@ NibbleHex:
 WriteSpace:
 	MOVLW	' '
 	MOVWF	Serial_Data
-	CALL 	Serial_TX_waitWrite	
+	CALL 	Serial_TX_write	
 	RETURN
 WriteEOL:
 	MOVLW	13		;(CR)
 	MOVWF	Serial_Data
-	CALL 	Serial_TX_waitWrite	
+	CALL 	Serial_TX_write	
 	MOVLW	10		;(LF)
 	MOVWF	Serial_Data
-	CALL 	Serial_TX_waitWrite
+	CALL 	Serial_TX_write
 	RETURN
 	
-;Serial_RX_read		busy wait for next available data and read next byte in rx buffer
-;Serial_RX_isQueueFull
-;Serial_RX_isByteAvailable
-;Serial_RX_wait		busy wait for byte in rx buffer
-;Serial_RX_forceRead		read next byte in buffer immediatly
-;Serial_RX_directRead		busy wait to read reg directly, no interrupts
-;Serial_RX_purge
 
-;Serial_TX_write		busy wait to write to tx buffer when available
-;Serial_TX_isQueueFull
-;Serial_TX_isByteAvailable
-;Serial_TX_wait		busy wait for avaiable byte in tx buffer
-;Serial_TX_forceWrite		add byte to tx buffer even if full
-;Serial_TX_directWrite	busy wait to write reg directly, no interrupts
-;Serial_TX_purge
-
-;Serial_hasError
-
-; Serial_Status
-;_Serial_bit_RX_avail 
-;_Serial_bit_TX_avail 
-;_Serial_bit_RX_frameError 
-;_Serial_bit_RX_overrunERror 
-;_Serial_bit_TX_bufferOverrun
-;_Serial_bit_RX_bufferOverrun 
-;_Serial_bit_RX_bufferFull
-;_Serial_bit_TX_bufferFull
-
-; Serial_Data	Byte buffer to get and set data to serial methods
-; Serial_TX_buffer_wp
-; Serial_TX_buffer_rp
-; Serial_RX_buffer_wp
-; Serial_RX_buffer_rp
-;  _Serial_TX_buffer_startAddress
-;  _Serial_RX_buffer_startAddress
-;  _Serial_TX_buffer_endAddress
-;  _Serial_RX_buffer_endAddeess
 
 ;#############################################################################
 ;	Delay routines	

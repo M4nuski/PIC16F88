@@ -1635,9 +1635,11 @@ _b2:
 	
 _end:
 	; restore final STATUS values
-	CLRF	STATUS
+	BCF	STATUS, C
 	BTFSC	SCRATCH, sfC
-	BSF	STATUS, C	
+	BSF	STATUS, C
+	
+	BCF	STATUS, Z
 	BTFSC	SCRATCH, sfZ
 	BSF	STATUS, Z
 	ENDM
@@ -1720,9 +1722,11 @@ _r0:
 	
 _end:
 	; restore final STATUS values
-	CLRF	STATUS
+	BCF	STATUS, C
 	BTFSC	SCRATCH, sfC
-	BSF	STATUS, C	
+	BSF	STATUS, C
+	
+	BCF	STATUS, Z
 	BTFSC	SCRATCH, sfZ
 	BSF	STATUS, Z
 	ENDM
