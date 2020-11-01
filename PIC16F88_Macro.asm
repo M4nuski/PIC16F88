@@ -450,6 +450,20 @@ NEGw	MACRO
 	XORLW	0xFF
 	ADDLW	0x01
 	ENDM
+	
+READp 	MACRO	address, file
+	MOVF	address, W
+	MOVWF	FSR
+	MOVF	INDF, W
+	MOVWF	file
+	ENDM
+
+WRITEp	MACRO	file, address
+	MOVF	address, W
+	MOVWF	FSR
+	MOVF	file, W
+	MOVWF	INDF
+	ENDM
 
 ; SWAP content of 2 files
 ; not the nibbles like SWAPF
