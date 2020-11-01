@@ -124,12 +124,12 @@ TZ_offset		EQU	0x26
 WriteLoop		EQU	0x27
 TX_Temp			EQU	0x28
 
-data_H10		EQU	0x28
-data_H01		EQU	0x29
-data_m10		EQU	0x2A
-data_m01		EQU	0x2B
-data_s10		EQU	0x2C
-data_s01		EQU	0x2D
+data_H10		EQU	0x29
+data_H01		EQU	0x2A
+data_m10		EQU	0x2B
+data_m01		EQU	0x2C
+data_s10		EQU	0x2D
+data_s01		EQU	0x2E
 
 ; Bank 1
 _Serial_RX_buffer_startAddress	EQU	0xA0 ; circular RX buffer start
