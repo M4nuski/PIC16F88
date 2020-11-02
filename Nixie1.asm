@@ -20,7 +20,7 @@
 
 ; PIC16F88:
 ; pin  1 IOA PORTA2	O NixieSerial - Latch
-; pin  2 IOA PORTA3	
+; pin  2 IOA PORTA3	?I AU_select 0=M 1=Ft
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
 ; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
@@ -31,11 +31,11 @@
 
 ; pin 10 IO_ PORTB4	
 ; pin 11 IOT PORTB5	O TX to computer
-; pin 12 IOA PORTB6	(PGC)
-; pin 13 IOA PORTB7	(PGD)
+; pin 12 IOA PORTB6	?(PGC)
+; pin 13 IOA PORTB7	?(PGD)
 ; pin 14 PWR VDD	VCC
-; pin 15 _O_ PORTA6	XT
-; pin 16 I__ PORTA7	XT
+; pin 15 _O_ PORTA6	?XT
+; pin 16 I__ PORTA7	?XT
 ; pin 17 IOA PORTA0	O NixieSerial - Clock
 ; pin 18 IOA PORTA1	O NixieSerial - Data
 
@@ -68,6 +68,7 @@
 ;#############################################################################
 ;	File Variables and Constants
 ;#############################################################################
+; Bank 0
 
 WAIT_loopCounter1	EQU	0x20
 WAIT_loopCounter2	EQU	0x21
@@ -75,18 +76,15 @@ WAIT_loopCounter3	EQU	0x22
 
 Serial_Data		EQU	0x23
 Serial_Status		EQU	0x24
-;_Serial_bit_RX_avail 		EQU	0	;data available in RX buffer
-;_Serial_bit_RX_bufferFull		EQU	1	;RX buffer is full, next RX will overrun unless read
-;_Serial_bit_TX_avail 		EQU	2	;space available in TX buffer
-_Serial_bit_RX_frameError 		EQU	3	;uart module frame error
-_Serial_bit_RX_overrunError 		EQU	4	;uart module overrun error
-;_Serial_bit_TX_bufferOverrun		EQU	5	;TX circular buffer overrun error
-_Serial_bit_RX_bufferOverrun 		EQU	6	;RX circular buffer overrun error
 
-ByteToConvert		EQU	0x25
-TZ_offset		EQU	0x26
-WriteLoop		EQU	0x27
-TX_Temp			EQU	0x28
+_Serial_bit_RX_frameError 		EQU	0	;uart module frame error
+_Serial_bit_RX_overrunError 		EQU	1	;uart module overrun error
+_Serial_bit_RX_bufferOverrun 		EQU	2	;RX circular buffer overrun error
+
+ByteToConvert		EQU	0x25 ; for convert to hex
+TZ_offset		EQU	0x26 ; for TZ adjust
+WriteLoop		EQU	0x27 ; for NixieSerial and WriteString
+TX_Temp			EQU	0x28 ; for RX/TX buffer address calculation
 
 data_H10		EQU	0x29
 data_H01		EQU	0x2A
@@ -95,21 +93,37 @@ data_m01		EQU	0x2C
 data_s10		EQU	0x2D
 data_s01		EQU	0x2E
 
-NixieDemoCount		EQU	0x5C
-NixieLoop		EQU	0x5D
-NixieData		EQU	0x5E
-NixieTube		EQU	0x5F
-NixieBuffer		EQU	0x60 ; to 0x69, 10 bytes, 80 bit
+NixieVarX		EQU	0x59 ; inner data
+NixieVarY		EQU	0x5A ; inner data
+NixieLoop		EQU	0x5B ; inner data
+NixieSeg		EQU	0x5C ; to pass data between routines
+NixieData		EQU	0x5D ; to pass data between routines
+NixieTube		EQU	0x5E ; to pass data between routines
+NixieDemoCount		EQU	0x5F ; global for demo
+
+D88_Num			EQU	0x60 ; numerator for div and receive modulo (remainder)
+D88_Denum		EQU	0x61 ; denumerator for div
+D88_Fract		EQU	0x62 ; Receive fraction of div
+D88_Modulo		EQU	0x63
+
+; GPR files in GPR for context saving
+;STACK_FSR		EQU	0x6C
+;STACK_SCRATCH		EQU	0x6D
+;STACK_SCRATCH2	EQU	0x6E
+;STACK_PCLATH		EQU	0x6F
 
 ; Bank 1
+
 _Serial_RX_buffer_startAddress	EQU	0xA0 ; circular RX buffer start
 _Serial_RX_buffer_endAddress		EQU	0xC0 ; circular RX buffer end
 
 _Serial_TX_buffer_startAddress	EQU	0xC0 ; circular TX buffer start
 _Serial_TX_buffer_endAddress		EQU	0xE0 ; circular TX buffer end
 
+NixieBuffer				EQU	0xE0 ; to 0xE9, 10 bytes, 80 bit
+
 ;#############################################################################
-;	Shared Files 0x70 - 0x7F
+;	Shared Files 0x70 - 0x7F / 0xF0 - 0xFF
 ;#############################################################################
 
 Serial_RX_buffer_rp	EQU	0x70 ; circular RX buffer read pointer
@@ -117,6 +131,15 @@ Serial_RX_buffer_wp	EQU	0x71 ; circular RX buffer write pointer
 
 Serial_TX_buffer_rp	EQU	0x72 ; circular TX buffer read pointer
 Serial_TX_buffer_wp	EQU	0x73 ; circular TX buffer write pointer
+
+
+; GPR files in shared GPR for instruction extensions
+;SCRATCH		EQU	0x7C
+;SCRATCH2		EQU	0x7D
+
+; GPR files in shared GPR for context saving
+;STACK_STATUS		EQU	0x7E
+;STACK_W		EQU	0x7F
 
 ;#############################################################################
 ;	MACRO
@@ -142,6 +165,25 @@ _TABLE:
 	ADDWF	PCL, F
 	DT	string, 13, 10, 0
 _END:
+	ENDM
+	
+BClear	MACRO	file, bit
+	LOCAL	_set
+	MOVLW	0xFE	;1111 1110 
+	BTFSC	bit, 2	;4
+	MOVLW	0xEF	;1110 1111
+	MOVWF	SCRATCH
+	BSF	STATUS, C
+	
+	BTFSC	bit, 0
+	RLF	SCRATCH, F ; 1
+	BTFSS	bit, 1
+	GOTO	_set
+	RLF	SCRATCH, F
+	RLF	SCRATCH, F ; 2
+_set:
+	MOVF	SCRATCH, W
+	ANDWF	file, F
 	ENDM
 	
 ;#############################################################################
@@ -291,6 +333,8 @@ SETUP:
 
 	
 LOOP:
+	;GOTO	DEMO
+
 	CALL	READ_NEXT_TIME
 	BW_False	NO_TIME
 	
@@ -362,6 +406,11 @@ LOOP:
 	STR	'T', Serial_Data
 	CALL 	Serial_TX_write
 	
+	GOTO	ErrorCheck1	
+	
+	PC0x0100ALIGN		NO_TIME
+	WRITESTRING_LN		"No Time Data!"
+	
 ErrorCheck1:
 	BTFBC	Serial_Status, _Serial_bit_RX_overrunError, ErrorCheck2
 	STR	' ', Serial_Data
@@ -401,21 +450,116 @@ ErrorCheck_End:
 	CALL	WriteEOL
 	CLRF	Serial_Status	
 	
-	INCF	NixieDemoCount, F
-	BTFSC	NixieDemoCount, 0
-	GOTO	NixieDemoAll
-	GOTO	NixieDemoNone
-NixieDemoAll:
-	CALL	Nixie_All
-	CALL	Nixie_Send	
-	GOTO	LOOP
-NixieDemoNone:
-	CALL	Nixie_None
-	CALL	Nixie_Send
-	GOTO	LOOP
 	
-	PC0x0100ALIGN		NO_TIME
-	WRITESTRING_LN		"No Time Data!"
+	
+DEMO:
+	;CALL	Wait_05s
+; Write data to Nixie tubes
+	;INCF	NixieDemoCount, F
+	;CMP_lf	9, NixieDemoCount
+	;SK_NE	
+	;CLRF	NixieDemoCount
+	
+	CALL	Nixie_None	
+	
+	STR	2, NixieTube
+	MOVLW	'0'
+	SUBWF	data_H10, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum
+		
+	STR	3, NixieTube
+	MOVLW	'0'
+	SUBWF	data_H01, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum	
+	
+	
+	STR	5, NixieTube
+	MOVLW	'0'
+	SUBWF	data_m10, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum
+	
+	STR	6, NixieTube
+	MOVLW	'0'
+	SUBWF	data_m01, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum
+	
+	
+	STR	8, NixieTube
+	MOVLW	'0'
+	SUBWF	data_s10, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum
+	
+	STR	9, NixieTube
+	MOVLW	'0'
+	SUBWF	data_s01, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum
+	
+	
+	;MOV	NixieDemoCount, NixieData
+	
+	;STR	1, NixieTube
+	;CALL	Nixie_DrawNum	; light up 1 segment, seg# in NixieData, tube# in NixieTube
+
+	;STR	2, NixieTube
+	;CALL	Nixie_DrawNum
+
+	;STR	3, NixieTube
+	;CALL	Nixie_DrawNum
+	
+
+	;STR	5, NixieTube
+	;CALL	Nixie_DrawNum
+
+	;STR	6, NixieTube
+	;CALL	Nixie_DrawNum
+
+	;STR	7, NixieTube
+	;CALL	Nixie_DrawNum
+
+	;STR	8, NixieTube
+	;CALL	Nixie_DrawNum
+
+	;STR	9, NixieTube
+	;CALL	Nixie_DrawNum
+	
+
+	;BCF	STATUS, C
+	;RRF	NixieData, W
+	;MOVWF	NixieSeg
+	;STR	0, NixieTube
+	;CALL	Nixie_SetSegment
+	
+	;STR	4, NixieTube
+	;CALL	Nixie_SetSegment
+
+	
+	CALL	Nixie_Send
+	
+;	CALL	Nixie_None
+;	MOVLW	NixieBuffer
+;	ADDWF	NixieDemoCount, W
+;	MOVWF	FSR
+;	CLRF	INDF
+;	CALL	Nixie_Send
+
+; flash all on/off
+;	BTFSC	NixieDemoCount, 0
+;	GOTO	NixieDemoAll
+;	GOTO	NixieDemoNone
+;NixieDemoAll:
+;	CALL	Nixie_All
+;	CALL	Nixie_Send	
+;	GOTO	LOOP
+;NixieDemoNone:
+;	CALL	Nixie_None
+;	CALL	Nixie_Send
+;	GOTO	LOOP
 
 	
 	GOTO	LOOP
@@ -480,7 +624,8 @@ Serial_RX_waitRead:
 ;	Nixie Tube Serial (74x595) 10 tubes X 9 segments
 ;#############################################################################
 
-Nixie_All: 	; light up all segments
+; light up all segments
+Nixie_All: ;()[NixieLoop]
 	MOVLW	NixieBuffer
 	MOVWF	FSR
 	STR	10, NixieLoop
@@ -491,7 +636,8 @@ Nixie_All_Next:
 	GOTO	Nixie_All_Next	
 	RETURN	
 	
-Nixie_None:	; Turn all segments off
+; Turn all segments off
+Nixie_None: ;()[NixieLoop]
 	MOVLW	NixieBuffer
 	MOVWF	FSR
 	STR	10, NixieLoop
@@ -503,12 +649,78 @@ Nixie_None_Next:
 	GOTO	Nixie_None_Next	
 	RETURN
 	
-Nixie_SetSegment:	; light up 1 segment, # in NixieData, tube in NixieTube
-Nixie_DrawNum:		; Draw a num [0-9], char code in NixieData, tube in NixieTube
+
+; light up 1 segment, seg# in NixieSeg, tube# in NixieTube
+Nixie_SetSegment: ;(NixieSeg, NixieTube)[NixieVarX, NixieVarY]
+
+	MOVLW	high (TABLE0)
+	MOVWF	PCLATH
+	
+	MOVF	NixieTube, W
+	CALL	Nixie_MaxSeg	; get number of segments for the tube
+	SUBWF	NixieSeg, W	; w = seg# - max, borrow should be set (carry cleared)
+	BTFSC	STATUS, C
+	RETURN	
+	
+	MOVF	NixieTube, W
+	CALL	Nixie_Offsets	; get the bit offset for that tube
+	ADDWF	NixieSeg, W	; NixieVarX = offset + seg#
+	MOVWF	NixieVarX
+
+	CLRF	NixieVarY	; to receive remainder
+	BCF	STATUS, C
+	RRF	NixieVarX, F	; / 2
+	RRF	NixieVarY, F	
+	BCF	STATUS, C
+	RRF	NixieVarX, F	; / 4
+	RRF	NixieVarY, F	
+	BCF	STATUS, C
+	RRF	NixieVarX, F	; / 8
+	RRF	NixieVarY, F	
+	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
+	RRF	NixieVarY, F
+	SWAPF	NixieVarY, F
+	
+	MOVLW	NixieBuffer	; @data
+	ADDWF	NixieVarX, W
+	MOVWF	FSR		; FSR = @data[di]
+	BClear	INDF, 	NixieVarY	
+	RETURN
+
+; Draw a num [0-9], char code in NixieData, tube in NixieTube
+Nixie_DrawNum:	;(NixieData) [NixieLoop]
+; CALL	Nixie_SetSegment:(NixieSeg, NixieTube)[NixieVarX, NixieVarY]
+
+	MOVLW	high (TABLE0)
+	MOVWF	PCLATH	
+	MOVF	NixieData, W
+	CALL	Nixie_Num_seg8
+	MOVWF	NixieLoop
+	
+	STR	8, NixieSeg	
+	BTFSC	NixieLoop, 0 ; test seg 8
+	CALL	Nixie_SetSegment
+	
+	MOVF	NixieData, W
+	CALL	Nixie_Num_seg0_7
+	MOVWF	NixieLoop
+
+Nixie_DrawNum_loop:
+	DECF	NixieSeg, F
+	RLF	NixieLoop, F
+	BTFSC	STATUS, C
+	CALL	Nixie_SetSegment
+	INCF	NixieSeg, F
+	DECFSZ	NixieSeg, F
+	GOTO	Nixie_DrawNum_loop
+	
+	RETURN	
+
 Nixie_DrawChar:	; Draw char [.:+-ecmfa], char code in NixieData, tube in NixieTube
 
+;Send the data to the SIPO buffers, LSBit of LSByte first
+Nixie_Send: ;()[WriteLoop, NixieLoop]
 
-Nixie_Send:		;Send the data to the SIPO buffers, LSBit of LSByte first
 	MOVLW	NixieBuffer
 	MOVWF	FSR
 	STR	10, WriteLoop
@@ -638,12 +850,9 @@ ADJUST_TZ_DONE:
 ;#############################################################################
 ;	Serial formatting and helpers
 ;#############################################################################
-
-;	Set PC just after the next 256 byte boundary
-	ORG	( $ & 0xFFFFFF00 ) + 0x100
 	
 WriteHex:
-	MOVLW	high (NibbleHex)
+	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
 	SWAPF	ByteToConvert, W
 	ANDLW	0x0F
@@ -660,10 +869,6 @@ WriteHex:
 	CALL 	Serial_TX_write
 	RETURN
 	
-NibbleHex:
-	ADDWF	PCL, F
-	dt	"0123456789ABCDEF"
-	
 WriteSpace:
 	MOVLW	' '
 	MOVWF	Serial_Data
@@ -677,21 +882,28 @@ WriteEOL:
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	RETURN
+
+;#############################################################################
+;	Tables
+;#############################################################################
+
+	PC0x0100ALIGN	TABLE0	
 	
+; 	Int to Hex nibble char table
+NibbleHex:
+	ADDWF	PCL, F
+	dt	"0123456789ABCDEF"
 
-
-;#############################################################################
-;	Nixie Segments offset tables
-;#############################################################################
+;	Nixie Segments offset
 
 Nixie_Offsets: ; segments starting bit offset of each tubes
 	ADDWF	PCL, F
 	dt	0,  4, 13, 22, 31, 35, 44, 53, 62, 71
-Nixie_Lengths:
+Nixie_MaxSeg:
 	ADDWF	PCL, F
 	dt	4,  9,  9,  9,  4,  9,  9,  9,  9,  9
 
-Nixie_Num_bit07:
+Nixie_Num_seg0_7:
 	ADDWF	PCL, F
 	   ;     'hgfedcba'
 	RETLW	b'00110101' ;0
@@ -705,7 +917,7 @@ Nixie_Num_bit07:
 	RETLW	b'11111110' ;8
 	RETLW	b'01001100' ;9
 	
-Nixie_Num_bit9:
+Nixie_Num_seg8:
 	ADDWF	PCL, F
 	    ;    '       i'
 	RETLW	b'00000001' ;0
@@ -719,9 +931,111 @@ Nixie_Num_bit9:
 	RETLW	b'00000000' ;8
 	RETLW	b'00000001' ;9
 	
-DIV88:
+Nixie_Char_seg0_7:
+	; a -> HBar
+	; b -> TDot
+	; c -> BDot
+	; d -> VBar
+	ADDWF	PCL, F
+	   ;     'hgfedcba'
+	RETLW	b'00110101' ;.
+	RETLW	b'00000000' ;:
+	RETLW	b'01110110' ;-
+	RETLW	b'11110100' ;+
+	RETLW	b'01001000' ;E
+	RETLW	b'10111100' ;C
+	RETLW	b'10110111' ;F
+	RETLW	b'00000100' ;M
+	RETLW	b'11111110' ;
+	RETLW	b'01001100' ;
+	
+Nixie_Char_seg8:
+	ADDWF	PCL, F
+	    ;    '       i'
+	RETLW	b'00000001' ;.
+	RETLW	b'00000001' ;:
+	RETLW	b'00000000' ;-
+	RETLW	b'00000000' ;+
+	RETLW	b'00000001' ;E
+	RETLW	b'00000000' ;C
+	RETLW	b'00000000' ;F
+	RETLW	b'00000001' ;M
+	RETLW	b'00000000' ;
+	RETLW	b'00000001' ;
+	
+DIV88:	; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum 
+	CLRF	D88_Fract
+	
+	MOVF	D88_Denum, F	; return if Denum is 0
+	BTFSC	STATUS, Z
+	RETURN
+	
+	STR	0x01, SCRATCH	; index
+	BTFSC	D88_Denum, 7
+	GOTO	_div88Loop
+	
+_div88Prep:
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	BCF	STATUS, C
+	RLF	SCRATCH, F
+	BTFSS	D88_Denum, 7
+	GOTO	_div88Prep
+	
+_div88Loop:
+	SUB	D88_Num, D88_Denum
+	BR_GT	_div88pos
+	BR_LT	_div88neg
+;if equal
+	ADD	D88_Fract, SCRATCH
+	RETURN
+_div88pos:
+	ADD	D88_Fract, SCRATCH
+	GOTO	_div88roll
+_div88neg:
+	ADD	D88_Num, D88_Denum
+_div88roll:
+	BCF	STATUS, C
+	RRF	D88_Denum, F
+	BCF	STATUS, C
+	RRF	SCRATCH, F
+	BTFSS	STATUS, C
+	GOTO	_div88Loop	
 
 	RETURN
+	
+D8:	; D88_Num = D88_Num / 8, D88_Modulo = D88_Num % 8 
+	CLRF	D88_Modulo
+	
+	BCF	STATUS, C	; / 2
+	RRF	D88_Num, F
+	RRF	D88_Modulo, F
+	
+	BCF	STATUS, C	; / 4
+	RRF	D88_Num, F
+	RRF	D88_Modulo, F
+	
+	BCF	STATUS, C	; / 8
+	RRF	D88_Num, F
+	RRF	D88_Modulo, F
+	
+	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
+	RRF	D88_Modulo, F
+	SWAPF	D88_Modulo, F
+
+	;dest = a DIV b
+	
+	; check if b is Zero
+	; SCRATCH = 0x01
+	; check if MSB if b is 1, else
+	; RLF b et SCRATCH until MSB(b) == 1
+	
+	; TEMP = a
+	; TEMP = TEMP - b
+	; IF POS
+	;   dest += SCRATCH
+	;   a = TEMP
+	; RRF b et SCRATCH until SCRATCH == 0 (ou le LSB se trouve dans le CARRY)
 
 ;#############################################################################
 ;	Delay routines	

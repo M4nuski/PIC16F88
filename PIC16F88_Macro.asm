@@ -17,13 +17,19 @@
 #DEFINE TRUE	0x00
 #DEFINE FALSE	0x01
 
-; GPR files in shared GPR
-STACK_W		EQU	0x7F
-STACK_STATUS	EQU	0x7E
-STACK_PCLATH	EQU	0x7D
+; GPR files in GPR for context saving
+STACK_FSR	EQU	0x6C
+STACK_SCRATCH	EQU	0x6D
+STACK_SCRATCH2	EQU	0x6E
+STACK_PCLATH	EQU	0x6F
+
+; GPR files in shared GPR for instruction extensions
 SCRATCH		EQU	0x7C
-STACK_SCRATCH	EQU	0x7B
-STACK_FSR	EQU	0x7A
+SCRATCH2	EQU	0x7D
+
+; GPR files in shared GPR for context saving
+STACK_STATUS	EQU	0x7E
+STACK_W		EQU	0x7F
 
 ;#############################################################################
 ;	Bank Switching
@@ -632,11 +638,15 @@ POPfsr	MACRO
 PUSHscr	MACRO
 	MOVF	SCRATCH, W
 	MOVWF	STACK_SCRATCH
+	MOVF	SCRATCH2, W
+	MOVWF	STACK_SCRATCH2
 	ENDM
 	
 POPscr	MACRO
+	MOVF	STACK_SCRATCH2, W
+	MOVWF	SCRATCH2
 	MOVF	STACK_SCRATCH, W
-	MOVWF	SCRATCH
+	MOVWF	SCRATCH	
 	ENDM
 
 

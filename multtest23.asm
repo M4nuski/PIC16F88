@@ -211,4 +211,90 @@ _end:
 	NOP
 	NOP
 	
+DIV88	MACRO dest, a, b
+	; dest = a / b, dest + 1 = a % b
+	MOVF	b, F
+	BR_ZE	_div88End
+	CLRF	dest
+	MOV	a, dest + 1
+	MOV	b, var8
+	STR	0x01, SCRATCH	
+	BTFSC	var8, 7
+	GOTO	_div88Loop
+	
+_div88Prep:
+	BCF	STATUS, C
+	RLF	var8, F
+	BCF	STATUS, C
+	RLF	SCRATCH, F
+	BTFSS	var8, 7
+	GOTO	_div88Prep
+_div88Loop:
+	SUB	dest + 1, var8
+	BR_EQ	_div88eq
+	BR_GT	_div88pos
+	BR_LT	_div88neg
+_div88eq:
+	ADD	dest, SCRATCH
+	GOTO	_div88End
+_div88pos:
+	ADD	dest, SCRATCH
+	GOTO	_div88roll
+_div88neg:
+	ADD	dest + 1, var8
+	GOTO	_div88roll
+_div88roll:
+	BCF	STATUS, C
+	RRF	var8, F
+	BCF	STATUS, C
+	RRF	SCRATCH, F
+	BTFSS	STATUS, C
+	GOTO	_div88Loop	
+_div88End:
+	ENDM
+	
+	MOVLW	235	
+	MOVWF	var1
+	MOVLW	8	
+	MOVWF	var2
+	
+	Test_StartCounter 1
+	DIV88 var3, var1, var2
+	Test_StopCounter var6
+	
+	NOP
+	NOP
+	NOP
+	NOP
+
+D88_Num		EQU	var1
+D88_Fract	EQU	var2
+
+	MOVLW	235	
+	MOVWF	D88_Num
+	
+	Test_StartCounter 1
+	
+D8:	; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum 
+	CLRF	D88_Fract
+	
+	BCF	STATUS, C	; / 2
+	RRF	D88_Num, F
+	RRF	D88_Fract, F
+	
+	BCF	STATUS, C	; / 4
+	RRF	D88_Num, F
+	RRF	D88_Fract, F
+	
+	BCF	STATUS, C	; / 8
+	RRF	D88_Num, F
+	RRF	D88_Fract, F
+	
+	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
+	RRF	D88_Fract, F
+	SWAPF	D88_Fract, F
+	
+	Test_StopCounter var6
+
+	
 	Test_Footer
