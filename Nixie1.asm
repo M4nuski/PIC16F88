@@ -18,6 +18,7 @@
 ;	Pinout
 ;#############################################################################
 
+; PIC16F88:
 ; pin  1 IOA PORTA2	O NixieSerial - Latch
 ; pin  2 IOA PORTA3	
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
@@ -37,6 +38,14 @@
 ; pin 16 I__ PORTA7	XT
 ; pin 17 IOA PORTA0	O NixieSerial - Clock
 ; pin 18 IOA PORTA1	O NixieSerial - Data
+
+; Nixie Serial to Parallel module:
+; (Parallel out side)
+; Data
+; Ground
+; Latch
+; Clock
+; VCC
 
 #DEFINE NixieSerial_Clock	PORTA, 0
 #DEFINE NixieSerial_Data	PORTA, 1
@@ -86,6 +95,8 @@ data_m01		EQU	0x2C
 data_s10		EQU	0x2D
 data_s01		EQU	0x2E
 
+NixieDemoCount		EQU	0x5C
+NixieLoop		EQU	0x5D
 NixieData		EQU	0x5E
 NixieTube		EQU	0x5F
 NixieBuffer		EQU	0x60 ; to 0x69, 10 bytes, 80 bit
@@ -266,6 +277,7 @@ SETUP:
 	
 	CLRF	PORTA
 	CLRF	PORTB
+	CLRF	NixieDemoCount
 	
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
@@ -388,6 +400,18 @@ ErrorCheck3:
 ErrorCheck_End:
 	CALL	WriteEOL
 	CLRF	Serial_Status	
+	
+	INCF	NixieDemoCount, F
+	BTFSC	NixieDemoCount, 0
+	GOTO	NixieDemoAll
+	GOTO	NixieDemoNone
+NixieDemoAll:
+	CALL	Nixie_All
+	CALL	Nixie_Send	
+	GOTO	LOOP
+NixieDemoNone:
+	CALL	Nixie_None
+	CALL	Nixie_Send
 	GOTO	LOOP
 	
 	PC0x0100ALIGN		NO_TIME
@@ -453,17 +477,66 @@ Serial_RX_waitRead:
 
 
 ;#############################################################################
-;	Nixie Tube Serial (74 595)
+;	Nixie Tube Serial (74x595) 10 tubes X 9 segments
 ;#############################################################################
-Nixie_All:; light up all segments
+
+Nixie_All: 	; light up all segments
+	MOVLW	NixieBuffer
+	MOVWF	FSR
+	STR	10, NixieLoop
+Nixie_All_Next:
+	CLRF	INDF
+	INCF	FSR, F
+	DECFSZ	NixieLoop, F
+	GOTO	Nixie_All_Next	
+	RETURN	
 	
-Nixie_None:; Turn all segments off
+Nixie_None:	; Turn all segments off
+	MOVLW	NixieBuffer
+	MOVWF	FSR
+	STR	10, NixieLoop
+	MOVLW	0xFF
+Nixie_None_Next:
+	MOVWF	INDF
+	INCF	FSR, F
+	DECFSZ	NixieLoop, F
+	GOTO	Nixie_None_Next	
+	RETURN
+	
+Nixie_SetSegment:	; light up 1 segment, # in NixieData, tube in NixieTube
+Nixie_DrawNum:		; Draw a num [0-9], char code in NixieData, tube in NixieTube
+Nixie_DrawChar:	; Draw char [.:+-ecmfa], char code in NixieData, tube in NixieTube
 
-Nixie_SetSegment:; light up 1 segment, # in NixieData, tube in NixieTube
 
-Nixie_DrawNum:; Draw a num [0-9], char code in NixieData, tube in NixieTube
-Nixie_DrawChar:; Draw char [.:+-ecmfa], char code in NixieData, tube in NixieTube
-Nixie_Send:;Send the data to the SIPO buffers
+Nixie_Send:		;Send the data to the SIPO buffers, LSBit of LSByte first
+	MOVLW	NixieBuffer
+	MOVWF	FSR
+	STR	10, WriteLoop
+Nixie_Send_Next_Byte:
+	STR	8, NixieLoop
+	
+Nixie_Send_Next_Bit:
+	BCF	NixieSerial_Data
+	RRF	INDF, F
+	BTFSC	STATUS, C
+	BSF	NixieSerial_Data
+	
+	BSF	NixieSerial_Clock
+	BCF	NixieSerial_Clock
+	
+	DECFSZ	NixieLoop, F
+	GOTO	Nixie_Send_Next_Bit
+	
+	INCF	FSR, F
+	DECFSZ	WriteLoop, F
+	GOTO	Nixie_Send_Next_Byte
+	
+	BSF	NixieSerial_Latch
+	BCF	NixieSerial_Latch
+	
+	RETURN
+
+
 
 ;#############################################################################
 ;	GPS serial read and parse
@@ -618,7 +691,37 @@ Nixie_Lengths:
 	ADDWF	PCL, F
 	dt	4,  9,  9,  9,  4,  9,  9,  9,  9,  9
 
+Nixie_Num_bit07:
+	ADDWF	PCL, F
+	   ;     'hgfedcba'
+	RETLW	b'00110101' ;0
+	RETLW	b'00000000' ;1
+	RETLW	b'01110110' ;2
+	RETLW	b'11110100' ;3
+	RETLW	b'01001000' ;4
+	RETLW	b'10111100' ;5
+	RETLW	b'10110111' ;6
+	RETLW	b'00000100' ;7
+	RETLW	b'11111110' ;8
+	RETLW	b'01001100' ;9
+	
+Nixie_Num_bit9:
+	ADDWF	PCL, F
+	    ;    '       i'
+	RETLW	b'00000001' ;0
+	RETLW	b'00000001' ;1
+	RETLW	b'00000000' ;2
+	RETLW	b'00000000' ;3
+	RETLW	b'00000001' ;4
+	RETLW	b'00000000' ;5
+	RETLW	b'00000000' ;6
+	RETLW	b'00000001' ;7
+	RETLW	b'00000000' ;8
+	RETLW	b'00000001' ;9
+	
+DIV88:
 
+	RETURN
 
 ;#############################################################################
 ;	Delay routines	
