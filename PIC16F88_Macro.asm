@@ -11,11 +11,19 @@
 ;	ISR context switching:
 ;		W + STATUS + PCLATH, FSR, SCRATCH
 ;	Timer1 value reader
-;	Assert:
-;		w, bit set, bit cleared, file
 ;#############################################################################
 
+#DEFINE STALL	GOTO	$
+#DEFINE TRUE	0x00
+#DEFINE FALSE	0x01
 
+; GPR files in shared GPR
+STACK_W		EQU	0x7F
+STACK_STATUS	EQU	0x7E
+STACK_PCLATH	EQU	0x7D
+SCRATCH		EQU	0x7C
+STACK_SCRATCH	EQU	0x7B
+STACK_FSR	EQU	0x7A
 
 ;#############################################################################
 ;	Bank Switching
@@ -570,15 +578,6 @@ _end:
 ;	ISR Context Push and Pop
 ;#############################################################################
 
-; GPR files in shared GPR
-STACK_W		EQU	0x7F
-STACK_STATUS	EQU	0x7E
-STACK_PCLATH	EQU	0x7D
-SCRATCH		EQU	0x7C
-STACK_SCRATCH	EQU	0x7B
-STACK_FSR	EQU	0x7A
-
-
 ; Push and Pop for W, STATUS and PCLATH
 ; should be first to push and last to pop
 ;
@@ -643,119 +642,17 @@ POPscr	MACRO
 
 
 ;#############################################################################
-;	Assertion functions to Test and Debug
-;#############################################################################
-
-#DEFINE STALL		GOTO	$
-#DEFINE TRUE	0x00
-#DEFINE FALSE	0x01
-
-ASSERTw		MACRO val		; w == val
-	XORLW	val
-	BTFSS	STATUS, Z
-	STALL
-	XORLW	val
-	ENDM
-	
-ASSERTbs	MACRO file, bit	; file bit is set
-	BTFSS	file, bit
-	STALL
-	ENDM
-	
-ASSERTbc	MACRO file, bit	; file bit is cleared
-	BTFSC	file, bit
-	STALL
-	ENDM
-	
-ASSERTf		MACRO	val, file	; val == file content
-	MOVLW	val
-	XORWF	file, W
-	BTFSS	STATUS, Z
-	STALL
-	ENDM
-
-ASSERT_ZE	MACRO
-	LOCAL	_END
-	BR_ZE	_END
-	STALL
-_END:	
-	ENDM	
-ASSERT_NZ	MACRO
-	LOCAL	_END
-	BR_NZ	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_EQ	MACRO
-	LOCAL	_END
-	BR_EQ	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_NE	MACRO
-	LOCAL	_END
-	BR_NE	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_GT	MACRO
-	LOCAL	_END
-	BR_GT	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_GE	MACRO
-	LOCAL	_END
-	BR_GE	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_LT	MACRO
-	LOCAL	_END
-	BR_LT	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_LE	MACRO
-	LOCAL	_END
-	BR_LE	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_CA	MACRO
-	LOCAL	_END
-	BR_CA	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_NC	MACRO
-	LOCAL	_END
-	BR_NC	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_BO	MACRO
-	LOCAL	_END
-	BR_BO	_END
-	STALL
-_END:	
-	ENDM
-ASSERT_NB	MACRO
-	LOCAL	_END
-	BR_NB	_END
-	STALL
-_END:	
-	ENDM
-
-
-
-;#############################################################################
 ;	PC MSB Boundary skip
 ;#############################################################################
 
-PC0x800SKIP	MACRO
+PC0x0800SKIP	MACRO	; Skip to the next 2K instruction boundary
 	BSF	PCLATH, 3
 	GOTO	_NEXT_BOUNDARY
 	ORG	0x0800
 _NEXT_BOUNDARY:
+	ENDM
+	
+PC0x0100ALIGN	MACRO	TableLabel; Align next instruction on a 256 instruction boundary (for small table reads)
+	ORG	( $ & 0xFFFFFF00 ) + 0x100
+TableLabel
 	ENDM

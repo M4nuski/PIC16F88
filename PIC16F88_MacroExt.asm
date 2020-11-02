@@ -2925,17 +2925,16 @@ XORi	MACRO	a, b
 ;#############################################################################
 
 ; inline implementation (no loop)
-MULT	MACRO	dest, a, b ;dest is 2 bytes, a and b are 1 byte
+; would be best to wrap the macro in a subroutine call with proper calling convention
+MULT88	MACRO	dest, a, b ;dest is 2 bytes, a and b are 1 byte
 	LOCAL	_1, _2, _3, _4, _5, _6, _7, _END
 	
 	CLRF	dest
 	CLRF	dest + 1
 	CLRF	SCRATCH
 	
-	MOVF	a, F
-	BTFSC	STATUS, Z
-	GOTO	_END
-	MOVF	b, F
+	MOVF	a, W
+	IORWF	b, W
 	BTFSC	STATUS, Z
 	GOTO	_END
 	
@@ -3044,61 +3043,109 @@ _7:
 
 _END:
 	ENDM
-
-;#############################################################################
-;	Assertion functions to Test and Debug
-;	Extended to 16, 24 and 32 bits
-;#############################################################################
-
-ASSERTs		MACRO	val, file	; 16 bit val == file content
-	MOVLW	(val & 0x000000FF) >> 0
-	XORWF	file, W
-	BTFSS	STATUS, Z
-	STALL
 	
-	MOVLW	(val & 0x0000FF00) >> 8
-	XORWF	file + 1, W
-	BTFSS	STATUS, Z
-	STALL
+; 8bit * 8bit mult, loop implementation
+MULT88l	MACRO	dest, a, b ;dest is 2 bytes, a and b are 1 byte
+	LOCAL	_next, _shift, _end
+	
+	CLRF	dest
+	CLRF	dest + 1
+	CLRF	SCRATCH
+	
+	MOVF	b, W		; test that b !=0
+	BTFSC	STATUS, Z
+	GOTO	_end	
+_next
+	MOVF	a, W		;test if "a" have bits set to 1
+	BTFSC	STATUS, Z
+	GOTO	_end
+
+	BCF	STATUS, C
+	RRF	a, F		; a >> 1
+	BTFSS	STATUS, C
+	GOTO	_shift		; if 0 shift only
+	
+	MOVF	b, W		; if 1 add to result then shift
+	ADDWF	dest, F
+	BTFSC	STATUS, C
+	INCF	dest + 1, F
+	MOVF	SCRATCH, W
+	ADDWF	dest + 1, F	
+_shift:
+	BCF	STATUS, C
+	RLF	b, F
+	RLF	SCRATCH, F
+	GOTO	_next
+_end:
 	ENDM
 	
-ASSERTc		MACRO	val, file	; 24 bit val == file content
-	MOVLW	(val & 0x000000FF) >> 0
-	XORWF	file, W
-	BTFSS	STATUS, Z
-	STALL
-	
-	MOVLW	(val & 0x0000FF00) >> 8
-	XORWF	file + 1, W
-	BTFSS	STATUS, Z
-	STALL
-	
-	MOVLW	(val & 0x00FF0000) >> 16
-	XORWF	file + 2, W
-	BTFSS	STATUS, Z
-	STALL
-	ENDM
-	
-ASSERTi		MACRO	val, file	; 32 bit val == file content
-	MOVLW	(val & 0x000000FF) >> 0
-	XORWF	file, W
-	BTFSS	STATUS, Z
-	STALL
-	
-	MOVLW	(val & 0x0000FF00) >> 8
-	XORWF	file + 1, W
-	BTFSS	STATUS, Z
-	STALL
-	
-	MOVLW	(val & 0x00FF0000) >> 16
-	XORWF	file + 2, W
-	BTFSS	STATUS, Z
-	STALL
+;MULT816
+;MULT824
+;MULT832
+;MULT1616
+;MULT1624
+;MULT1632
+;MULT3232
+; mask = 0x01
+; and mask var1
+; rlf mask
 
-	MOVLW	(val & 0xFF000000) >> 24
-	XORWF	file + 3, W
-	BTFSS	STATUS, Z
-	STALL
-	ENDM
+;Result to Packed BCD, 16 bit input, max value is 65536, 2.5 BCD bytes (x6 55 36)
+BIN2BCD		MACRO	BCD, Result, count_BCD1, count_BCD2
+	LOCAL BIN2BCD_mainLoop, BIN2BCD_highNibble, BIN2BCD_lowNibble, BIN2BCD_nextNibble
+	CLRF	BCD
+	CLRF	BCD + 1
+	CLRF	BCD + 2
+	MOVLW	15		; Rotate and Increment 15 time
+	MOVWF	count_BCD1
+
+BIN2BCD_mainLoop:
+ 	BCF	STATUS, C
+	RLF	Result, F
+	RLF	Result + 1, F
+	RLF	BCD, F
+	RLF	BCD + 1, F
+	RLF	BCD + 2, F
+
+	MOVLW	BCD
+	MOVWF	FSR
+
+	MOVLW	0x03
+	MOVWF	count_BCD2
+	
+BIN2BCD_highNibble:
+	SWAPF	INDF, W	
+	ANDLW	0x0F
+	SUBLW	0x04
+	BTFSC	STATUS, C
+	GOTO	BIN2BCD_lowNibble
+	MOVLW	0x30
+	ADDWF	INDF, F
+
+BIN2BCD_lowNibble:
+	MOVLW	0x0F
+	ANDWF	INDF, W
+	SUBLW	0x04
+	BTFSC	STATUS, C
+	GOTO	BIN2BCD_nextNibble
+	MOVLW	0x03
+	ADDWF	INDF, F		
+
+BIN2BCD_nextNibble:
+	INCF	FSR, F
+	DECFSZ	count_BCD2, F
+	GOTO	BIN2BCD_highNibble
+
+	DECFSZ	count_BCD1, F
+	GOTO	BIN2BCD_mainLoop
+
+ 	BCF	STATUS, C	; 16th Time no C5A3
+	RLF	Result, F
+	RLF	Result + 1, F
+	RLF	BCD, F
+	RLF	BCD + 1, F
+	RLF	BCD + 2, F
+
+	RETURN
 
 
