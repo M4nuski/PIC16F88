@@ -66,12 +66,12 @@ WAIT_loopCounter3	EQU	0x22
 
 Serial_Data		EQU	0x23
 Serial_Status		EQU	0x24
-_Serial_bit_RX_avail 			EQU	0	;data available in RX buffer
-_Serial_bit_RX_bufferFull		EQU	1	;RX buffer is full, next RX will overrun unless read
-_Serial_bit_TX_avail 			EQU	2	;space available in TX buffer
+;_Serial_bit_RX_avail 		EQU	0	;data available in RX buffer
+;_Serial_bit_RX_bufferFull		EQU	1	;RX buffer is full, next RX will overrun unless read
+;_Serial_bit_TX_avail 		EQU	2	;space available in TX buffer
 _Serial_bit_RX_frameError 		EQU	3	;uart module frame error
 _Serial_bit_RX_overrunError 		EQU	4	;uart module overrun error
-_Serial_bit_TX_bufferOverrun		EQU	5	;TX circular buffer overrun error
+;_Serial_bit_TX_bufferOverrun		EQU	5	;TX circular buffer overrun error
 _Serial_bit_RX_bufferOverrun 		EQU	6	;RX circular buffer overrun error
 
 ByteToConvert		EQU	0x25
@@ -85,6 +85,10 @@ data_m10		EQU	0x2B
 data_m01		EQU	0x2C
 data_s10		EQU	0x2D
 data_s01		EQU	0x2E
+
+NixieData		EQU	0x5E
+NixieTube		EQU	0x5F
+NixieBuffer		EQU	0x60 ; to 0x69, 10 bytes, 80 bit
 
 ; Bank 1
 _Serial_RX_buffer_startAddress	EQU	0xA0 ; circular RX buffer start
@@ -102,15 +106,6 @@ Serial_RX_buffer_wp	EQU	0x71 ; circular RX buffer write pointer
 
 Serial_TX_buffer_rp	EQU	0x72 ; circular TX buffer read pointer
 Serial_TX_buffer_wp	EQU	0x73 ; circular TX buffer write pointer
-
-
-;SCRATCH	EQU	0x7A
-; For ISR context
-;STACK_SCRATCH	EQU	0x7B
-;STACK_FSR	EQU	0x7C
-;STACK_PCLATH	EQU	0x7D
-;STACK_STATUS	EQU	0x7E
-;STACK_W	EQU	0x7F
 
 ;#############################################################################
 ;	MACRO
@@ -266,8 +261,8 @@ SETUP:
 ;welcome message
 	CALL	WAIT_1s	
 	
-	ORG	( $ & 0xFFFFFF00 ) + 0x100
-	WRITESTRING_LN "Nixie 1 - Time"
+	PC0x0100ALIGN		startUpMessage
+	WRITESTRING_LN		"Nixie 1 - Time"
 	
 	CLRF	PORTA
 	CLRF	PORTB
@@ -355,24 +350,48 @@ LOOP:
 	STR	'T', Serial_Data
 	CALL 	Serial_TX_write
 	
+ErrorCheck1:
+	BTFBC	Serial_Status, _Serial_bit_RX_overrunError, ErrorCheck2
+	STR	' ', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'O', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'E', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'R', Serial_Data
+	CALL 	Serial_TX_write
+	
+ErrorCheck2:
+	BTFBC	Serial_Status, _Serial_bit_RX_frameError, ErrorCheck3
+	STR	' ', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'F', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'E', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'R', Serial_Data
+	CALL 	Serial_TX_write
+	
+ErrorCheck3:
+	BTFBC	Serial_Status, _Serial_bit_RX_bufferOverrun, ErrorCheck_End
+	STR	' ', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'R', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'B', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'E', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'R', Serial_Data
+	CALL 	Serial_TX_write
+	
+ErrorCheck_End:
 	CALL	WriteEOL
-
-	
-	BCF	OverrunError_yellow
-	BTFSC	Serial_Status, _Serial_bit_RX_overrunError
-	BSF	OverrunError_yellow
-	
-	BCF	FrameError_yellow
-	BTFSC	Serial_Status, _Serial_bit_RX_frameError
-	BSF	FrameError_yellow
-	CLRF	Serial_Status
-	
-	
+	CLRF	Serial_Status	
 	GOTO	LOOP
 	
-	ORG	( $ & 0xFFFFFF00 ) + 0x100
-NO_TIME:
-	WRITESTRING_LN	"No Time Data!"
+	PC0x0100ALIGN		NO_TIME
+	WRITESTRING_LN		"No Time Data!"
 
 	
 	GOTO	LOOP
@@ -389,7 +408,7 @@ NO_TIME:
 
 ; block wait for availble space in the TX buffer then write the byte
 Serial_TX_write:
-	BSF	TX_green
+	;BSF	TX_green
 	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
 	MOVWF	TX_Temp
 	CMP_lf	_Serial_TX_buffer_endAddress, TX_Temp
@@ -432,6 +451,19 @@ Serial_RX_waitRead:
 	RETURN
 
 
+
+;#############################################################################
+;	Nixie Tube Serial (74 595)
+;#############################################################################
+Nixie_All:; light up all segments
+	
+Nixie_None:; Turn all segments off
+
+Nixie_SetSegment:; light up 1 segment, # in NixieData, tube in NixieTube
+
+Nixie_DrawNum:; Draw a num [0-9], char code in NixieData, tube in NixieTube
+Nixie_DrawChar:; Draw char [.:+-ecmfa], char code in NixieData, tube in NixieTube
+Nixie_Send:;Send the data to the SIPO buffers
 
 ;#############################################################################
 ;	GPS serial read and parse
@@ -573,6 +605,19 @@ WriteEOL:
 	CALL 	Serial_TX_write
 	RETURN
 	
+
+
+;#############################################################################
+;	Nixie Segments offset tables
+;#############################################################################
+
+Nixie_Offsets: ; segments starting bit offset of each tubes
+	ADDWF	PCL, F
+	dt	0,  4, 13, 22, 31, 35, 44, 53, 62, 71
+Nixie_Lengths:
+	ADDWF	PCL, F
+	dt	4,  9,  9,  9,  4,  9,  9,  9,  9,  9
+
 
 
 ;#############################################################################
