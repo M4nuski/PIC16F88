@@ -141,6 +141,15 @@ Serial_TX_buffer_wp	EQU	0x73 ; circular TX buffer write pointer
 ;STACK_STATUS		EQU	0x7E
 ;STACK_W		EQU	0x7F
 
+_char_dot	EQU 10
+_char_column	EQU 11
+_char_minus	EQU 12
+_char_plus	EQU 13
+_char_E		EQU 14
+_char_C		EQU 15
+_char_F		EQU 16
+_char_M		EQU 17
+
 ;#############################################################################
 ;	MACRO
 ;#############################################################################
@@ -312,6 +321,34 @@ SETUP:
 	MOVWF	Serial_TX_buffer_wp
 
 ;welcome message
+	CALL	Nixie_None
+		
+	STR	2, NixieTube
+	STR	_char_E, NixieData
+	CALL	Nixie_DrawNum	
+		
+	STR	3, NixieTube
+	STR	_char_C, NixieData
+	CALL	Nixie_DrawNum	
+	
+	STR	5, NixieTube
+	STR	2, NixieData
+	CALL	Nixie_DrawNum	
+	
+	STR	6, NixieTube
+	STR	0, NixieData
+	CALL	Nixie_DrawNum	
+
+	STR	7, NixieTube
+	STR	2, NixieData
+	CALL	Nixie_DrawNum	
+
+	STR	8, NixieTube
+	STR	0, NixieData
+	CALL	Nixie_DrawNum		
+	
+	CALL	Nixie_Send
+	
 	CALL	WAIT_1s	
 	
 	PC0x0100ALIGN		startUpMessage
@@ -474,6 +511,9 @@ DEMO:
 	MOVWF	NixieData
 	CALL	Nixie_DrawNum	
 	
+	STR	4, NixieTube
+	STR	_char_column, NixieData
+	CALL	Nixie_DrawNum	
 	
 	STR	5, NixieTube
 	MOVLW	'0'
@@ -716,8 +756,6 @@ Nixie_DrawNum_loop:
 	
 	RETURN	
 
-Nixie_DrawChar:	; Draw char [.:+-ecmfa], char code in NixieData, tube in NixieTube
-
 ;Send the data to the SIPO buffers, LSBit of LSByte first
 Nixie_Send: ;()[WriteLoop, NixieLoop]
 
@@ -916,6 +954,16 @@ Nixie_Num_seg0_7:
 	RETLW	b'00000100' ;7
 	RETLW	b'11111110' ;8
 	RETLW	b'01001100' ;9
+	RETLW	b'00000100' ;.
+	RETLW	b'00000110' ;:
+	RETLW	b'00000001' ;-
+	RETLW	b'00001001' ;+
+	RETLW	b'00111110' ;E
+	RETLW	b'00110101' ;C
+	RETLW	b'00001101' ;F
+	RETLW	b'01001001' ;M
+	RETLW	b'00000000' ;
+	RETLW	b'00000000' ;
 	
 Nixie_Num_seg8:
 	ADDWF	PCL, F
@@ -930,38 +978,20 @@ Nixie_Num_seg8:
 	RETLW	b'00000001' ;7
 	RETLW	b'00000000' ;8
 	RETLW	b'00000001' ;9
-	
-Nixie_Char_seg0_7:
-	; a -> HBar
-	; b -> TDot
-	; c -> BDot
-	; d -> VBar
-	ADDWF	PCL, F
-	   ;     'hgfedcba'
-	RETLW	b'00110101' ;.
+	RETLW	b'00000000' ;.
 	RETLW	b'00000000' ;:
-	RETLW	b'01110110' ;-
-	RETLW	b'11110100' ;+
-	RETLW	b'01001000' ;E
-	RETLW	b'10111100' ;C
-	RETLW	b'10110111' ;F
-	RETLW	b'00000100' ;M
-	RETLW	b'11111110' ;
-	RETLW	b'01001100' ;
-	
-Nixie_Char_seg8:
-	ADDWF	PCL, F
-	    ;    '       i'
-	RETLW	b'00000001' ;.
-	RETLW	b'00000001' ;:
 	RETLW	b'00000000' ;-
 	RETLW	b'00000000' ;+
-	RETLW	b'00000001' ;E
+	RETLW	b'00000000' ;E
 	RETLW	b'00000000' ;C
 	RETLW	b'00000000' ;F
 	RETLW	b'00000001' ;M
 	RETLW	b'00000000' ;
-	RETLW	b'00000001' ;
+	RETLW	b'00000000' ;
+	; a -> HBar
+	; b -> TDot
+	; c -> BDot
+	; d -> VBar
 	
 DIV88:	; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum 
 	CLRF	D88_Fract
