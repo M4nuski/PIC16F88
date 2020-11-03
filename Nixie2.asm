@@ -1,6 +1,7 @@
 ;#############################################################################
-;	Nixie GPS 1 - (UART Test 5)
+;	Nixie GPS 2
 ;	GPS Time: read, parse, adjust timezone, display
+;	GPS Alt: parse and convert M/FT
 ;#############################################################################
 
 	LIST	p=16F88			; processor model
@@ -20,16 +21,16 @@
 
 ; PIC16F88:
 ; pin  1 IOA PORTA2	O NixieSerial - Latch
-; pin  2 IOA PORTA3	?I AU_select 0=M 1=Ft
+; pin  2 IOA PORTA3	I AU_select 0=M 1=Ft
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
 ; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
 ; pin  6 IO_ PORTB0	O WaitRX_red
 ; pin  7 IO_ PORTB1	
 ; pin  8 IOR PORTB2	I RX from GPS
-; pin  9 IO_ PORTB3	
+; pin  9 IO_ PORTB3	I Mode Select bit 0
 
-; pin 10 IO_ PORTB4	
+; pin 10 IO_ PORTB4	I Mode Select bit 1
 ; pin 11 IOT PORTB5	O TX to computer
 ; pin 12 IOA PORTB6	?(PGC)
 ; pin 13 IOA PORTB7	?(PGD)
@@ -51,9 +52,13 @@
 #DEFINE NixieSerial_Data	PORTA, 1
 #DEFINE NixieSerial_Latch	PORTA, 2
 
+#DEFINE AU_Select		PORTA, 3
 #DEFINE TZ_Select		PORTA, 4
 
 #DEFINE WaitRX_red 		PORTB, 0
+
+#DEFINE Mode_Select_b0	PORTB, 3
+#DEFINE Mode_Select_b1	PORTB, 4
 
 ;#############################################################################
 ;	Memory Organisation
@@ -92,6 +97,12 @@ data_m10		EQU	0x2B
 data_m01		EQU	0x2C
 data_s10		EQU	0x2D
 data_s01		EQU	0x2E
+
+Display_Mode		EQU	0x30 
+mode_Time		EQU	0
+mode_Alt		EQU	1
+mode_Lat		EQU	2
+mode_Long		EQU	3
 
 NixieVarX		EQU	0x59 ; inner data
 NixieVarY		EQU	0x5A ; inner data
@@ -149,6 +160,7 @@ _char_E		EQU 14
 _char_C		EQU 15
 _char_F		EQU 16
 _char_M		EQU 17
+_char_topdot	EQU 18
 
 ;#############################################################################
 ;	MACRO
@@ -276,8 +288,13 @@ SETUP:
 	
 	; init port directions 
 	CLRF	TRISA		; all outputs	
+	BSF	AU_Select	; Bit3 is input
+	BSF	TZ_Select	; Bit4 is input
+	
 	CLRF	TRISB		; all outputs	
 	BSF	TRISB, 2	; Bit2 is input (RX)
+	BSF	Mode_Select_b0	; Bit3 is input
+	BSF	Mode_Select_b1	; Bit4 is input
 	
 	; init analog inputs
 	CLRF	ANSEL		; all digital
@@ -287,8 +304,7 @@ SETUP:
 	BSF	OSCCON, IRCF1
 	BSF	OSCCON, IRCF2
 	
-	; init AUSART	
-	; transmitter
+	; init AUSART transmitter
 	;BSF	TXSTA, CSRC	; not used in async - set as clock source master
 	BCF 	TXSTA, TX9	; 8 bit tx
 	BSF	TXSTA, TXEN	; enable tx
@@ -304,14 +320,14 @@ SETUP:
 	
 	BANK0
 	
-	; receiver
+	; init AUSART receiver
 	BSF	RCSTA, SPEN	; serial port enabled
 	BCF	RCSTA, RX9	; 8 bit rx
 	;BSF	RCSTA, SREN	; not used in async - enable single receive
 	BSF	RCSTA, CREN	; enable continuous receive
 	BCF	RCSTA, ADDEN	; disable addressing
 	
-; initialize circular buffer pointers
+	; initialize circular buffer pointers
 	MOVLW	_Serial_RX_buffer_startAddress
 	MOVWF	Serial_RX_buffer_rp
 	MOVWF	Serial_RX_buffer_wp
@@ -323,6 +339,7 @@ SETUP:
 	CLRF	PORTA
 	CLRF	PORTB
 	CLRF	NixieDemoCount
+	STR	mode_time, Display_Mode
 	
 ;welcome message
 	CALL	Nixie_None
@@ -353,17 +370,15 @@ SETUP:
 	
 	CALL	Nixie_Send
 	
+	CALL	WAIT_1s	
+	
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
 	BSF	INTCON, GIE  ; global int	
 	
-	CALL	WAIT_1s	
 	
 	PC0x0100ALIGN		startUpMessage
-	WRITESTRING_LN		"Nixie 1 - Time"
-	
-
-	
+	WRITESTRING_LN		"Nixie 2 - Time + Alt"
 
 
 
@@ -374,66 +389,72 @@ SETUP:
 
 	
 LOOP:
-	;GOTO	DEMO
+	CALL	Nixie_None	
+	;Check Mode
+	;Read_next_ mode
+	;Parse and display
+
+
+
 
 	CALL	READ_NEXT_TIME
-	BW_False	NO_TIME
+	BW_False	Draw_No_time
 	
-	MOV	data_H10, Serial_Data
-	CALL	Serial_TX_write
-	MOV	data_H01, Serial_Data
-	CALL	Serial_TX_write
-	
-	STR	':', Serial_Data
-	CALL 	Serial_TX_write
-	
-	MOV	data_m10, Serial_Data
-	CALL	Serial_TX_write
-	MOV	data_m01, Serial_Data
-	CALL	Serial_TX_write
-	
-	STR	':', Serial_Data
-	CALL 	Serial_TX_write
-	
-	MOV	data_s10, Serial_Data
-	CALL	Serial_TX_write
-	MOV	data_s01, Serial_Data
-	CALL	Serial_TX_write
-	
-	STR	'Z', Serial_Data
-	CALL 	Serial_TX_write
-	
-	STR	' ', Serial_Data
-	CALL 	Serial_TX_write
-	
-	
+	; Adjust time zone
 	MOVLW	5
 	BTFSC	TZ_Select
 	MOVLW	4
-	MOVWF	TZ_offset
+	MOVWF	TZ_offset	
+	CALL	ADJUST_TZ
 	
-	CALL	ADJUST_TZ	
+	; Draw time data on nixie tubes
+	STR	2, NixieTube
+	MOV	data_H10, NixieData
+	CALL	Nixie_DrawNum		
+	STR	3, NixieTube
+	MOV	data_H01, NixieData
+	CALL	Nixie_DrawNum	
 	
+	STR	4, NixieTube
+	STR	_char_column, NixieData
+	CALL	Nixie_DrawNum	
+	
+	STR	5, NixieTube
+	MOV	data_m10, NixieData
+	CALL	Nixie_DrawNum	
+	STR	6, NixieTube
+	MOV	data_m01, NixieData
+	CALL	Nixie_DrawNum	
+	
+	STR	8, NixieTube
+	MOV	data_s10, NixieData
+	CALL	Nixie_DrawNum	
+	STR	9, NixieTube
+	MOV	data_s01, NixieData
+	CALL	Nixie_DrawNum	
+	
+	
+	; Send time data to serial
 	MOV	data_H10, Serial_Data
-	CALL	Serial_TX_write
+	CALL	Serial_TX_write_ITOA
 	MOV	data_H01, Serial_Data
-	CALL	Serial_TX_write
+	CALL	Serial_TX_write_ITOA
 	
 	STR	':', Serial_Data
 	CALL 	Serial_TX_write
 	
 	MOV	data_m10, Serial_Data
-	CALL	Serial_TX_write
+	CALL	Serial_TX_write_ITOA
 	MOV	data_m01, Serial_Data
-	CALL	Serial_TX_write
+	CALL	Serial_TX_write_ITOA
 	
 	STR	':', Serial_Data
 	CALL 	Serial_TX_write
 	
 	MOV	data_s10, Serial_Data
-	CALL	Serial_TX_write
+	CALL	Serial_TX_write_ITOA
 	MOV	data_s01, Serial_Data
-	CALL	Serial_TX_write
+	CALL	Serial_TX_write_ITOA
 	
 	STR	'E', Serial_Data
 	CALL 	Serial_TX_write
@@ -447,11 +468,32 @@ LOOP:
 	STR	'T', Serial_Data
 	CALL 	Serial_TX_write
 	
-	GOTO	ErrorCheck1	
 	
-	PC0x0100ALIGN		NO_TIME
-	WRITESTRING_LN		"No Time Data!"
+	GOTO	ErrorCheck1
 	
+Draw_No_time:
+	MOVLW	_char_dot
+	INCF	NixieDemoCount, F
+	BTFSC	NixieDemoCount, 1
+	MOVLW	_char_topdot
+	MOVWF	NixieData
+	
+	CLRF	NixieTube
+	CALL	Nixie_DrawNum
+	
+	STR	'N', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'T', Serial_Data
+	CALL 	Serial_TX_write
+	
+	GOTO	ErrorCheck1
+
+
+
+
+
+
+
 ErrorCheck1:
 	BTFBC	Serial_Status, _Serial_bit_RX_overrunError, ErrorCheck2
 	STR	' ', Serial_Data
@@ -488,123 +530,17 @@ ErrorCheck3:
 	CALL 	Serial_TX_write
 	
 ErrorCheck_End:
-	CALL	WriteEOL
+	MOVLW	13		;(CR)
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write	
+	MOVLW	10		;(LF)
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	RETURN
+	
 	CLRF	Serial_Status	
-	
-	
-	
-DEMO:
-	;CALL	Wait_05s
-; Write data to Nixie tubes
-	;INCF	NixieDemoCount, F
-	;CMP_lf	9, NixieDemoCount
-	;SK_NE	
-	;CLRF	NixieDemoCount
-	
-	CALL	Nixie_None	
-	
-	STR	2, NixieTube
-	MOVLW	'0'
-	SUBWF	data_H10, W
-	MOVWF	NixieData
-	CALL	Nixie_DrawNum
-		
-	STR	3, NixieTube
-	MOVLW	'0'
-	SUBWF	data_H01, W
-	MOVWF	NixieData
-	CALL	Nixie_DrawNum	
-	
-	STR	4, NixieTube
-	STR	_char_column, NixieData
-	CALL	Nixie_DrawNum	
-	
-	STR	5, NixieTube
-	MOVLW	'0'
-	SUBWF	data_m10, W
-	MOVWF	NixieData
-	CALL	Nixie_DrawNum
-	
-	STR	6, NixieTube
-	MOVLW	'0'
-	SUBWF	data_m01, W
-	MOVWF	NixieData
-	CALL	Nixie_DrawNum
-	
-	
-	STR	8, NixieTube
-	MOVLW	'0'
-	SUBWF	data_s10, W
-	MOVWF	NixieData
-	CALL	Nixie_DrawNum
-	
-	STR	9, NixieTube
-	MOVLW	'0'
-	SUBWF	data_s01, W
-	MOVWF	NixieData
-	CALL	Nixie_DrawNum
-	
-	
-	;MOV	NixieDemoCount, NixieData
-	
-	;STR	1, NixieTube
-	;CALL	Nixie_DrawNum	; light up 1 segment, seg# in NixieData, tube# in NixieTube
 
-	;STR	2, NixieTube
-	;CALL	Nixie_DrawNum
-
-	;STR	3, NixieTube
-	;CALL	Nixie_DrawNum
-	
-
-	;STR	5, NixieTube
-	;CALL	Nixie_DrawNum
-
-	;STR	6, NixieTube
-	;CALL	Nixie_DrawNum
-
-	;STR	7, NixieTube
-	;CALL	Nixie_DrawNum
-
-	;STR	8, NixieTube
-	;CALL	Nixie_DrawNum
-
-	;STR	9, NixieTube
-	;CALL	Nixie_DrawNum
-	
-
-	;BCF	STATUS, C
-	;RRF	NixieData, W
-	;MOVWF	NixieSeg
-	;STR	0, NixieTube
-	;CALL	Nixie_SetSegment
-	
-	;STR	4, NixieTube
-	;CALL	Nixie_SetSegment
-
-	
 	CALL	Nixie_Send
-	
-;	CALL	Nixie_None
-;	MOVLW	NixieBuffer
-;	ADDWF	NixieDemoCount, W
-;	MOVWF	FSR
-;	CLRF	INDF
-;	CALL	Nixie_Send
-
-; flash all on/off
-;	BTFSC	NixieDemoCount, 0
-;	GOTO	NixieDemoAll
-;	GOTO	NixieDemoNone
-;NixieDemoAll:
-;	CALL	Nixie_All
-;	CALL	Nixie_Send	
-;	GOTO	LOOP
-;NixieDemoNone:
-;	CALL	Nixie_None
-;	CALL	Nixie_Send
-;	GOTO	LOOP
-
 	
 	GOTO	LOOP
 
@@ -618,6 +554,11 @@ DEMO:
 ;	Serial TX
 ;#############################################################################
 
+; convert 0-9 value to ascii '0' to '1' bnefore sending
+Serial_TX_write_ITOA:
+	MOVLW	'0'
+	ADDWF	Serial_Data, F
+	
 ; block wait for availble space in the TX buffer then write the byte
 Serial_TX_write:
 	;BSF	TX_green
@@ -847,6 +788,14 @@ READ_NEXT_TIME:
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_s01
 	
+	MOVLW	'0'
+	SUBWF	data_H10, F
+	SUBWF	data_H01, F
+	SUBWF	data_m10, F
+	SUBWF	data_m01, F
+	SUBWF	data_s10, F
+	SUBWF	data_s01, F
+	
 	RETLW	TRUE
 	
 ;#############################################################################
@@ -855,9 +804,6 @@ READ_NEXT_TIME:
 
 ADJUST_TZ:
 	; adjust timezone
-	SUBL	data_H01, '0'; ascii to int
-	SUBL	data_H10, '0'; ascii to int
-	
 	BCF	STATUS, C
 	RLF	data_H10, F ; h10  = 2*h10
 	MOVF	data_H10, W ; w = 2*h10
@@ -869,22 +815,23 @@ ADJUST_TZ:
 	ADDWF	data_H01, F ; h01 = 10*h10 + h01 = HH(utc)
 	
 	SUB	data_H01, TZ_offset ; h01 = HH(EDT/EST)
-	BR_NB	ADJUST_TZ_DONE_NB
+	BR_NB	ADJUST_TZ_NB
 	ADDL	data_H01, 24
-ADJUST_TZ_DONE_NB:
+ADJUST_TZ_NB:
 	CLRF	data_H10
 	CMP_lf	10, data_H01
-	BR_GT	ADJUST_TZ_DONE
+	BR_LE	ADJUST_TZ_10
+	RETURN
+ADJUST_TZ_10:
 	INCF	data_H10, F
 	SUBL	data_H01, 10
-
+	
 	CMP_lf	10, data_H01
-	BR_GT	ADJUST_TZ_DONE
+	BR_LE	ADJUST_TZ_20
+	RETURN
+ADJUST_TZ_20:
 	INCF	data_H10, F
 	SUBL	data_H01, 10
-ADJUST_TZ_DONE:		
-	ADDL	data_H01, '0'
-	ADDL	data_H10, '0'		
 	RETURN
 
 
@@ -892,7 +839,8 @@ ADJUST_TZ_DONE:
 ;#############################################################################
 ;	Serial formatting and helpers
 ;#############################################################################
-	
+
+; Convert byte to hex and send over serial
 WriteHex:
 	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
@@ -911,20 +859,6 @@ WriteHex:
 	CALL 	Serial_TX_write
 	RETURN
 	
-WriteSpace:
-	MOVLW	' '
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write	
-	RETURN
-WriteEOL:
-	MOVLW	13		;(CR)
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write	
-	MOVLW	10		;(LF)
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	RETURN
-
 ;#############################################################################
 ;	Tables
 ;#############################################################################
@@ -966,7 +900,7 @@ Nixie_Num_seg0_7:
 	RETLW	b'00110101' ;C
 	RETLW	b'00001101' ;F
 	RETLW	b'01001001' ;M
-	RETLW	b'00000000' ;
+	RETLW	b'00000010' ;topdot
 	RETLW	b'00000000' ;
 	
 Nixie_Num_seg8:
@@ -990,7 +924,7 @@ Nixie_Num_seg8:
 	RETLW	b'00000000' ;C
 	RETLW	b'00000000' ;F
 	RETLW	b'00000001' ;M
-	RETLW	b'00000000' ;
+	RETLW	b'00000000' ;topdot
 	RETLW	b'00000000' ;
 	; a -> HBar
 	; b -> TDot
