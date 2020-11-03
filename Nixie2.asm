@@ -339,6 +339,7 @@ SETUP:
 	CLRF	PORTA
 	CLRF	PORTB
 	CLRF	NixieDemoCount
+	CLRF	Serial_Status
 	STR	mode_time, Display_Mode
 	
 ;welcome message
@@ -474,7 +475,7 @@ LOOP:
 Draw_No_time:
 	MOVLW	_char_dot
 	INCF	NixieDemoCount, F
-	BTFSC	NixieDemoCount, 1
+	BTFSC	NixieDemoCount, 0
 	MOVLW	_char_topdot
 	MOVWF	NixieData
 	
@@ -536,13 +537,12 @@ ErrorCheck_End:
 	MOVLW	10		;(LF)
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	RETURN
 	
-	CLRF	Serial_Status	
-
+	CLRF	Serial_Status
 	CALL	Nixie_Send
-	
 	GOTO	LOOP
+
+
 
 ;#############################################################################
 ;	Subroutines
