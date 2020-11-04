@@ -98,11 +98,12 @@ data_m01		EQU	0x2C
 data_s10		EQU	0x2D
 data_s01		EQU	0x2E
 
-Display_Mode		EQU	0x30 
-mode_Time		EQU	0
-mode_Alt		EQU	1
-mode_Lat		EQU	2
-mode_Long		EQU	3
+
+Display_Mode		EQU	0x4F 
+_mode_Time		EQU	0
+_mode_Alt		EQU	1
+_mode_Lat		EQU	2
+_mode_Long		EQU	3
 
 NixieVarX		EQU	0x59 ; inner data
 NixieVarY		EQU	0x5A ; inner data
@@ -340,7 +341,7 @@ SETUP:
 	CLRF	PORTB
 	CLRF	NixieDemoCount
 	CLRF	Serial_Status
-	STR	mode_time, Display_Mode
+	STR	_mode_Time, Display_Mode
 	
 ;welcome message
 	CALL	Nixie_None
@@ -391,13 +392,28 @@ SETUP:
 	
 LOOP:
 	CALL	Nixie_None	
-	;Check Mode
-	;Read_next_ mode
-	;Parse and display
+	
+	CLRF	Display_Mode
+	BTFSC	Mode_Select_b0
+	BSF	Display_Mode, 0
+	BTFSC	Mode_Select_b1
+	BSF	Display_Mode, 1
+
+	CMP_lf	_mode_Time, Display_Mode
+	BR_EQ	MAIN_TIME
+	
+	CMP_lf	_mode_Alt, Display_Mode
+	BR_EQ	MAIN_ALT
+	
+	CMP_lf	_mode_Lat, Display_Mode
+	BR_EQ	MAIN_LAT
+	
+	CMP_lf	_mode_Long, Display_Mode
+	BR_EQ	MAIN_LONG	
 
 
 
-
+MAIN_TIME:
 	CALL	READ_NEXT_TIME
 	BW_False	Draw_No_time
 	
@@ -467,8 +483,7 @@ LOOP:
 	CALL 	Serial_TX_write
 	
 	STR	'T', Serial_Data
-	CALL 	Serial_TX_write
-	
+	CALL 	Serial_TX_write	
 	
 	GOTO	ErrorCheck1
 	
@@ -489,12 +504,56 @@ Draw_No_time:
 	
 	GOTO	ErrorCheck1
 
+MAIN_ALT
+	CALL	READ_NEXT_ALT
+	BW_False	Draw_No_alt
+	
+; 3.281ft / m
+	MOV	data_h10, Serial_Data
+	CALL	Serial_TX_write_ITOA
+	MOV	data_h01, Serial_Data
+	CALL	Serial_TX_write_ITOA
+	MOV	data_m10, Serial_Data
+	CALL	Serial_TX_write_ITOA
+	MOV	data_m01, Serial_Data
+	CALL	Serial_TX_write_ITOA
+	MOV	data_s10, Serial_Data
+	CALL	Serial_TX_write_ITOA
+	MOV	data_s01, Serial_Data
+	CALL	Serial_TX_write_ITOA
 
-
-
-
-
-
+	GOTO	ErrorCheck1
+	
+Draw_No_alt:	
+	STR	'N', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'A', Serial_Data
+	CALL 	Serial_TX_write
+	
+	GOTO	ErrorCheck1
+	
+MAIN_LAT:
+	STR	'L', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'A', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'T', Serial_Data
+	CALL 	Serial_TX_write
+	
+	GOTO	ErrorCheck1
+	
+MAIN_LONG:
+	STR	'L', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'O', Serial_Data
+	CALL 	Serial_TX_write
+	STR	'N', Serial_Data
+	CALL 	Serial_TX_write
+	
+	GOTO	ErrorCheck1
+	
+	
+	
 ErrorCheck1:
 	BTFBC	Serial_Status, _Serial_bit_RX_overrunError, ErrorCheck2
 	STR	' ', Serial_Data
@@ -795,6 +854,83 @@ READ_NEXT_TIME:
 	SUBWF	data_m01, F
 	SUBWF	data_s10, F
 	SUBWF	data_s01, F
+	
+	RETLW	TRUE
+	
+; $GPGGA,205647.91,          , ,           , ,0,00,99.99,   , ,     , ,,*6C
+; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,39.6,M,-32.4,M,,*59
+; $GPGGA,  time   , lat      ,N, lat       ,W,x,x , x  , ALT,U
+READ_NEXT_ALT:
+	STR	8, NixieVarX	
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	'$', Serial_Data
+	BR_NE	READ_NEXT_ALT
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	'G', Serial_Data
+	BR_NE	READ_NEXT_ALT
+
+	CALL	Serial_RX_waitRead
+	CMP_lf	'P', Serial_Data
+	BR_NE	READ_NEXT_ALT
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	'G', Serial_Data
+	BR_NE	READ_NEXT_ALT
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	'G', Serial_Data
+	BR_NE	READ_NEXT_ALT
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	'A', Serial_Data
+	BR_NE	READ_NEXT_ALT
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	',', Serial_Data
+	BR_NE	READ_NEXT_ALT	
+	
+	
+READ_NEXT_ALT_SEEK:
+
+	CALL	Serial_RX_waitRead
+	CMP_lf	',', Serial_Data
+	BR_NE	READ_NEXT_ALT_SEEK	
+
+	DECFSZ	NixieVarX, F
+	GOTO	READ_NEXT_ALT_SEEK
+	
+	CALL	Serial_RX_waitRead
+	CMP_lf	',', Serial_Data
+	SK_NE
+	RETLW	FALSE
+	
+	MOVLW	data_H10
+	MOVWF	FSR
+	MOV	Serial_Data, INDF	
+	INCF	FSR, F
+	
+READ_NEXT_ALT_GET_DATA:
+
+	CALL	Serial_RX_waitRead	
+	
+	CMP_lf	',', Serial_Data
+	BR_EQ	READ_NEXT_ALT_END
+	
+	MOV	Serial_Data, INDF	
+	INCF	FSR, F
+	GOTO	READ_NEXT_ALT_GET_DATA	
+	
+READ_NEXT_ALT_END:
+	STR	0xFF, INDF ; end marker
+	
+READ_NEXT_ALT_CONVERT:
+	DECF	FSR, F
+	MOVLW	'0'	
+	SUBWF	INDF, F
+	CMP_lf	data_H10, FSR
+	BR_NE	READ_NEXT_ALT_CONVERT
 	
 	RETLW	TRUE
 	
