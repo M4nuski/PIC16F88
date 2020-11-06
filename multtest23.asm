@@ -295,6 +295,65 @@ D8:	; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum
 	SWAPF	D88_Fract, F
 	
 	Test_StopCounter var6
+	
+	
+	NOP
+	NOP
+	NOP
+	MOVLW	10
+	NOP
+	NOP
+	NOP
+;http://www.piclist.com/techref/method/math/divconst.htm
+DIV10	MACRO
+	MOVF	D8_Num, W
+	MOVWF	D8_Modulo
+	CLRF	D8_Num
+
+	MOVLW	b'10100000'
+	SUBWF	D8_Modulo, F
+	SK_BO
+	BSF	D8_Num, 4
+	SK_NB
+	ADDWF	D8_Modulo, F
+
+	MOVLW	b'01010000'
+	SUBWF	D8_Modulo, F
+	SK_BO
+	BSF	D8_Num, 3
+	SK_NB
+	ADDWF	D8_Modulo, F
+
+	MOVLW	b'00101000'
+	SUBWF	D8_Modulo, F
+	SK_BO
+	BSF	D8_Num, 2
+	SK_NB
+	ADDWF	D8_Modulo, F
+
+	MOVLW	b'00010100'
+	SUBWF	D8_Modulo, F
+	SK_BO
+	BSF	D8_Num, 1
+	SK_NB
+	ADDWF	D8_Modulo, F
+
+	MOVLW	b'00001010'
+	SUBWF	D8_Modulo, F
+	SK_BO
+	BSF	D8_Num, 0
+	SK_NB
+	ADDWF	D8_Modulo, F
+	ENDM
+	
+D8_Num		EQU	var1
+D8_Modulo	EQU	var2
+    MOVLW	235
+    MOVWF	D8_Num
+    	Test_StartCounter 1
+    DIV10
+    	Test_StopCounter var6
+    
 
 	
 	Test_Footer

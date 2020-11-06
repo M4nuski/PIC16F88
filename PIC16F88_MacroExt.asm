@@ -32,7 +32,65 @@
 ;	string utilities
 
 
-
+BTFSCs	MACRO	file, bit
+	if (bit >= 8)
+	BTFSC	file + 1, bit - 8
+	else 
+	BTFSC 	file, bit
+	endif
+	ENDM
+	
+BTFSCc	MACRO	file, bit
+	if (bit >= 16)
+	BTFSC	file + 2, bit - 16
+	else if (bit >= 8)
+	BTFSC	file + 1, bit - 8
+	else 
+	BTFSC 	file, bit
+	endif
+	ENDM
+	
+BTFSCi	MACRO	file, bit
+	if (bit >= 24)
+	BTFSC	file + 3, bit - 24
+	else if (bit >= 16)
+	BTFSC	file + 2, bit - 16
+	else if (bit >= 8)
+	BTFSC	file + 1, bit - 8
+	else 
+	BTFSC 	file, bit
+	endif
+	ENDM
+	
+BTFSSs	MACRO	file, bit
+	if (bit >= 8)
+	BTFSS	file + 1, bit - 8
+	else 
+	BTFSS 	file, bit
+	endif
+	ENDM
+	
+BTFSSc	MACRO	file, bit
+	if (bit >= 16)
+	BTFSS	file + 2, bit - 16
+	else if (bit >= 8)
+	BTFSS	file + 1, bit - 8
+	else 
+	BTFSS 	file, bit
+	endif
+	ENDM
+	
+BTFSSi	MACRO	file, bit
+	if (bit >= 24)
+	BTFSS	file + 3, bit - 24
+	else if (bit >= 16)
+	BTFSS	file + 2, bit - 16
+	else if (bit >= 8)
+	BTFSS	file + 1, bit - 8
+	else 
+	BTFSS 	file, bit
+	endif
+	ENDM
 ;#############################################################################
 ;	Bit Test SKip if Set (file)target, (file)bit
 ;	Check if a bit is set in a file, skip next
@@ -372,7 +430,7 @@ _end:
 ;#############################################################################
 
 BClear	MACRO	file, bit
-	LOCAL	_set
+	LOCAL	_clear
 	MOVLW	0xFE	;1111 1110 
 	BTFSC	bit, 2	;4
 	MOVLW	0xEF	;1110 1111
@@ -382,10 +440,10 @@ BClear	MACRO	file, bit
 	BTFSC	bit, 0
 	RLF	SCRATCH, F ; 1
 	BTFSS	bit, 1
-	GOTO	_set
+	GOTO	_clear
 	RLF	SCRATCH, F
 	RLF	SCRATCH, F ; 2
-_set:
+_clear:
 	MOVF	SCRATCH, W
 	ANDWF	file, F
 	ENDM
@@ -3146,6 +3204,7 @@ BIN2BCD_nextNibble:
 	RLF	BCD + 1, F
 	RLF	BCD + 2, F
 
-	RETURN
+	ENDM
 
 
+	END

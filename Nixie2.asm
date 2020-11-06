@@ -7,7 +7,7 @@
 	LIST	p=16F88			; processor model
 #INCLUDE	<P16F88.INC>		; processor specific variable definitions
 #INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
-
+#INCLUDE	<PIC16F88_MacroExt.asm> ; 16/24/32 bit instructions extensions
 ;#############################################################################
 ;	Configuration	
 ;#############################################################################
@@ -60,6 +60,16 @@
 #DEFINE Mode_Select_b0	PORTB, 3
 #DEFINE Mode_Select_b1	PORTB, 4
 
+#DEFINE	END_MARKER		0xFF
+#DEFINE	CONV_END_MARKER	END_MARKER - '0'
+#DEFINE	CONV_DOT		'.' - '0'
+#DEFINE	CONV_M			'M' - '0'
+#DEFINE	CONV_F			'F' - '0'
+#DEFINE	CONV_N			'N' - '0'
+#DEFINE	CONV_S			'S' - '0'
+#DEFINE	CONV_W			'W' - '0'
+#DEFINE	CONV_E			'E' - '0'
+
 ;#############################################################################
 ;	Memory Organisation
 ;#############################################################################
@@ -91,14 +101,15 @@ TZ_offset		EQU	0x26 ; for TZ adjust
 WriteLoop		EQU	0x27 ; for NixieSerial and WriteString
 TX_Temp			EQU	0x28 ; for RX/TX buffer address calculation
 
-data_H10		EQU	0x29
+data_buffer		EQU	0x29
+data_H10		EQU	0x29 ; alias for static buffer positions
 data_H01		EQU	0x2A
 data_m10		EQU	0x2B
 data_m01		EQU	0x2C
 data_s10		EQU	0x2D
 data_s01		EQU	0x2E
 
-
+data_unit		EQU	0x4E ; M F N S E W
 Display_Mode		EQU	0x4F 
 _mode_Time		EQU	0
 _mode_Alt		EQU	1
@@ -114,9 +125,9 @@ NixieTube		EQU	0x5E ; to pass data between routines
 NixieDemoCount		EQU	0x5F ; global for demo
 
 D88_Num			EQU	0x60 ; numerator for div and receive modulo (remainder)
-D88_Denum		EQU	0x61 ; denumerator for div
-D88_Fract		EQU	0x62 ; Receive fraction of div
-D88_Modulo		EQU	0x63
+D88_Denum		EQU	0x62 ; denumerator for div
+D88_Fract		EQU	0x64 ; Receive fraction of div
+D88_Modulo		EQU	0x66 ; Modulo for preset div, also index for arbitrary div
 
 ; GPR files in GPR for context saving
 ;STACK_FSR		EQU	0x6C
@@ -162,6 +173,8 @@ _char_C		EQU 15
 _char_F		EQU 16
 _char_M		EQU 17
 _char_topdot	EQU 18
+_char_comma	EQU 19
+_char_A		EQU 20
 
 ;#############################################################################
 ;	MACRO
@@ -189,25 +202,52 @@ _TABLE:
 _END:
 	ENDM
 	
-BClear	MACRO	file, bit
-	LOCAL	_set
-	MOVLW	0xFE	;1111 1110 
-	BTFSC	bit, 2	;4
-	MOVLW	0xEF	;1110 1111
-	MOVWF	SCRATCH
-	BSF	STATUS, C
-	
-	BTFSC	bit, 0
-	RLF	SCRATCH, F ; 1
-	BTFSS	bit, 1
-	GOTO	_set
-	RLF	SCRATCH, F
-	RLF	SCRATCH, F ; 2
-_set:
-	MOVF	SCRATCH, W
-	ANDWF	file, F
+WRITE_NIXIE_L	MACRO Tube, Data
+	MOVLW	Tube
+	MOVWF	NixieTube
+	MOVLW 	Data
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum	
 	ENDM
 	
+WRITE_NIXIE_F	MACRO Tube, Data
+	MOVLW	Tube
+	MOVWF	NixieTube
+	MOVF 	Data, W
+	MOVWF	NixieData
+	CALL	Nixie_DrawNum	
+	ENDM
+	
+WRITE_NIXIE_W	MACRO Tube
+	MOVWF	NixieData
+	MOVLW	Tube
+	MOVWF	NixieTube
+	CALL	Nixie_DrawNum	
+	ENDM
+	
+WRITE_SERIAL_L	MACRO lit
+	MOVLW	lit
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	ENDM
+	
+WRITE_SERIAL_F	MACRO file
+	MOVF	file, W
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	ENDM
+	
+WRITE_SERIAL_FITOA	MACRO file
+	MOVF	file, W
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write_ITOA
+	ENDM
+	
+WRITE_SERIAL_W	MACRO
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	ENDM
+
 ;#############################################################################
 ;	Reset Vector - Main Entry Point
 ;#############################################################################
@@ -344,34 +384,23 @@ SETUP:
 	STR	_mode_Time, Display_Mode
 	
 ;welcome message
-	CALL	Nixie_None
-		
-	STR	2, NixieTube
-	STR	_char_E, NixieData
-	CALL	Nixie_DrawNum	
-		
-	STR	3, NixieTube
-	STR	_char_C, NixieData
-	CALL	Nixie_DrawNum	
-	
-	STR	5, NixieTube
-	STR	2, NixieData
-	CALL	Nixie_DrawNum	
-	
-	STR	6, NixieTube
-	STR	0, NixieData
-	CALL	Nixie_DrawNum	
 
-	STR	7, NixieTube
-	STR	2, NixieData
-	CALL	Nixie_DrawNum	
-
-	STR	8, NixieTube
-	STR	0, NixieData
-	CALL	Nixie_DrawNum		
-	
+	CALL	Nixie_All
 	CALL	Nixie_Send
+	CALL	WAIT_1s	
 	
+	CALL	Nixie_None
+	CALL	Nixie_Send
+	CALL	WAIT_1s	
+	
+	WRITE_NIXIE_L	2, _char_E
+	WRITE_NIXIE_L	3, _char_C
+	WRITE_NIXIE_L	5, 2
+	WRITE_NIXIE_L	6, 0
+	WRITE_NIXIE_L	7, 2
+	WRITE_NIXIE_L	8, 0
+
+	CALL	Nixie_Send
 	CALL	WAIT_1s	
 	
 ; enable interrupts
@@ -393,29 +422,35 @@ SETUP:
 LOOP:
 	CALL	Nixie_None	
 	
-	CLRF	Display_Mode
-	BTFSC	Mode_Select_b0
-	BSF	Display_Mode, 0
-	BTFSC	Mode_Select_b1
-	BSF	Display_Mode, 1
+;	CLRF	Display_Mode
+;	BTFSC	Mode_Select_b0
+;	BSF	Display_Mode, 0
+;	BTFSC	Mode_Select_b1
+;	BSF	Display_Mode, 1
 
-	CMP_lf	_mode_Time, Display_Mode
-	BR_EQ	MAIN_TIME
+;	CMP_lf	_mode_Time, Display_Mode
+;	BR_EQ	MAIN_TIME
+;	GOTO	MAIN_TIME
 	
-	CMP_lf	_mode_Alt, Display_Mode
-	BR_EQ	MAIN_ALT
+;	CMP_lf	_mode_Alt, Display_Mode
+;	BR_EQ	MAIN_ALT
+	GOTO	MAIN_ALT
 	
-	CMP_lf	_mode_Lat, Display_Mode
-	BR_EQ	MAIN_LAT
+;	CMP_lf	_mode_Lat, Display_Mode
+;	BR_EQ	MAIN_LAT
 	
-	CMP_lf	_mode_Long, Display_Mode
-	BR_EQ	MAIN_LONG	
+;	CMP_lf	_mode_Long, Display_Mode
+;	BR_EQ	MAIN_LONG
+	
+	WRITE_SERIAL_L	'?'
+	CALL	Wait_1s
 
-
+	GOTO	LOOP
 
 MAIN_TIME:
 	CALL	READ_NEXT_TIME
 	BW_False	Draw_No_time
+	
 	
 	; Adjust time zone
 	MOVLW	5
@@ -424,66 +459,35 @@ MAIN_TIME:
 	MOVWF	TZ_offset	
 	CALL	ADJUST_TZ
 	
-	; Draw time data on nixie tubes
-	STR	2, NixieTube
-	MOV	data_H10, NixieData
-	CALL	Nixie_DrawNum		
-	STR	3, NixieTube
-	MOV	data_H01, NixieData
-	CALL	Nixie_DrawNum	
 	
-	STR	4, NixieTube
-	STR	_char_column, NixieData
-	CALL	Nixie_DrawNum	
+	; Draw time data on nixie tubes	
+	WRITE_NIXIE_F	2, data_H10	
+	WRITE_NIXIE_F	3, data_H01
 	
-	STR	5, NixieTube
-	MOV	data_m10, NixieData
-	CALL	Nixie_DrawNum	
-	STR	6, NixieTube
-	MOV	data_m01, NixieData
-	CALL	Nixie_DrawNum	
+	WRITE_NIXIE_L	4, _char_column
 	
-	STR	8, NixieTube
-	MOV	data_s10, NixieData
-	CALL	Nixie_DrawNum	
-	STR	9, NixieTube
-	MOV	data_s01, NixieData
-	CALL	Nixie_DrawNum	
+	WRITE_NIXIE_F	5, data_m10
+	WRITE_NIXIE_F	6, data_m01
+	
+	WRITE_NIXIE_F	8, data_s10
+	WRITE_NIXIE_F	9, data_s01
 	
 	
 	; Send time data to serial
-	MOV	data_H10, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_H01, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	
-	STR	':', Serial_Data
-	CALL 	Serial_TX_write
-	
-	MOV	data_m10, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_m01, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	
-	STR	':', Serial_Data
-	CALL 	Serial_TX_write
-	
-	MOV	data_s10, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_s01, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	
-	STR	'E', Serial_Data
-	CALL 	Serial_TX_write
-	
+	WRITE_SERIAL_FITOA	data_H10
+	WRITE_SERIAL_FITOA	data_H01
+	WRITE_SERIAL_L	':'
+	WRITE_SERIAL_FITOA	data_m10
+	WRITE_SERIAL_FITOA	data_m01
+	WRITE_SERIAL_L	':'
+	WRITE_SERIAL_FITOA	data_s10
+	WRITE_SERIAL_FITOA	data_s01	
+	WRITE_SERIAL_L	'E'	
 	MOVLW	'S'
 	BTFSC	TZ_select
 	MOVLW	'D'
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	
-	STR	'T', Serial_Data
-	CALL 	Serial_TX_write	
+	WRITE_SERIAL_W	
+	WRITE_SERIAL_L	'T'
 	
 	GOTO	ErrorCheck1
 	
@@ -492,63 +496,80 @@ Draw_No_time:
 	INCF	NixieDemoCount, F
 	BTFSC	NixieDemoCount, 0
 	MOVLW	_char_topdot
-	MOVWF	NixieData
+	WRITE_NIXIE_W	4
 	
-	CLRF	NixieTube
-	CALL	Nixie_DrawNum
-	
-	STR	'N', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'T', Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	'N'
+	WRITE_SERIAL_L	'T'
 	
 	GOTO	ErrorCheck1
 
 MAIN_ALT
-	CALL	READ_NEXT_ALT
+	WRITE_NIXIE_L	1, _char_A
+	WRITE_NIXIE_L	4, _char_column	
+	
+	MOVLW	8
+	CALL	READ_NEXT
 	BW_False	Draw_No_alt
 	
 ; 3.281ft / m
+; M * 33 / 10
+
+	; convert integer part to int
+	; check unit
+	; check requested unit
+	; if different convert
+	
+	; Meters:
+	; draw M
+	; check if > 1000
+	; 	draw integer part
+	; else draw both parts
+	
+	; Feet:
+	; draw F
+	; draw integer part
+
+	CLRF	NixieVarX	
+	MOVLW	data_h10
+	MOVWF	FSR	
+MAIN_ALT_1:
+	CMP_lf	0xFF, INDF
+	BR_EQ	MAIN_ALT_2
+	INCF	INDF, F
+	
+MAIN_ALT_2:
+
 	MOV	data_h10, Serial_Data
+	CMP_lf	0xFF, Serial_Data
+	SK_EQ
 	CALL	Serial_TX_write_ITOA
-	MOV	data_h01, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_m10, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_m01, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_s10, Serial_Data
-	CALL	Serial_TX_write_ITOA
-	MOV	data_s01, Serial_Data
-	CALL	Serial_TX_write_ITOA
+
 
 	GOTO	ErrorCheck1
 	
 Draw_No_alt:	
-	STR	'N', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'A', Serial_Data
-	CALL 	Serial_TX_write
+	MOVLW	_char_dot
+	INCF	NixieDemoCount, F
+	BTFSC	NixieDemoCount, 0
+	MOVLW	_char_topdot
+	WRITE_NIXIE_W	4
+	
+	WRITE_SERIAL_L	'N'
+	WRITE_SERIAL_L	'A'
 	
 	GOTO	ErrorCheck1
 	
 MAIN_LAT:
-	STR	'L', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'A', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'T', Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	'L'
+	WRITE_SERIAL_L	'A'
+	WRITE_SERIAL_L	'T'
 	
 	GOTO	ErrorCheck1
 	
 MAIN_LONG:
-	STR	'L', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'O', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'N', Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	'L'
+	WRITE_SERIAL_L	'O'
+	WRITE_SERIAL_L	'N'
 	
 	GOTO	ErrorCheck1
 	
@@ -556,46 +577,29 @@ MAIN_LONG:
 	
 ErrorCheck1:
 	BTFBC	Serial_Status, _Serial_bit_RX_overrunError, ErrorCheck2
-	STR	' ', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'O', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'E', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'R', Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	' '
+	WRITE_SERIAL_L	'O'
+	WRITE_SERIAL_L	'E'
+	WRITE_SERIAL_L	'R'
 	
 ErrorCheck2:
 	BTFBC	Serial_Status, _Serial_bit_RX_frameError, ErrorCheck3
-	STR	' ', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'F', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'E', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'R', Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	' '
+	WRITE_SERIAL_L	'F'
+	WRITE_SERIAL_L	'E'
+	WRITE_SERIAL_L	'R'
 	
 ErrorCheck3:
 	BTFBC	Serial_Status, _Serial_bit_RX_bufferOverrun, ErrorCheck_End
-	STR	' ', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'R', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'B', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'E', Serial_Data
-	CALL 	Serial_TX_write
-	STR	'R', Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	' '
+	WRITE_SERIAL_L	'R'
+	WRITE_SERIAL_L	'B'
+	WRITE_SERIAL_L	'E'
+	WRITE_SERIAL_L	'R'
 	
 ErrorCheck_End:
-	MOVLW	13		;(CR)
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write	
-	MOVLW	10		;(LF)
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
+	WRITE_SERIAL_L	13		;(CR)
+	WRITE_SERIAL_L	10		;(LF)
 	
 	CLRF	Serial_Status
 	CALL	Nixie_Send
@@ -795,37 +799,43 @@ Nixie_Send_Next_Bit:
 ;#############################################################################
 ;	GPS serial read and parse
 ;#############################################################################
-
-; $GPGGA,205654.00,
-READ_NEXT_TIME:
+WAIT_GPGGA_HEADER:
 	CALL	Serial_RX_waitRead
 	CMP_lf	'$', Serial_Data
-	BR_NE	READ_NEXT_TIME
+	BR_NE	WAIT_GPGGA_HEADER
 	
 	CALL	Serial_RX_waitRead
 	CMP_lf	'G', Serial_Data
-	BR_NE	READ_NEXT_TIME
+	BR_NE	WAIT_GPGGA_HEADER
 
 	CALL	Serial_RX_waitRead
 	CMP_lf	'P', Serial_Data
-	BR_NE	READ_NEXT_TIME
+	BR_NE	WAIT_GPGGA_HEADER
 	
 	CALL	Serial_RX_waitRead
 	CMP_lf	'G', Serial_Data
-	BR_NE	READ_NEXT_TIME
+	BR_NE	WAIT_GPGGA_HEADER
 	
 	CALL	Serial_RX_waitRead
 	CMP_lf	'G', Serial_Data
-	BR_NE	READ_NEXT_TIME
+	BR_NE	WAIT_GPGGA_HEADER
 	
 	CALL	Serial_RX_waitRead
 	CMP_lf	'A', Serial_Data
-	BR_NE	READ_NEXT_TIME
+	BR_NE	WAIT_GPGGA_HEADER
 	
 	CALL	Serial_RX_waitRead
 	CMP_lf	',', Serial_Data
-	BR_NE	READ_NEXT_TIME	
+	BR_NE	WAIT_GPGGA_HEADER	
 	
+	RETURN
+
+
+
+; $GPGGA,205654.00,
+READ_NEXT_TIME:
+	CALL	WAIT_GPGGA_HEADER
+		
 	CALL	Serial_RX_waitRead
 	CMP_lf	',', Serial_Data
 	SK_NE
@@ -860,80 +870,58 @@ READ_NEXT_TIME:
 ; $GPGGA,205647.91,          , ,           , ,0,00,99.99,   , ,     , ,,*6C
 ; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,39.6,M,-32.4,M,,*59
 ; $GPGGA,  time   , lat      ,N, lat       ,W,x,x , x  , ALT,U
-READ_NEXT_ALT:
-	STR	8, NixieVarX	
-	
-	CALL	Serial_RX_waitRead
-	CMP_lf	'$', Serial_Data
-	BR_NE	READ_NEXT_ALT
-	
-	CALL	Serial_RX_waitRead
-	CMP_lf	'G', Serial_Data
-	BR_NE	READ_NEXT_ALT
+;          0        1         2  3          4 5 6   7     8  9
 
-	CALL	Serial_RX_waitRead
-	CMP_lf	'P', Serial_Data
-	BR_NE	READ_NEXT_ALT
+READ_NEXT:
+	MOVWF	NixieVarX
+	CALL	WAIT_GPGGA_HEADER	
 	
-	CALL	Serial_RX_waitRead
-	CMP_lf	'G', Serial_Data
-	BR_NE	READ_NEXT_ALT
-	
-	CALL	Serial_RX_waitRead
-	CMP_lf	'G', Serial_Data
-	BR_NE	READ_NEXT_ALT
-	
-	CALL	Serial_RX_waitRead
-	CMP_lf	'A', Serial_Data
-	BR_NE	READ_NEXT_ALT
-	
-	CALL	Serial_RX_waitRead
+READ_NEXT_SEEK:
+	CALL	Serial_RX_waitRead	; wait for next ','
 	CMP_lf	',', Serial_Data
-	BR_NE	READ_NEXT_ALT	
-	
-	
-READ_NEXT_ALT_SEEK:
+	BR_NE	READ_NEXT_SEEK	
 
-	CALL	Serial_RX_waitRead
-	CMP_lf	',', Serial_Data
-	BR_NE	READ_NEXT_ALT_SEEK	
-
-	DECFSZ	NixieVarX, F
-	GOTO	READ_NEXT_ALT_SEEK
+	DECFSZ	NixieVarX, F		; dec index
+	GOTO	READ_NEXT_SEEK
 	
 	CALL	Serial_RX_waitRead
-	CMP_lf	',', Serial_Data
+	CMP_lf	',', Serial_Data	; if already another ',' return false
 	SK_NE
 	RETLW	FALSE
 	
-	MOVLW	data_H10
-	MOVWF	FSR
-	MOV	Serial_Data, INDF	
-	INCF	FSR, F
+	MOV	Serial_Data, data_buffer	; data_buffer[0] = Serial_Data
 	
-READ_NEXT_ALT_GET_DATA:
+	STR	data_buffer, NixieVarX	; x = @data_buffer
+	INCF	NixieVarX, F			; x++
 
+READ_NEXT_READ_DATA:
 	CALL	Serial_RX_waitRead	
 	
 	CMP_lf	',', Serial_Data
-	BR_EQ	READ_NEXT_ALT_END
+	BR_EQ	READ_NEXT_CONVERT		; convert after receiving a ','
 	
-	MOV	Serial_Data, INDF	
-	INCF	FSR, F
-	GOTO	READ_NEXT_ALT_GET_DATA	
+	WRITEp	Serial_Data, NixieVarX	; data_buffer[x] = Serial_Data
+	INCF	NixieVarX, F			; ptr++
+	GOTO	READ_NEXT_READ_DATA	
 	
-READ_NEXT_ALT_END:
-	STR	0xFF, INDF ; end marker
+READ_NEXT_CONVERT:
+	MOV	NixieVarX, FSR
+	STR	END_MARKER, INDF
 	
-READ_NEXT_ALT_CONVERT:
+READ_NEXT_CONVERT_LOOP:
 	DECF	FSR, F
-	MOVLW	'0'	
+	MOVLW	'0'			; subtract ord('0') from each bytes until pointer is back to @data_buffer
 	SUBWF	INDF, F
-	CMP_lf	data_H10, FSR
-	BR_NE	READ_NEXT_ALT_CONVERT
+	CMP_lf	data_buffer, FSR
+	BR_NE	READ_NEXT_CONVERT_LOOP
+	
+	CALL	Serial_RX_waitRead	; read first char of next value, usually the unit of the preceding one
+	MOV	Serial_data, data_unit
 	
 	RETLW	TRUE
-	
+
+
+
 ;#############################################################################
 ;	Timezone adjust
 ;#############################################################################
@@ -1037,7 +1025,8 @@ Nixie_Num_seg0_7:
 	RETLW	b'00001101' ;F
 	RETLW	b'01001001' ;M
 	RETLW	b'00000010' ;topdot
-	RETLW	b'00000000' ;
+	RETLW	b'00100000' ;,
+	RETLW	b'01001101' ;A
 	
 Nixie_Num_seg8:
 	ADDWF	PCL, F
@@ -1061,7 +1050,8 @@ Nixie_Num_seg8:
 	RETLW	b'00000000' ;F
 	RETLW	b'00000001' ;M
 	RETLW	b'00000000' ;topdot
-	RETLW	b'00000000' ;
+	RETLW	b'00000000' ;,
+	RETLW	b'00000001' ;A
 	; a -> HBar
 	; b -> TDot
 	; c -> BDot
@@ -1074,7 +1064,7 @@ DIV88:	; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum
 	BTFSC	STATUS, Z
 	RETURN
 	
-	STR	0x01, SCRATCH	; index
+	STR	0x01, D88_Modulo
 	BTFSC	D88_Denum, 7
 	GOTO	_div88Loop
 	
@@ -1082,7 +1072,7 @@ _div88Prep:
 	BCF	STATUS, C
 	RLF	D88_Denum, F
 	BCF	STATUS, C
-	RLF	SCRATCH, F
+	RLF	D88_Modulo, F
 	BTFSS	D88_Denum, 7
 	GOTO	_div88Prep
 	
@@ -1091,10 +1081,10 @@ _div88Loop:
 	BR_GT	_div88pos
 	BR_LT	_div88neg
 ;if equal
-	ADD	D88_Fract, SCRATCH
+	ADD	D88_Fract, D88_Modulo
 	RETURN
 _div88pos:
-	ADD	D88_Fract, SCRATCH
+	ADD	D88_Fract, D88_Modulo
 	GOTO	_div88roll
 _div88neg:
 	ADD	D88_Num, D88_Denum
@@ -1102,13 +1092,59 @@ _div88roll:
 	BCF	STATUS, C
 	RRF	D88_Denum, F
 	BCF	STATUS, C
-	RRF	SCRATCH, F
+	RRF	D88_Modulo, F
 	BTFSS	STATUS, C
 	GOTO	_div88Loop	
 
 	RETURN
 	
-D8:	; D88_Num = D88_Num / 8, D88_Modulo = D88_Num % 8 
+	
+	
+	
+DIV1616:; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum
+	CLRFs	D88_Fract
+
+	TESTs	D88_Denum	; return if Denum is 0
+	SK_NZ
+	RETURN
+
+_DIV1616_start:	
+	STRs	0x0001, D88_Modulo
+	
+	BTFSCs	D88_Denum, 15
+	GOTO	_DIV1616_loop
+	
+_DIV1616_preShift:
+	BCF	STATUS, C
+	RLFs	D88_Denum
+	BCF	STATUS, C
+	RLFs	D88_Modulo
+	BTFSSs	D88_Denum, 15
+	GOTO	_DIV1616_preShift
+	
+_DIV1616_loop:
+	SUBs	D88_Num, D88_Denum
+	BR_GT	_DIV1616_pos
+	BR_LT	_DIV1616_neg
+;if equal
+	ADDs	D88_Fract, D88_Modulo
+	RETURN
+_DIV1616_pos:
+	ADDs	D88_Fract, D88_Modulo
+	GOTO	_DIV1616_roll
+_DIV1616_neg:
+	ADDs	D88_Num, D88_Denum
+_DIV1616_roll:
+	BCF	STATUS, C
+	RRFs	D88_Denum
+	BCF	STATUS, C
+	RRFs	D88_Modulo
+	BTFSS	STATUS, C
+	GOTO	_DIV1616_loop	
+
+	RETURN
+	
+DIV8:	; D88_Num = D88_Num / 8, D88_Modulo = D88_Num % 8 
 	CLRF	D88_Modulo
 	
 	BCF	STATUS, C	; / 2
@@ -1141,6 +1177,163 @@ D8:	; D88_Num = D88_Num / 8, D88_Modulo = D88_Num % 8
 	;   a = TEMP
 	; RRF b et SCRATCH until SCRATCH == 0 (ou le LSB se trouve dans le CARRY)
 
+
+DIV10	MACRO
+	MOV	D88_Num, D88_Modulo
+	CLRF	D88_Num
+
+	MOVLW	b'10100000'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D88_Num, 4
+	SK_NB
+	ADDWF	D88_Modulo, F
+
+	MOVLW	b'01010000'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D88_Num, 3
+	SK_NB
+	ADDWF	D88_Modulo, F
+
+	MOVLW	b'00101000'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D88_Num, 2
+	SK_NB
+	ADDWF	D88_Modulo, F
+
+	MOVLW	b'00010100'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D88_Num, 1
+	SK_NB
+	ADDWF	D88_Modulo, F
+
+	MOVLW	b'00001010'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D88_Num, 0
+	SK_NB			; could be removed if modulo is not used
+	ADDWF	D88_Modulo, F	; could be removed if modulo is not used
+	ENDM
+	
+; 10 = 0000 1010
+
+; div  1010 0000
+; ind  0001 0000
+
+; div  0101 0000
+; ind  0000 1000
+
+; div  0010 1000
+; ind  0000 0100
+
+; div  0001 0100
+; ind  0000 0010
+
+; div  0000 1010
+; ind  0000 0001
+
+; 33 = 1 + 32
+; 2 4 8 16 32
+MULT33	MACRO	a, dest
+
+	MOVF	a, W
+	MOVWF	dest
+	MOVF	a + 1, W
+	MOVWF	dest + 1	; dest = a
+	
+	MOVLW	b'00000111'	; to avoid the rotated-out MSB contaminating the carry bit
+	ANDWF	a + 1, F
+	
+	BCF	STATUS, C
+	RLF	a, F
+	RLF	a + 1, F 	; a = a * 2
+	
+	RLF	a, F
+	RLF	a + 1, F	; a = a * 4
+	
+	RLF	a, F
+	RLF	a + 1, F	; a = a * 8
+	
+	RLF	a, F
+	RLF	a + 1, F	; a = a * 16
+	
+	RLF	a, F
+	RLF	a + 1, F	; a = a * 32
+	
+	MOVF	a, W
+	ADDWF	dest, F
+	SK_NC
+	INCF	dest + 1, F	
+	MOVF	a + 1, W
+	ADDWF	dest + 1, F	; dest = a + 32*a = 33*a
+
+	ENDM
+	
+MULT10	MACRO	a, dest
+	BCF	STATUS, C
+	RLF	a, F
+	RLF	a + 1, F	; *2
+	
+	MOVF	a, W 
+	MOVWF	dest
+	MOVF	a + 1, W
+	MOVWF	dest + 1
+	
+	BCF	STATUS, C
+	RLF	a, F
+	RLF	a + 1, F	; *4
+	BCF	STATUS, C
+	RLF	a, F
+	RLF	a + 1, F	; *8
+	
+	MOVF	a, W 
+	ADDWF	dest, F
+	SK_NC
+	INCF	dest, F
+	MOVF	a + 1, W
+	ADDWF	dest + 1, F	; dest = 2*a + 8*a
+	ENDM
+
+
+; 33 =	00100001
+; shift2
+;	10000100
+;	00000100
+
+;	01000010
+;	00000010
+
+;	00100001
+;	00000001
+	
+DIV33	MACRO
+	MOV	D88_Num, D88_Modulo
+	CLRF	D88_Num
+
+	MOVLW	b'10000100'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D88_Num, 2
+	SK_NB
+	ADDWF	D88_Modulo, F
+
+	MOVLW	b'01000010'
+	SUBWF	D8_Modulo, F
+	SK_BO
+	BSF	D88_Num, 1
+	SK_NB
+	ADDWF	D88_Modulo, F
+
+	MOVLW	b'00100001'
+	SUBWF	D88_Modulo, F
+	SK_BO
+	BSF	D8_Num, 0
+	SK_NB			; could be removed if modulo is not used
+	ADDWF	D88_Modulo, F	; could be removed if modulo is not used
+	ENDM
 ;#############################################################################
 ;	Delay routines	
 ;#############################################################################

@@ -8,6 +8,8 @@
 Test_Header	MACRO
 	LIST	p=16F88			 ; processor model
 #INCLUDE	<P16F88.INC>		 ; processor specific variable definitions
+;#INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
+;#INCLUDE	<PIC16F88_MacroExt.asm>
 
 ;#############################################################################
 ;	Configuration	
