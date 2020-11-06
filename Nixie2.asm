@@ -169,6 +169,7 @@ _char_M		EQU 17
 _char_topdot	EQU 18
 _char_comma	EQU 19
 _char_A		EQU 20
+_char_T		EQU 21
 
 ;#############################################################################
 ;	MACRO
@@ -428,7 +429,10 @@ LOOP:
 	
 ;	CMP_lf	_mode_Alt, Display_Mode
 ;	BR_EQ	MAIN_ALT
+
+	BTFSC	Mode_Select_b0
 	GOTO	MAIN_ALT
+	GOTO	MAIN_TIME
 	
 ;	CMP_lf	_mode_Lat, Display_Mode
 ;	BR_EQ	MAIN_LAT
@@ -448,6 +452,9 @@ LOOP:
 ;#############################################################################
 
 MAIN_TIME:
+	WRITE_NIXIE_L	4, _char_column
+;	WRITE_NIXIE_L	1, _char_T
+	
 	CALL	READ_NEXT_TIME
 	BW_False	Draw_No_time
 	
@@ -492,11 +499,7 @@ MAIN_TIME:
 	GOTO	ErrorCheck1
 	
 Draw_No_time:
-	MOVLW	_char_dot
-	INCF	NixieDemoCount, F
-	BTFSC	NixieDemoCount, 0
-	MOVLW	_char_topdot
-	WRITE_NIXIE_W	4
+	CALL	WAIT_DATA
 	
 	WRITE_SERIAL_L	'N'
 	WRITE_SERIAL_L	'T'
@@ -510,12 +513,13 @@ Draw_No_time:
 ;#############################################################################
 
 MAIN_ALT:
-	WRITE_NIXIE_L	1, _char_A
 	WRITE_NIXIE_L	4, _char_column	
+	WRITE_NIXIE_L	1, _char_A
 	
 	MOVLW	8
 	CALL	READ_NEXT
 	BW_False	Draw_No_alt
+	;GOTO	Draw_No_alt
 	
 ; 3.281ft / m
 ; M * 33 / 10
@@ -586,11 +590,7 @@ MAIN_ALT_3:
 	GOTO	MAIN_ALT_2
 	
 Draw_No_alt:	
-	MOVLW	_char_dot
-	INCF	NixieDemoCount, F
-	BTFSC	NixieDemoCount, 0
-	MOVLW	_char_topdot
-	WRITE_NIXIE_W	4
+	CALL 	WAIT_DATA
 	
 	WRITE_SERIAL_L	'N'
 	WRITE_SERIAL_L	'A'
@@ -671,7 +671,13 @@ ErrorCheck_End:
 ;	Subroutines
 ;#############################################################################
 
-
+WAIT_DATA:
+	MOVLW	_char_dot
+	INCF	NixieDemoCount, F
+	BTFSC	NixieDemoCount, 0
+	MOVLW	_char_topdot
+	WRITE_NIXIE_W	0
+	RETURN
 	
 ;#############################################################################
 ;	Serial TX
@@ -1088,6 +1094,7 @@ Nixie_Num_seg0_7:
 	RETLW	b'00000010' ;topdot 18
 	RETLW	b'00100000' ;, 19
 	RETLW	b'01001101' ;A 20
+	RETLW	b'00000101' ;T 21
 	
 Nixie_Num_seg8:
 	ADDWF	PCL, F
@@ -1113,6 +1120,7 @@ Nixie_Num_seg8:
 	RETLW	b'00000000' ;topdot 18
 	RETLW	b'00000000' ;, 19
 	RETLW	b'00000001' ;A 20
+	RETLW	b'00000000' ;T 21
 	; a -> HBar
 	; b -> TDot
 	; c -> BDot
