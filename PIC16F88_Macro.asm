@@ -663,10 +663,8 @@ _NEXT_BOUNDARY:
 	ENDM
 	
 PC0x0100ALIGN	MACRO	TableLabel; Align next instruction on a 256 instruction boundary (for small table reads)
-	ORG	( $ & 0xFFFFFF00 ) + 0x100
+	if	( $ & 0x000000FF != 0 )
+	ORG	( $ & 0xFFFFFF00 ) + 0x0100
+	endif
 TableLabel
 	ENDM
-
-
-
-	END

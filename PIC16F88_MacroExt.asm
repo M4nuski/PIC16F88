@@ -3205,6 +3205,3 @@ BIN2BCD_nextNibble:
 	RLF	BCD + 2, F
 
 	ENDM
-
-
-	END
