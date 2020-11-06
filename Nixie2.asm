@@ -110,6 +110,7 @@ _mode_Lat				EQU	1
 _mode_Long				EQU	2
 _mode_Alt				EQU	3
 
+
 NixieVarX		EQU	0x59 ; inner data
 NixieVarY		EQU	0x5A ; inner data
 NixieLoop		EQU	0x5B ; inner data
@@ -519,10 +520,6 @@ MAIN_ALT:
 	MOVLW	8
 	CALL	READ_NEXT
 	BW_False	Draw_No_alt
-	;GOTO	Draw_No_alt
-	
-; 3.281ft / m
-; M * 33 / 10
 
 	; convert integer part to int
 	; check unit
@@ -538,6 +535,7 @@ MAIN_ALT:
 	; Feet:
 	; draw F
 	; draw integer part
+	
 	WRITE_SERIAL_FITOA	data_H10
 	WRITE_SERIAL_FITOA	data_H01
 	WRITE_SERIAL_FITOA	data_m10
@@ -553,12 +551,75 @@ MAIN_ALT:
 	BR_EQ	MAIN_ALT_Feet	
 	GOTO	MAIN_ALT_draw
 	
-MAIN_ALT_Meter:
+MAIN_ALT_Meter:	; received unit is Meter
+
 	WRITE_NIXIE_L	3, _char_M
-	GOTO	MAIN_ALT_draw
 	
-MAIN_ALT_Feet:
+	BTFSS	AU_Select	; if requested unit is meter check range and draw
+	GOTO	MAIN_ALT_Meter_format
+	;convert to feet
+	; 3.281ft / m
+	; F = M * 33 / 10
+	; convert to u_int_16
+	; mult 33
+	; convert to bcd
+	; unpack bcd to byte, place end_marker before last bcd nibble (0.1th) or fake dot before last bcd nibble
+	
+	
+	;call feet format routine
+	GOTO	MAIN_ALT_Feet_format
+	
+	
+MAIN_ALT_Meter_format:
+	CMP_lw	CONV_DOT, data_buffer		; impossible dot at buffer[0] ".0000F"
+	BR_EQ	MAIN_ALT_draw
+	CMP_lw	CONV_DOT, data_buffer + 1	; dot at buffer[1] "0.000F"
+	BR_EQ	MAIN_ALT_draw
+	CMP_lw	CONV_DOT, data_buffer + 2	; dot at buffer[2] "00.00F"
+	BR_EQ	MAIN_ALT_draw	
+	CMP_lw	CONV_DOT, data_buffer + 3	; dot at buffer[3] "000.0F"
+	BR_EQ	MAIN_ALT_draw
+	
+	; ALT > 999.9 remove decimal
+	
+	STR	data_buffer + 3, FSR	; buffer[3]
+	
+MAIN_ALT_Meter_format_2:
+	INCF	FSR, F
+	CMP_lf	END_MARKER, INDF
+	BR_EQ	Draw_No_alt
+	CMP_lf	CONV_DOT, INDF
+	BR_NE	MAIN_ALT_Meter_format_2
+	
+	STR	END_MARKER, INDF	;replace dot with end_marker
+	GOTO	MAIN_ALT_draw
+
+
+
+MAIN_ALT_Feet:		; received unit is Feet
 	WRITE_NIXIE_L	3, _char_F
+	
+	BTFSC	AU_Select	; if requested unit is feet draw
+	GOTO	MAIN_ALT_Feet_format
+	;convert to meter
+	
+	
+	
+	;call meter format routine
+	GOTO	MAIN_ALT_Meter_format
+	
+	
+MAIN_ALT_Feet_format:
+	STR	data_buffer - 1, FSR	; buffer[-1]
+	
+MAIN_ALT_Feet_format2:
+	INCF	FSR, F
+	CMP_lf	END_MARKER, INDF
+	BR_EQ	Draw_No_alt
+	CMP_lf	CONV_DOT, INDF
+	BR_NE	MAIN_ALT_Feet_format2
+	
+	STR	END_MARKER, INDF	;replace dot with end_marker
 	GOTO	MAIN_ALT_draw
 
 MAIN_ALT_draw:
