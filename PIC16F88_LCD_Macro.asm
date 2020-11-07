@@ -99,8 +99,8 @@ __LCD_SEND_F		MACRO file
 	CALL __LCD_SEND
 ENDM
 
-__LCD_SEND_L		MACRO literate
-	MOVLW literate
+__LCD_SEND_L		MACRO literal
+	MOVLW literal
 	MOVWF __LCD_BUFFER
 	CALL __LCD_SEND
 ENDM
@@ -122,8 +122,8 @@ _LCD_ADDRESS_F		MACRO file
 	BSF __LCD_RS		;R/S to RAM
 ENDM
 
-_LCD_ADDRESS_L		MACRO literate
-	MOVLW literate
+_LCD_ADDRESS_L		MACRO literal
+	MOVLW literal
 	MOVWF __LCD_BUFFER
 	BSF __LCD_BUFFER, 7	;Address Flag
 	BCF __LCD_RS		;R/S to CTRL
@@ -206,10 +206,10 @@ LCDSL
 	BSF __LCD_CLK	;trig sr
 	DECFSZ LCDLP1, F
 	GOTO LCDSL
-	BSF __LCD_E	;Trig E
+	BSF __LCD_E	;Trig E; must be held high for min 220ns
 	BCF __LCD_E
 	MOVLW 0x10	;16 CYCLE
-	MOVWF LCDLP1
+	MOVWF LCDLP1	; total minimum time is 500ns
 LCDSW	
 	DECFSZ LCDLP1, F;3uS PER CYCLE
 	GOTO LCDSW

@@ -63,6 +63,7 @@
 #DEFINE	END_MARKER		0xFF
 #DEFINE	CONV_END_MARKER	END_MARKER - '0'
 #DEFINE	CONV_DOT		'.' - '0'
+#DEFINE	CONV_MINUS		'-' - '0'
 
 ;#############################################################################
 ;	Memory Organisation
@@ -435,6 +436,27 @@ LOOP:
 	GOTO	MAIN_ALT
 	GOTO	MAIN_TIME
 	
+	; TODO test negative
+	; TODO FT to M
+	; TODO M to FT	
+	; TODO M >= 1000
+	;; test strings:
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1.2,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12.3,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123.4,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123456.7,M,-32.4,M,,*59 ; impossible one
+	
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,39.6,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,130.6,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,4073.8,F,-32.4,M,,*59
+	
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-39.6,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-130.6,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1234.5,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-4073.8,F,-32.4,M,,*59
+	
 ;	CMP_lf	_mode_Lat, Display_Mode
 ;	BR_EQ	MAIN_LAT
 	
@@ -571,13 +593,13 @@ MAIN_ALT_Meter:	; received unit is Meter
 	
 	
 MAIN_ALT_Meter_format:
-	CMP_lw	CONV_DOT, data_buffer		; impossible dot at buffer[0] ".0000F"
+	CMP_lf	CONV_DOT, data_buffer		; impossible dot at buffer[0] ".0000F"
 	BR_EQ	MAIN_ALT_draw
-	CMP_lw	CONV_DOT, data_buffer + 1	; dot at buffer[1] "0.000F"
+	CMP_lf	CONV_DOT, data_buffer + 1	; dot at buffer[1] "0.000F"
 	BR_EQ	MAIN_ALT_draw
-	CMP_lw	CONV_DOT, data_buffer + 2	; dot at buffer[2] "00.00F"
+	CMP_lf	CONV_DOT, data_buffer + 2	; dot at buffer[2] "00.00F"
 	BR_EQ	MAIN_ALT_draw	
-	CMP_lw	CONV_DOT, data_buffer + 3	; dot at buffer[3] "000.0F"
+	CMP_lf	CONV_DOT, data_buffer + 3	; dot at buffer[3] "000.0F"
 	BR_EQ	MAIN_ALT_draw
 	
 	; ALT > 999.9 remove decimal
@@ -637,13 +659,21 @@ MAIN_ALT_2:
 	DECF	FSR, F
 	
 	MOV	INDF, NixieData	; load char
-	CMP_lf	CONV_DOT, NixieData
-	BR_NE	MAIN_ALT_3
+	
+	CMP_lf	CONV_DOT, NixieData	; convert special char ','
+	BR_NE	MAIN_ALT_3a
 	STR	_char_comma, NixieData
-MAIN_ALT_3:
-	MOV	FSR, TZ_offset
+MAIN_ALT_3a:
+	CMP_lf	CONV_MINUS, NixieData	; convert special char '-'
+	BR_NE	MAIN_ALT_3b
+	STR	_char_minus, NixieData
+	STR	4, NixieTube
+	CALL	Nixie_ClearTube ;remove ":" and replace by '-'
+	STR	data_buffer, FSR; short circuit out of loop when encountering a '-'
+MAIN_ALT_3b:
+	MOV	FSR, TZ_offset	;push FSR
 	CALL	Nixie_DrawNum
-	MOV	TZ_offset, FSR
+	MOV	TZ_offset, FSR	;pop FSR
 	
 	DECF	NixieTube, F		
 	CMP_lf	data_buffer, FSR
@@ -822,6 +852,43 @@ Nixie_None_Next:
 	INCF	FSR, F
 	DECFSZ	NixieLoop, F
 	GOTO	Nixie_None_Next
+	RETURN
+
+; Turn off all segments of 1 tube
+Nixie_ClearTube: ;(NixieTube)[NixieLoop, WriteLoop, NixieVarX, NixieVarY]
+	MOVF	NixieTube, W
+	CALL	Nixie_MaxSeg	; get number of segments for the tube
+	MOVWF	NixieLoop
+	
+	MOVF	NixieTube, W
+	CALL	Nixie_Offsets	; get the bit offset for that tube
+	MOVWF	NixieVarX	; offset, will be lost each write
+	MOVWF	WriteLoop	; offset to keep original value
+	
+Nixie_ClearTube_Loop:
+	CLRF	NixieVarY	; to receive remainder
+	BCF	STATUS, C	; div and mod bit number to get byte and bit offsets
+	RRF	NixieVarX, F	; / 2
+	RRF	NixieVarY, F	
+	BCF	STATUS, C
+	RRF	NixieVarX, F	; / 4
+	RRF	NixieVarY, F	
+	BCF	STATUS, C
+	RRF	NixieVarX, F	; / 8
+	RRF	NixieVarY, F	
+	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
+	RRF	NixieVarY, F
+	SWAPF	NixieVarY, F
+	
+	MOVLW	NixieBuffer	; @data
+	ADDWF	NixieVarX, W	; + byte offset
+	MOVWF	FSR		; FSR = @data[di]
+	BSet	INDF, 	NixieVarY ; Y = bit offset
+	
+	INCF	WriteLoop, F
+	MOV	WriteLoop, NixieVarX	;next segment in X
+	DECFSZ	NixieLoop, F
+	GOTO	Nixie_ClearTube_Loop
 	RETURN
 
 ; light up 1 segment, seg# in NixieSeg, tube# in NixieTube
