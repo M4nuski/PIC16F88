@@ -233,9 +233,9 @@ WRITE_SERIAL_F	MACRO file
 	MOVF	file, W
 	MOVWF	Serial_Data
 	CMP_lf	' ', Serial_Data
-	BR_LT	_invalidASCII
+	BR_GT	_invalidASCII	; invalid if ' ' > data
 	CMP_lf	126, Serial_Data
-	BR_GT	_invalidASCII
+	BR_LT	_invalidASCII	; invalid if 126 < data
 	GOTO	_end
 _invalidASCII:
 	STR	'?', Serial_Data
