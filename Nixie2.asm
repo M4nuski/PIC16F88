@@ -208,21 +208,11 @@ WRITE_NIXIE_L	MACRO Tube, Data
 	ENDM
 	
 WRITE_NIXIE_F	MACRO Tube, Data
-	LOCAL	_invalidASCII, _end
 	MOVLW	Tube
 	MOVWF	NixieTube
 	MOVF 	Data, W
-	CMP_lf	' ', Data	
-	BR_LT	_invalidASCII
-	CMP_lf	126, Data	
-	BR_GT	_invalidASCII	
 	MOVWF	NixieData
 	CALL	Nixie_DrawNum
-	GOTO	_end
-_invalidASCII:
-	STR	'?', NixieData
-	CALL	Nixie_DrawNum
-_end:
 	ENDM
 	
 WRITE_NIXIE_W	MACRO Tube
@@ -239,16 +229,17 @@ WRITE_SERIAL_L	MACRO lit
 	ENDM
 	
 WRITE_SERIAL_F	MACRO file
-	LOCAL	_invalidASCII
-	
+	LOCAL	_invalidASCII, _end	
 	MOVF	file, W
 	MOVWF	Serial_Data
 	CMP_lf	' ', Serial_Data
 	BR_LT	_invalidASCII
 	CMP_lf	126, Serial_Data
 	BR_GT	_invalidASCII
-	
+	GOTO	_end
 _invalidASCII:
+	STR	'?', Serial_Data
+_end:
 	CALL 	Serial_TX_write
 	ENDM
 	
