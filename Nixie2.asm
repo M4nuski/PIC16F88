@@ -91,27 +91,47 @@ _Serial_bit_RX_frameError 		EQU	0	;uart module frame error
 _Serial_bit_RX_overrunError 		EQU	1	;uart module overrun error
 _Serial_bit_RX_bufferOverrun 		EQU	2	;RX circular buffer overrun error
 
-ByteToConvert		EQU	0x25 ; for convert to hex
-TZ_offset		EQU	0x26 ; for TZ adjust
-WriteLoop		EQU	0x27 ; for NixieSerial and WriteString
-TX_Temp			EQU	0x28 ; for RX/TX buffer address calculation
+ByteToConvert		EQU	0x25 ; 0x26 for convert to hex
+TZ_offset		EQU	0x27 ; for TZ adjust
+WriteLoop		EQU	0x28 ; for NixieSerial and WriteString
+TX_Temp			EQU	0x29 ; for RX/TX buffer address calculation
 
-data_buffer		EQU	0x29
-data_H10		EQU	0x29 ; alias for static buffer positions
-data_H01		EQU	0x2A
-data_m10		EQU	0x2B
-data_m01		EQU	0x2C
-data_s10		EQU	0x2D
-data_s01		EQU	0x2E
+data_buffer		EQU	0x2A ; 0x2A to 0x39
 
-data_unit		EQU	0x4E ; M F N S E W
+; alias for static buffer positions
+data_H10			EQU	0x2A
+data_H01			EQU	0x2B
+data_m10			EQU	0x2C
+data_m01			EQU	0x2D
+data_s10			EQU	0x2E
+data_s01			EQU	0x2F
+
+;			EQU	0x3A
+;			EQU	0x3B
+;			EQU	0x3C
+;			EQU	0x3D
+;			EQU	0x3E
+;			EQU	0x3F
+BCD_Result		EQU	0x40 ; 0x41 0x42 for 6 bcd nibbles, up to 999 999
+D88_Fract		EQU	0x43 ; 0x44 0x45 resulting fraction of div
+D88_Modulo		EQU	0x46 ; 0x47 0x48 Modulo for preset div, also index for arbitrary div
+D88_Num			EQU	0x49 ; 0x4A 0x4B numerator for div and receive modulo (remainder)
+D88_Denum		EQU	0x4C ; 0x4D 0x4E denumerator for div
 Display_Mode		EQU	0x4F 
 _mode_Time				EQU	0
 _mode_Lat				EQU	1
 _mode_Long				EQU	2
 _mode_Alt				EQU	3
 
-
+data_unit		EQU	0x50 ; M F N S E W
+;			EQU	0x51
+;			EQU	0x52
+;			EQU	0x53
+;			EQU	0x54
+;			EQU	0x55
+;			EQU	0x56
+;			EQU	0x57
+;			EQU	0x58
 NixieVarX		EQU	0x59 ; inner data
 NixieVarY		EQU	0x5A ; inner data
 NixieLoop		EQU	0x5B ; inner data
@@ -120,15 +140,23 @@ NixieData		EQU	0x5D ; to pass data between routines
 NixieTube		EQU	0x5E ; to pass data between routines
 NixieDemoCount		EQU	0x5F ; global for demo
 
-D88_Num			EQU	0x60 ; numerator for div and receive modulo (remainder)
-D88_Denum		EQU	0x62 ; denumerator for div
-D88_Fract		EQU	0x64 ; Receive fraction of div
-D88_Modulo		EQU	0x66 ; Modulo for preset div, also index for arbitrary div
+;			EQU	0x60
+;			EQU	0x61
+;			EQU	0x62
+;			EQU	0x63
+;			EQU	0x64
+;			EQU	0x65
+;			EQU	0x66
+;			EQU	0x67
+;			EQU	0x68
+;			EQU	0x69
+;			EQU	0x6A
+;			EQU	0x6B
+;			EQU	0x6C
 
 ; GPR files in GPR for context saving
-;STACK_FSR		EQU	0x6C
-;STACK_SCRATCH		EQU	0x6D
-;STACK_SCRATCH2	EQU	0x6E
+;STACK_FSR		EQU	0x6D
+;STACK_SCRATCH		EQU	0x6E
 ;STACK_PCLATH		EQU	0x6F
 
 ; Bank 1
@@ -151,10 +179,18 @@ Serial_RX_buffer_wp	EQU	0x71 ; circular RX buffer write pointer
 Serial_TX_buffer_rp	EQU	0x72 ; circular TX buffer read pointer
 Serial_TX_buffer_wp	EQU	0x73 ; circular TX buffer write pointer
 
+;			EQU	0x74
+;			EQU	0x75
+;			EQU	0x76
+;			EQU	0x77
+;			EQU	0x78
+;			EQU	0x79
+;			EQU	0x7A
+;			EQU	0x7B
+;			EQU	0x7C
 
 ; GPR files in shared GPR for instruction extensions
-;SCRATCH		EQU	0x7C
-;SCRATCH2		EQU	0x7D
+;SCRATCH		EQU	0x7D
 
 ; GPR files in shared GPR for context saving
 ;STACK_STATUS		EQU	0x7E
@@ -459,7 +495,7 @@ LOOP:
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12345.6,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123456.7,M,-32.4,M,,*59
-	
+	;$GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,4100.0,M,-32.4,M,,*59
 	; Negative Meters
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1.2,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12.3,M,-32.4,M,,*59
@@ -515,7 +551,6 @@ LOOP:
 
 MAIN_TIME:
 	WRITE_NIXIE_L	4, _char_column
-;	WRITE_NIXIE_L	1, _char_T
 	
 	CALL	READ_NEXT_TIME
 	BW_False	Draw_No_time
@@ -582,7 +617,6 @@ MAIN_ALT:
 	CALL	READ_NEXT		; wait and read CSV data at index 8
 	BW_False	Draw_No_alt
 
-	; convert integer part to int
 	; check unit
 	; check requested unit
 	; if different convert
@@ -617,13 +651,52 @@ MAIN_ALT:
 MAIN_ALT_Meter:	; received unit is Meter
 	BTFSS	AU_Select	; if requested unit is meter check range and draw
 	GOTO	MAIN_ALT_Meter_format
-	;convert to feet
+	; else convert to feet
 	; 3.281ft / m
-	; F = M * 33 / 10
+	; F = M * 33 / 10 (good enough...)	
 	; convert to u_int_16
 	; mult 33
-	; convert to bcd
-	; unpack bcd to byte, place end_marker before last bcd nibble (0.1th) or fake dot before last bcd nibble
+	STR	data_buffer, NixieVarX	; NixieVarX = @data_buffer
+	CMP_lf	CONV_MINUS, data_buffer
+	SK_NE	
+	INCF	NixieVarX, F	; skip the Minus sign
+	
+	CLRFc	D88_Num
+	CLRFc	D88_Denum
+	CLRFc	D88_Modulo		; D88_Denum = 0
+	READp	NixieVarX, D88_Denum	; D88_Denum = first value
+	
+MAIN_ALT_Meter_Convert_1:
+	INCF	NixieVarX, F
+	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
+	
+	CMP_lf	CONV_DOT, D88_Modulo
+	BR_EQ	MAIN_ALT_Meter_Convert_2; if next is dot stop converting to int
+	CMP_lf	CONV_END_MARKER, D88_Modulo
+	BR_EQ	MAIN_ALT_Meter_Convert_2; to be safe also check for end of string marker
+
+	; else D88_Denum = D88_Denum * 10
+	CALL	MULT10s ; D88_Num = D88_Denum * 10
+	MOVc	D88_Num, D88_Denum
+	;      D88_Denum = D88_Denum + D88_Modulo
+	ADDc	D88_Denum, D88_Modulo
+		
+	GOTO	MAIN_ALT_Meter_Convert_1
+	
+MAIN_ALT_Meter_Convert_2:
+
+	MOVc	D88_Denum, ByteToConvert
+	CALL	WriteHexShort
+	WRITE_SERIAL_L	'>'
+	
+	CALL	MULT33s ; D88_Num = D88_Denum * 33
+	
+	MOVc	D88_Num, ByteToConvert
+	CALL	WriteHexShort
+	;CALL	DIV10s ; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
+	; convert D88_Num to bcd in BCD_Result
+	
+	; unpack bcd to byte, place dot after last bcd nibble to stop feet conversion
 	
 	
 	;call feet format routine
@@ -1236,7 +1309,86 @@ WriteHex:
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	RETURN
+
+; Convert short to hex and send over serial
+WriteHexShort:
+	MOVLW	high (TABLE0)
+	MOVWF	PCLATH
+	SWAPF	ByteToConvert + 1, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	ByteToConvert + 1, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
 	
+	SWAPF	ByteToConvert, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	ByteToConvert, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	MOVLW	' '
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	RETURN
+
+ShortToBCD:	; 0xFFFF -> 6 55 35 (3 packed BCD, 5 unpacked BCD)
+	CLRFc	BCD_Result
+	STR	15, NixieLoop	;Rotate and Increment 15 time
+	
+ShortToBCD_Rotate:
+ 	BCF	STATUS,C
+	RLF	D88_Num, F
+	RLF	D88_Num + 1, F
+	RLF	BCD_Result, F
+	RLF	BCD_Result + 1, F
+	RLF	BCD_Result + 2, F
+
+	STR	BCD_Result, FSR
+	STR	4, WriteLoop
+	
+ShortToBCD_HighNibble:	
+	SWAPF	INDF, W
+	ANDLW	0x0F
+	SUBLW	4
+	BR_NB	ShortToBCD_LowNibble
+	ADDL	INDF, 0x30
+	
+ShortToBCD_LowNibble:
+	MOVF	INDF, W
+	ANDLW	0x0F
+	SUBLW	4
+	BR_NB	ShortToBCD_CheckNext
+	ADDL	INDF, 0x03
+	
+ShortToBCD_CheckNext:
+	INCF	FSR, F
+	DECFSZ	WriteLoop, F
+	GOTO	ShortToBCD_HighNibble
+
+	DECFSZ	NixieLoop, F
+	GOTO	ShortToBCD_Rotate
+
+ 	BCF	STATUS,C		;16th Time no C5A3
+	RLF	D88_Num, F
+	RLF	D88_Num + 1, F
+	RLF	BCD_Result, F
+	RLF	BCD_Result + 1, F
+	RLF	BCD_Result + 2, F
+
+	RETURN
+
+
+
 ;#############################################################################
 ;	Tables
 ;#############################################################################
@@ -1312,289 +1464,156 @@ Nixie_Num_seg8:
 	; b -> TDot
 	; c -> BDot
 	; d -> VBar
-	
-DIV88:	; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum 
-	CLRF	D88_Fract
-	
-	MOVF	D88_Denum, F	; return if Denum is 0
-	BTFSC	STATUS, Z
-	RETURN
-	
-	STR	0x01, D88_Modulo
-	BTFSC	D88_Denum, 7
-	GOTO	_div88Loop
-	
-_div88Prep:
-	BCF	STATUS, C
-	RLF	D88_Denum, F
-	BCF	STATUS, C
-	RLF	D88_Modulo, F
-	BTFSS	D88_Denum, 7
-	GOTO	_div88Prep
-	
-_div88Loop:
-	SUB	D88_Num, D88_Denum
-	BR_GT	_div88pos
-	BR_LT	_div88neg
-;if equal
-	ADD	D88_Fract, D88_Modulo
-	RETURN
-_div88pos:
-	ADD	D88_Fract, D88_Modulo
-	GOTO	_div88roll
-_div88neg:
-	ADD	D88_Num, D88_Denum
-_div88roll:
-	BCF	STATUS, C
-	RRF	D88_Denum, F
-	BCF	STATUS, C
-	RRF	D88_Modulo, F
-	BTFSS	STATUS, C
-	GOTO	_div88Loop	
 
-	RETURN
-	
-	
-	
-	
-DIV1616:; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum
+
+
+;#############################################################################
+;	Math
+;#############################################################################
+
+;idx '0000 0000  0000 0001'
+; 10 '0000 0000  0000 1010' b0
+; 10 '1010 0000  0000 0000' b12
+;idx '0001 0000  0000 0000'
+DIV10s:	; div by 10, 16 bit; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
 	CLRFs	D88_Fract
-
-	TESTs	D88_Denum	; return if Denum is 0
-	SK_NZ
-	RETURN
-
-_DIV1616_start:	
-	STRs	0x0001, D88_Modulo
+	STRs	b'0001000000000000', D88_Modulo
+	STRs	b'1010000000000000', D88_Denum
 	
-	BTFSCs	D88_Denum, 15
-	GOTO	_DIV1616_loop
-	
-_DIV1616_preShift:
-	BCF	STATUS, C
-	RLFs	D88_Denum
-	BCF	STATUS, C
-	RLFs	D88_Modulo
-	BTFSSs	D88_Denum, 15
-	GOTO	_DIV1616_preShift
-	
-_DIV1616_loop:
+_DIV10s_loop:
 	SUBs	D88_Num, D88_Denum
-	BR_GT	_DIV1616_pos
-	BR_LT	_DIV1616_neg
+	BR_GT	_DIV10s_pos
+	BR_LT	_DIV10s_neg
 ;if equal
 	ADDs	D88_Fract, D88_Modulo
 	RETURN
-_DIV1616_pos:
+_DIV10s_pos:
 	ADDs	D88_Fract, D88_Modulo
-	GOTO	_DIV1616_roll
-_DIV1616_neg:
+	GOTO	_DIV10s_roll
+_DIV10s_neg:
 	ADDs	D88_Num, D88_Denum
-_DIV1616_roll:
+_DIV10s_roll:
 	BCF	STATUS, C
 	RRFs	D88_Denum
 	BCF	STATUS, C
 	RRFs	D88_Modulo
 	BTFSS	STATUS, C
-	GOTO	_DIV1616_loop	
+	GOTO	_DIV10s_loop	
 
 	RETURN
+
+
+
+;idx '0000 0000  0000 0001'
+; 33 '0000 0000  0010 0001' b0
+; 33 '1000 0100  0000 0000' b10
+;idx '0000 0100  0000 0000'
+DIV33s:	; div by 33, 16 bit ; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum
+	CLRFs	D88_Fract
+	STRs	b'0000010000000000', D88_Modulo
+	STRs	b'1000010000000000', D88_Denum
 	
-DIV8:	; D88_Num = D88_Num / 8, D88_Modulo = D88_Num % 8 
-	CLRF	D88_Modulo
-	
-	BCF	STATUS, C	; / 2
-	RRF	D88_Num, F
-	RRF	D88_Modulo, F
-	
-	BCF	STATUS, C	; / 4
-	RRF	D88_Num, F
-	RRF	D88_Modulo, F
-	
-	BCF	STATUS, C	; / 8
-	RRF	D88_Num, F
-	RRF	D88_Modulo, F
-	
-	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
-	RRF	D88_Modulo, F
-	SWAPF	D88_Modulo, F
-
-	;dest = a DIV b
-	
-	; check if b is Zero
-	; SCRATCH = 0x01
-	; check if MSB if b is 1, else
-	; RLF b et SCRATCH until MSB(b) == 1
-	
-	; TEMP = a
-	; TEMP = TEMP - b
-	; IF POS
-	;   dest += SCRATCH
-	;   a = TEMP
-	; RRF b et SCRATCH until SCRATCH == 0 (ou le LSB se trouve dans le CARRY)
-
-
-DIV10:
-	MOV	D88_Num, D88_Modulo
-	CLRF	D88_Num
-
-	MOVLW	b'10100000'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 4
-	SK_NB
-	ADDWF	D88_Modulo, F
-
-	MOVLW	b'01010000'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 3
-	SK_NB
-	ADDWF	D88_Modulo, F
-
-	MOVLW	b'00101000'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 2
-	SK_NB
-	ADDWF	D88_Modulo, F
-
-	MOVLW	b'00010100'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 1
-	SK_NB
-	ADDWF	D88_Modulo, F
-
-	MOVLW	b'00001010'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 0
-	SK_NB			; could be removed if modulo is not used
-	ADDWF	D88_Modulo, F	; could be removed if modulo is not used
+_DIV33s_loop:
+	SUBs	D88_Num, D88_Denum
+	BR_GT	_DIV33s_pos
+	BR_LT	_DIV33s_neg
+;if equal
+	ADDs	D88_Fract, D88_Modulo
 	RETURN
+_DIV33s_pos:
+	ADDs	D88_Fract, D88_Modulo
+	GOTO	_DIV33s_roll
+_DIV33s_neg:
+	ADDs	D88_Num, D88_Denum
+_DIV33s_roll:
+	BCF	STATUS, C
+	RRFs	D88_Denum
+	BCF	STATUS, C
+	RRFs	D88_Modulo
+	BTFSS	STATUS, C
+	GOTO	_DIV33s_loop	
+
+	RETURN
+
+
+
+MULT33s: ; 33 = 1 + 32 ; D88_Num = D88_Denum * 33
+	MOVF	D88_Denum, W
+	MOVWF	D88_Num
+	MOVF	D88_Denum + 1, W
+	MOVWF	D88_Num + 1
+	CLRF	D88_Num + 2
 	
-; 10 = 0000 1010
-
-; div  1010 0000
-; ind  0001 0000
-
-; div  0101 0000
-; ind  0000 1000
-
-; div  0010 1000
-; ind  0000 0100
-
-; div  0001 0100
-; ind  0000 0010
-
-; div  0000 1010
-; ind  0000 0001
-
-; 33 = 1 + 32
-; 2 4 8 16 32
-MULT33	MACRO	a, dest
-
-	MOVF	a, W
-	MOVWF	dest
-	MOVF	a + 1, W
-	MOVWF	dest + 1	; dest = a
-	
-	MOVLW	b'00000111'	; to avoid the rotated-out MSB contaminating the carry bit
-	ANDWF	a + 1, F
+	;MOVLW	b'00000111'	; to avoid the rotated-out MSB contaminating the carry bit
+	;ANDWF	D88_Denum + 1, F
 	
 	BCF	STATUS, C
-	RLF	a, F
-	RLF	a + 1, F 	; a = a * 2
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F 	; a = a * 2
+	RLF	D88_Denum + 2, F
+		
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; a = a * 4
+	RLF	D88_Denum + 2, F
 	
-	RLF	a, F
-	RLF	a + 1, F	; a = a * 4
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; a = a * 8
+	RLF	D88_Denum + 2, F
 	
-	RLF	a, F
-	RLF	a + 1, F	; a = a * 8
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; a = a * 16
+	RLF	D88_Denum + 2, F
 	
-	RLF	a, F
-	RLF	a + 1, F	; a = a * 16
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; a = a * 32
+	RLF	D88_Denum + 2, F
 	
-	RLF	a, F
-	RLF	a + 1, F	; a = a * 32
-	
-	MOVF	a, W
-	ADDWF	dest, F
+	MOVF	D88_Denum, W
+	ADDWF	D88_Num, F
 	SK_NC
-	INCF	dest + 1, F	
-	MOVF	a + 1, W
-	ADDWF	dest + 1, F	; dest = a + 32*a = 33*a
-
-	ENDM
-	
-MULT10	MACRO	a, dest
-	BCF	STATUS, C
-	RLF	a, F
-	RLF	a + 1, F	; *2
-	
-	MOVF	a, W 
-	MOVWF	dest
-	MOVF	a + 1, W
-	MOVWF	dest + 1
-	
-	BCF	STATUS, C
-	RLF	a, F
-	RLF	a + 1, F	; *4
-	BCF	STATUS, C
-	RLF	a, F
-	RLF	a + 1, F	; *8
-	
-	MOVF	a, W 
-	ADDWF	dest, F
+	INCF	D88_Num + 1, F	
+	MOVF	D88_Denum + 1, W
+	ADDWF	D88_Num + 1, F	; D88_Num = a + 32*a = 33*a
 	SK_NC
-	INCF	dest, F
-	MOVF	a + 1, W
-	ADDWF	dest + 1, F	; dest = 2*a + 8*a
-	ENDM
-
-
-; 33 =	00100001
-; shift2
-;	10000100
-;	00000100
-
-;	01000010
-;	00000010
-
-;	00100001
-;	00000001
+	INCF	D88_Num + 2, F	
 	
-DIV33:
-	MOV	D88_Num, D88_Modulo
-	CLRF	D88_Num
+	RETURN
 
-	MOVLW	b'10000100'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 2
-	SK_NB
-	ADDWF	D88_Modulo, F
-
-	MOVLW	b'01000010'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 1
-	SK_NB
-	ADDWF	D88_Modulo, F
-
-	MOVLW	b'00100001'
-	SUBWF	D88_Modulo, F
-	SK_BO
-	BSF	D88_Num, 0
-	SK_NB			; could be removed if modulo is not used
-	ADDWF	D88_Modulo, F	; could be removed if modulo is not used
+	
+MULT10s: ; D88_Num = D88_Denum * 10
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; *2
+	
+	MOVF	D88_Denum, W 
+	MOVWF	D88_Num
+	MOVF	D88_Denum + 1, W
+	MOVWF	D88_Num + 1
+	
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; *4
+	BCF	STATUS, C
+	RLF	D88_Denum, F
+	RLF	D88_Denum + 1, F	; *8
+	
+	MOVF	D88_Denum, W 
+	ADDWF	D88_Num, F
+	SK_NC
+	INCF	D88_Num, F
+	MOVF	D88_Denum + 1, W
+	ADDWF	D88_Num + 1, F	; D88_Num = 2*a + 8*a
+	
 	RETURN
 
 
 
 ;#############################################################################
-;	Delay routines	
+;	Delay routines	for 8MHz
 ;#############################################################################
 
 WAIT_1s:
@@ -1624,76 +1643,6 @@ WAIT_1s_loop3:			; 4 cycles per loop (2us / loop2)
 	DECFSZ	WAIT_loopCounter1, F
 	GOTO	WAIT_1s_loop1
 	RETURN
-
-
-
-WAIT_05s:
-	MOVLW	10
-	MOVWF	WAIT_loopCounter1
-	
-WAIT_05s_loop1:
-	MOVLW	200			; (1) for 100 ms
-	MOVWF	WAIT_loopCounter2	; (1)
-
-WAIT_05s_loop2:			; 0.5ms / loop1
-	MOVLW	250 - 2			; (1) 250 loops of 4 cycles (minus 2 loop for setup and next loop) 
-	MOVWF	WAIT_loopCounter3	; (1) 
-	NOP				; (1) 
-	NOP				; (1) 
-
-WAIT_05s_loop3:			; 4 cycles per loop (2us / loop2)
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter3, F	; (1) 
-	GOTO	WAIT_05s_loop3	; (2) 
-	NOP				; (1) 
-	
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter2, F	; (1) 
-	GOTO	WAIT_05s_loop2		; (2) 	
-	
-	DECFSZ	WAIT_loopCounter1, F
-	GOTO	WAIT_05s_loop1
-	RETURN
-
-
-
-WAIT_25ms:				; (2) call
-	MOVLW	50			; (1) for 25 ms
-	MOVWF	WAIT_loopCounter1	; (1)
-
-WAIT_25ms_loop1:			; 0.5ms / loop1
-	MOVLW	250 - 1			; (1) 250 loops of 4 cycles (minus 1 loop for setup) 
-	MOVWF	WAIT_loopCounter2	; (1) 
-	NOP				; (1) 
-	NOP				; (1) 
-
-WAIT_25ms_loop2:			; 4 cycles per loop (2us / loop2)
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter2, F	; (1) 
-	GOTO	WAIT_25ms_loop2	; (2) 
-	NOP				; (1) 
-	
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter1, F	; (1) 
-	GOTO	WAIT_25ms_loop1	; (2) 
-	
-	RETURN				; (2)
-
-
-
-; at 8MHz, each instruction is 0.5 us
-WAIT_01ms:				; call 2 cycle
-	MOVLW	50 - 2			; (1) 50 loops of 4 cycles (minus 2 loops for call, setup and return) 
-	MOVWF	WAIT_loopCounter1	; (1) 
-	NOP				; (1) 
-	NOP				; (1) 
-					; setup is 4 cycles
-WAIT_01ms_loop1:			; 4 cycles per loop
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter1, F	; (1) 
-	GOTO	WAIT_01ms_loop1	; (2) 
-	NOP
-	RETURN				; return 2 cycles
 
 
 
