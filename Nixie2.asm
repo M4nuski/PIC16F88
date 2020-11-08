@@ -390,13 +390,13 @@ SETUP:
 	CALL	Nixie_Send
 	CALL	WAIT_1s	
 	
+	CALL	Nixie_None
 	WRITE_NIXIE_L	2, _char_E
 	WRITE_NIXIE_L	3, _char_C
 	WRITE_NIXIE_L	5, 2
 	WRITE_NIXIE_L	6, 0
 	WRITE_NIXIE_L	7, 2
 	WRITE_NIXIE_L	8, 0
-
 	CALL	Nixie_Send
 	CALL	WAIT_1s	
 	
@@ -436,22 +436,52 @@ LOOP:
 	GOTO	MAIN_ALT
 	GOTO	MAIN_TIME
 	
-	; TODO test negative
+	; TODO test negative M OK
+	; TODO test negative F OK
 	; TODO FT to M
 	; TODO M to FT	
-	; TODO M >= 1000
+	; TODO M >= 1000 OK
+	; TODO negative M >= 1000 OK
 	;; test strings:
+	; Meters
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1.2,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12.3,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123.4,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,M,-32.4,M,,*59
-	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123456.7,M,-32.4,M,,*59 ; impossible one
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12345.6,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123456.7,M,-32.4,M,,*59
 	
+	; Negative Meters
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1.2,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12.3,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-123.4,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1234.5,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12345.6,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-123456.7,M,-32.4,M,,*59
+	
+	; Feet
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1.2,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12.3,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123.4,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12345.6,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123456.7,F,-32.4,M,,*59
+	
+	; Negative Feet
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1.2,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12.3,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-123.4,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1234.5,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12345.6,F,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-123456.7,F,-32.4,M,,*59
+	
+	; Conversions
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,39.6,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,130.6,F,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,4073.8,F,-32.4,M,,*59
 	
+	; Negative Conversions
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-39.6,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-130.6,F,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1234.5,M,-32.4,M,,*59
@@ -540,7 +570,7 @@ MAIN_ALT:
 	WRITE_NIXIE_L	1, _char_A
 	
 	MOVLW	8
-	CALL	READ_NEXT
+	CALL	READ_NEXT		; wait and read CSV data at index 8
 	BW_False	Draw_No_alt
 
 	; convert integer part to int
@@ -558,12 +588,14 @@ MAIN_ALT:
 	; draw F
 	; draw integer part
 	
-	WRITE_SERIAL_FITOA	data_H10
-	WRITE_SERIAL_FITOA	data_H01
-	WRITE_SERIAL_FITOA	data_m10
-	WRITE_SERIAL_FITOA	data_m01
-	WRITE_SERIAL_FITOA	data_s10
-	WRITE_SERIAL_FITOA	data_s01
+	WRITE_SERIAL_FITOA	data_buffer
+	WRITE_SERIAL_FITOA	data_buffer + 1
+	WRITE_SERIAL_FITOA	data_buffer + 2
+	WRITE_SERIAL_FITOA	data_buffer + 3
+	WRITE_SERIAL_FITOA	data_buffer + 4
+	WRITE_SERIAL_FITOA	data_buffer + 5
+	WRITE_SERIAL_FITOA	data_buffer + 6
+	WRITE_SERIAL_FITOA	data_buffer + 7
 	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	
@@ -574,9 +606,6 @@ MAIN_ALT:
 	GOTO	MAIN_ALT_draw
 	
 MAIN_ALT_Meter:	; received unit is Meter
-
-	WRITE_NIXIE_L	3, _char_M
-	
 	BTFSS	AU_Select	; if requested unit is meter check range and draw
 	GOTO	MAIN_ALT_Meter_format
 	;convert to feet
@@ -593,6 +622,24 @@ MAIN_ALT_Meter:	; received unit is Meter
 	
 	
 MAIN_ALT_Meter_format:
+	WRITE_NIXIE_L	3, _char_M
+	
+	CMP_lf	CONV_MINUS, data_buffer	; check if negative
+	BR_NE	MAIN_ALT_Meter_format_pos
+	
+	CMP_lf	CONV_DOT, data_buffer + 1	; impossible dot at buffer[1] "-.0000F"
+	BR_EQ	MAIN_ALT_draw
+	CMP_lf	CONV_DOT, data_buffer + 2	; dot at buffer[2] "-0.000F"
+	BR_EQ	MAIN_ALT_draw
+	CMP_lf	CONV_DOT, data_buffer + 3	; dot at buffer[3] "-00.00F"
+	BR_EQ	MAIN_ALT_draw	
+	CMP_lf	CONV_DOT, data_buffer + 4 	; dot at buffer[4] "-000.0F"
+	BR_EQ	MAIN_ALT_draw
+	
+	STR	data_buffer + 4, FSR	; buffer[4]
+	GOTO	MAIN_ALT_Meter_format_2
+	
+MAIN_ALT_Meter_format_pos:
 	CMP_lf	CONV_DOT, data_buffer		; impossible dot at buffer[0] ".0000F"
 	BR_EQ	MAIN_ALT_draw
 	CMP_lf	CONV_DOT, data_buffer + 1	; dot at buffer[1] "0.000F"
@@ -619,8 +666,6 @@ MAIN_ALT_Meter_format_2:
 
 
 MAIN_ALT_Feet:		; received unit is Feet
-	WRITE_NIXIE_L	3, _char_F
-	
 	BTFSC	AU_Select	; if requested unit is feet draw
 	GOTO	MAIN_ALT_Feet_format
 	;convert to meter
@@ -632,6 +677,8 @@ MAIN_ALT_Feet:		; received unit is Feet
 	
 	
 MAIN_ALT_Feet_format:
+	WRITE_NIXIE_L	3, _char_F
+	
 	STR	data_buffer - 1, FSR	; buffer[-1]
 	
 MAIN_ALT_Feet_format2:
@@ -643,6 +690,9 @@ MAIN_ALT_Feet_format2:
 	
 	STR	END_MARKER, INDF	;replace dot with end_marker
 	GOTO	MAIN_ALT_draw
+
+
+
 
 MAIN_ALT_draw:
 	STR	9, NixieTube
