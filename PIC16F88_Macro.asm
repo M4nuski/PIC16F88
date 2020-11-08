@@ -13,6 +13,7 @@
 ;	Timer1 value reader
 ;#############################################################################
 
+
 #DEFINE STALL	GOTO	$
 #DEFINE TRUE	0x00
 #DEFINE FALSE	0x01
@@ -130,6 +131,7 @@ CMP_lw	MACRO lit		; literal vs w
 ;	CArry, No Carry
 ;	BOrrow, No Borrow
 ;#############################################################################
+
 ; from test and comp result
 BR_EQ	MACRO	dest
 	BTFSC	STATUS, Z
@@ -301,29 +303,52 @@ SK_NZ	MACRO
 	ENDM
 	
 SK_EQ	MACRO
-	BTFSS	STATUS, Z
+	BTFSS	STATUS, Z	; Zero is set on Equal
 	ENDM	
 
 SK_NE	MACRO
-	BTFSC	STATUS, Z
+	BTFSC	STATUS, Z	; Zero is cleared on Not Equal
 	ENDM
 
 SK_CA	MACRO
-	BTFSS	STATUS, C
+	BTFSS	STATUS, C	; Carry is set
 	ENDM	
 
 SK_NC	MACRO
-	BTFSC	STATUS, C
+	BTFSC	STATUS, C	; Carry is clear
 	ENDM
 
 SK_BO	MACRO
-	BTFSC	STATUS, C
+	BTFSC	STATUS, C	; C is cleared on borrow
 	ENDM	
 
 SK_NB	MACRO
+	BTFSS	STATUS, C	; C is set on borrow
+	ENDM
+
+SK_GT	MACRO			; greater, carry is set (borrow is cleared), Zero must be cleared
+	BTFSS	STATUS, C
+	BSF	STATUS, Z	; set Zero if carry is cleared (borrow set)
+	BTFSC	STATUS, Z	; if EQ Z is set
+	ENDM
+	
+SK_LT	MACRO			; less, carry is cleared (borrow is set), Zero must be cleared
+	BTFSC	STATUS, C
+	BSF	STATUS, Z	; set Zero if carry is set (borrow cleared)
+	BTFSC	STATUS, Z	; if EQ Z is set
+	ENDM
+
+SK_GE	MACRO			; greater or equal, carry must set (borrow must be cleared), Zero can be cleared
+	BTFSC	STATUS, Z
+	BSF	STATUS, C	; set Carry if Equal to enforce Skip at next instruction
 	BTFSS	STATUS, C
 	ENDM
 
+SK_LE	MACRO			; less or equal, carry must cleared (borrow must be set), Zero can be cleared
+	BTFSC	STATUS, Z
+	BCF	STATUS, C	; clear Carry if Equal to enforce Skip at next instruction
+	BTFSC	STATUS, C
+	ENDM
 
 
 ;#############################################################################

@@ -1,6 +1,7 @@
 ;#############################################################################
 ;	PIC16F88 Test Macro
 ;	Premade header
+;	#INCLUDE	<PIC16F88_Macro_Tester.asm> at the begining of the file to setup mcu, config, vars and org
 ;	Instruction Counter
 ;	Assert:
 ;		w, bit set, bit cleared, file content
@@ -102,9 +103,21 @@ Test_StopCounter	MACRO Dest
 	BCF	PIE1, TMR1IE
 	BCF	STATUS, RP0		
 	ENDM
+
+
+
+;#############################################################################
+;	Assertion macro for skip
+;#############################################################################
+
+ASSERT_SKIPPED		MACRO
+	STALL
+	ENDM
 	
-	
-	
+ASSERT_NOT_SKIPPED	MACRO
+	GOTO	$ + 2
+	STALL
+	ENDM
 	
 ;#############################################################################
 ;	Assertion macro for values
