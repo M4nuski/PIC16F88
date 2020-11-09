@@ -526,6 +526,20 @@ WRITEp	MACRO	file, pointer
 	MOVWF	INDF
 	ENDM
 
+READa 	MACRO	address, file
+	MOVLW	address
+	MOVWF	FSR
+	MOVF	INDF, W
+	MOVWF	file
+	ENDM
+
+WRITEa	MACRO	file, address
+	MOVLW	address
+	MOVWF	FSR
+	MOVF	file, W
+	MOVWF	INDF
+	ENDM
+
 ; SWAP content of 2 files
 ; not the nibbles like SWAPF
 ; can be used to swap bytes in short, or shorts in integer

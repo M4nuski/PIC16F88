@@ -91,7 +91,7 @@ _Serial_bit_RX_frameError 		EQU	0	;uart module frame error
 _Serial_bit_RX_overrunError 		EQU	1	;uart module overrun error
 _Serial_bit_RX_bufferOverrun 		EQU	2	;RX circular buffer overrun error
 
-ByteToConvert		EQU	0x25 ; 0x26 for convert to hex
+data_unit		EQU	0x25 ; M F N S E W
 TZ_offset		EQU	0x27 ; for TZ adjust
 WriteLoop		EQU	0x28 ; for NixieSerial and WriteString
 TX_Temp			EQU	0x29 ; for RX/TX buffer address calculation
@@ -111,8 +111,7 @@ data_s01			EQU	0x2F
 ;			EQU	0x3C
 ;			EQU	0x3D
 ;			EQU	0x3E
-;			EQU	0x3F
-BCD_Result		EQU	0x40 ; 0x41 0x42 for 6 bcd nibbles, up to 999 999
+BCD_Result		EQU	0x3F ; 0x40 0x41 0x42 for 8 bcd nibbles, up to 16 77 72 15 (24 bit to bcd)
 D88_Fract		EQU	0x43 ; 0x44 0x45 resulting fraction of div
 D88_Modulo		EQU	0x46 ; 0x47 0x48 Modulo for preset div, also index for arbitrary div
 D88_Num			EQU	0x49 ; 0x4A 0x4B numerator for div and receive modulo (remainder)
@@ -123,10 +122,7 @@ _mode_Lat				EQU	1
 _mode_Long				EQU	2
 _mode_Alt				EQU	3
 
-data_unit		EQU	0x50 ; M F N S E W
-;			EQU	0x51
-;			EQU	0x52
-;			EQU	0x53
+IntToConvert		EQU	0x50 ; 0x51 0x52 0x53 for convert to hex or BCD
 ;			EQU	0x54
 ;			EQU	0x55
 ;			EQU	0x56
@@ -481,12 +477,9 @@ LOOP:
 	GOTO	MAIN_ALT
 	GOTO	MAIN_TIME
 	
-	; TODO test negative M OK
-	; TODO test negative F OK
 	; TODO FT to M
 	; TODO M to FT	
-	; TODO M >= 1000 OK
-	; TODO negative M >= 1000 OK
+
 	;; test strings:
 	; Meters
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1.2,M,-32.4,M,,*59
@@ -495,7 +488,12 @@ LOOP:
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1234.5,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,12345.6,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,123456.7,M,-32.4,M,,*59
-	;$GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,4100.0,M,-32.4,M,,*59
+	
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,10.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,100.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1023.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,10000.0,M,-32.4,M,,*59
 	; Negative Meters
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1.2,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12.3,M,-32.4,M,,*59
@@ -551,21 +549,19 @@ LOOP:
 
 MAIN_TIME:
 	WRITE_NIXIE_L	4, _char_column
-	
+
 	CALL	READ_NEXT_TIME
 	BW_False	Draw_No_time
-	
-	
+
 	; Adjust time zone
 	MOVLW	5
 	BTFSC	TZ_Select
 	MOVLW	4
-	MOVWF	TZ_offset	
+	MOVWF	TZ_offset
 	CALL	ADJUST_TZ
-	
-	
-	; Draw time data on nixie tubes	
-	WRITE_NIXIE_F	2, data_H10	
+
+	; Draw time data on nixie tubes
+	WRITE_NIXIE_F	2, data_H10
 	WRITE_NIXIE_F	3, data_H01
 	
 	WRITE_NIXIE_L	4, _char_column
@@ -575,8 +571,7 @@ MAIN_TIME:
 	
 	WRITE_NIXIE_F	8, data_s10
 	WRITE_NIXIE_F	9, data_s01
-	
-	
+
 	; Send time data to serial
 	WRITE_SERIAL_FITOA	data_H10
 	WRITE_SERIAL_FITOA	data_H01
@@ -585,22 +580,22 @@ MAIN_TIME:
 	WRITE_SERIAL_FITOA	data_m01
 	WRITE_SERIAL_L	':'
 	WRITE_SERIAL_FITOA	data_s10
-	WRITE_SERIAL_FITOA	data_s01	
-	WRITE_SERIAL_L	'E'	
+	WRITE_SERIAL_FITOA	data_s01
+	WRITE_SERIAL_L	'E'
 	MOVLW	'S'
 	BTFSC	TZ_select
 	MOVLW	'D'
 	WRITE_SERIAL_W	
 	WRITE_SERIAL_L	'T'
-	
+
 	GOTO	ErrorCheck1
-	
+
 Draw_No_time:
 	CALL	WAIT_DATA
-	
+
 	WRITE_SERIAL_L	'N'
 	WRITE_SERIAL_L	'T'
-	
+
 	GOTO	ErrorCheck1
 
 
@@ -610,7 +605,7 @@ Draw_No_time:
 ;#############################################################################
 
 MAIN_ALT:
-	WRITE_NIXIE_L	4, _char_column	
+	WRITE_NIXIE_L	4, _char_column
 	WRITE_NIXIE_L	1, _char_A
 	
 	MOVLW	8
@@ -641,20 +636,21 @@ MAIN_ALT:
 	WRITE_SERIAL_FITOA	data_buffer + 7
 	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
-	
+	WRITE_SERIAL_L		' '
+
 	CMP_lf	'M', data_unit
 	BR_EQ	MAIN_ALT_Meter
 	CMP_lf	'F', data_unit
 	BR_EQ	MAIN_ALT_Feet	
 	GOTO	MAIN_ALT_draw
-	
+
 MAIN_ALT_Meter:	; received unit is Meter
 	BTFSS	AU_Select	; if requested unit is meter check range and draw
 	GOTO	MAIN_ALT_Meter_format
 	; else convert to feet
 	; 3.281ft / m
 	; F = M * 33 / 10 (good enough...)	
-	; convert to u_int_16
+	; convert to u_int24_t
 	; mult 33
 	STR	data_buffer, NixieVarX	; NixieVarX = @data_buffer
 	CMP_lf	CONV_MINUS, data_buffer
@@ -663,10 +659,10 @@ MAIN_ALT_Meter:	; received unit is Meter
 	
 	CLRFc	D88_Num
 	CLRFc	D88_Denum
-	CLRFc	D88_Modulo		; D88_Denum = 0
 	READp	NixieVarX, D88_Denum	; D88_Denum = first value
 	
 MAIN_ALT_Meter_Convert_1:
+	CLRFc	D88_Modulo
 	INCF	NixieVarX, F
 	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
 	
@@ -680,19 +676,18 @@ MAIN_ALT_Meter_Convert_1:
 	MOVc	D88_Num, D88_Denum
 	;      D88_Denum = D88_Denum + D88_Modulo
 	ADDc	D88_Denum, D88_Modulo
-		
 	GOTO	MAIN_ALT_Meter_Convert_1
 	
 MAIN_ALT_Meter_Convert_2:
 
-	MOVc	D88_Denum, ByteToConvert
+	MOVc	D88_Denum, IntToConvert
 	CALL	WriteHexShort
 	WRITE_SERIAL_L	'>'
 	
 	CALL	MULT33s ; D88_Num = D88_Denum * 33
 	
-	MOVc	D88_Num, ByteToConvert
-	CALL	WriteHexShort
+	MOVc	D88_Num, IntToConvert
+	CALL	WriteHexColor
 	;CALL	DIV10s ; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
 	; convert D88_Num to bcd in BCD_Result
 	
@@ -786,12 +781,12 @@ MAIN_ALT_1:				; seek end of buffer
 	BR_EQ	MAIN_ALT_2
 	INCF	FSR, F
 	GOTO	MAIN_ALT_1
-	
+
 MAIN_ALT_2:
 	DECF	FSR, F
-	
+
 	MOV	INDF, NixieData	; load char
-	
+
 	CMP_lf	CONV_DOT, NixieData	; convert special char ','
 	BR_NE	MAIN_ALT_3a
 	STR	_char_comma, NixieData
@@ -807,12 +802,12 @@ MAIN_ALT_3b:
 	CALL	Nixie_DrawNum
 	MOV	TZ_offset, FSR	;pop FSR
 	
-	DECF	NixieTube, F		
+	DECF	NixieTube, F
 	CMP_lf	data_buffer, FSR
 	BR_EQ	ErrorCheck1
 	GOTO	MAIN_ALT_2
 	
-Draw_No_alt:	
+Draw_No_alt:
 	CALL 	WAIT_DATA
 	
 	WRITE_SERIAL_L	'N'
@@ -1291,16 +1286,16 @@ ADJUST_TZ_20:
 ;	Serial formatting and helpers
 ;#############################################################################
 
-; Convert byte to hex and send over serial
-WriteHex:
+; Convert byte (8 bit int) to hex and send over serial
+WriteHexByte:
 	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
-	SWAPF	ByteToConvert, W
+	SWAPF	IntToConvert, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	MOVF	ByteToConvert, W
+	MOVF	IntToConvert, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
@@ -1310,27 +1305,124 @@ WriteHex:
 	CALL 	Serial_TX_write
 	RETURN
 
-; Convert short to hex and send over serial
+; Convert short (16 bit int) to hex and send over serial
 WriteHexShort:
 	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
-	SWAPF	ByteToConvert + 1, W
+	SWAPF	IntToConvert + 1, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	MOVF	ByteToConvert + 1, W
+	MOVF	IntToConvert + 1, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	
-	SWAPF	ByteToConvert, W
+	SWAPF	IntToConvert, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	MOVF	ByteToConvert, W
+	MOVF	IntToConvert, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	MOVLW	' '
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	RETURN
+	
+; Convert color (24 bit int) to hex and send over serial
+WriteHexColor:
+	MOVLW	high (TABLE0)
+	MOVWF	PCLATH
+	
+	SWAPF	IntToConvert + 2, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert + 2, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	SWAPF	IntToConvert + 1, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert + 1, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	SWAPF	IntToConvert, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	MOVLW	' '
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	RETURN
+	
+; Convert int (32 bit int) to hex and send over serial
+WriteHexInteger:
+	MOVLW	high (TABLE0)
+	MOVWF	PCLATH
+	
+	SWAPF	IntToConvert + 3, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert + 3, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	SWAPF	IntToConvert + 2, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert + 2, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	SWAPF	IntToConvert + 1, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert + 1, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	
+	SWAPF	IntToConvert, W
+	ANDLW	0x0F
+	CALL	NibbleHex
+	MOVWF	Serial_Data
+	CALL 	Serial_TX_write
+	MOVF	IntToConvert, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
@@ -1341,53 +1433,65 @@ WriteHexShort:
 	CALL 	Serial_TX_write
 	RETURN
 
-ShortToBCD:	; 0xFFFF -> 6 55 35 (3 packed BCD, 5 unpacked BCD)
-	CLRFc	BCD_Result
-	STR	15, NixieLoop	;Rotate and Increment 15 time
+; 24 bit int -> 32 bit packed bcd 16 77 72 15
+ColorToBCD:	
+	CLRFi	BCD_Result
+	STR	23, NixieLoop	;Rotate and Increment 23 time
 	
-ShortToBCD_Rotate:
+ColorToBCD_Rotate:
  	BCF	STATUS,C
-	RLF	D88_Num, F
-	RLF	D88_Num + 1, F
+	RLF	IntToConvert, F
+	RLF	IntToConvert + 1, F
+	RLF	IntToConvert + 2, F
 	RLF	BCD_Result, F
 	RLF	BCD_Result + 1, F
 	RLF	BCD_Result + 2, F
+	RLF	BCD_Result + 3, F
 
 	STR	BCD_Result, FSR
-	STR	4, WriteLoop
 	
-ShortToBCD_HighNibble:	
+ColorToBCD_HighNibble:	
 	SWAPF	INDF, W
 	ANDLW	0x0F
 	SUBLW	4
-	BR_NB	ShortToBCD_LowNibble
+	BR_NB	ColorToBCD_LowNibble
 	ADDL	INDF, 0x30
 	
-ShortToBCD_LowNibble:
+ColorToBCD_LowNibble:
 	MOVF	INDF, W
 	ANDLW	0x0F
 	SUBLW	4
-	BR_NB	ShortToBCD_CheckNext
+	BR_NB	ColorToBCD_CheckNext
 	ADDL	INDF, 0x03
 	
-ShortToBCD_CheckNext:
+ColorToBCD_CheckNext:
 	INCF	FSR, F
-	DECFSZ	WriteLoop, F
-	GOTO	ShortToBCD_HighNibble
+	CMP_lf	BCD_Result + 4, FSR
+	SK_EQ
+	GOTO	ColorToBCD_HighNibble
 
 	DECFSZ	NixieLoop, F
-	GOTO	ShortToBCD_Rotate
+	GOTO	ColorToBCD_Rotate
 
- 	BCF	STATUS,C		;16th Time no C5A3
-	RLF	D88_Num, F
-	RLF	D88_Num + 1, F
+ 	BCF	STATUS,C		;24th time Shift only, no "add 3 if > 4"
+	RLF	IntToConvert, F
+	RLF	IntToConvert + 1, F
+	RLF	IntToConvert + 2, F
 	RLF	BCD_Result, F
 	RLF	BCD_Result + 1, F
 	RLF	BCD_Result + 2, F
-
+	RLF	BCD_Result + 3, F
+	
 	RETURN
 
+; expand BCD_Result to serial_data
+; 32 bit packed bcd (16 77 72 15) to 1 byte per BCD 1 6 7 7 7 2 1 5
+;	skipping first destination char if '-'
+;	adding a '.' before last char
+;	skipping leading 0s
+ExpandBCD:
 
+	RETURN
 
 ;#############################################################################
 ;	Tables
@@ -1537,76 +1641,45 @@ _DIV33s_roll:
 
 
 
-MULT33s: ; 33 = 1 + 32 ; D88_Num = D88_Denum * 33
-	MOVF	D88_Denum, W
-	MOVWF	D88_Num
-	MOVF	D88_Denum + 1, W
-	MOVWF	D88_Num + 1
-	CLRF	D88_Num + 2
-	
-	;MOVLW	b'00000111'	; to avoid the rotated-out MSB contaminating the carry bit
-	;ANDWF	D88_Denum + 1, F
+MULT33s: ; 33 = 1 + 32 ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 33
+	CLRF	D88_Denum + 2	
+	MOVc	D88_Denum, D88_Num	; D88_Num = a
 	
 	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F 	; a = a * 2
-	RLF	D88_Denum + 2, F
+	RLFc	D88_Denum	; a = a * 2
 		
 	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; a = a * 4
-	RLF	D88_Denum + 2, F
+	RLFc	D88_Denum	; a = a * 4
 	
 	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; a = a * 8
-	RLF	D88_Denum + 2, F
+	RLFc	D88_Denum	; a = a * 8
 	
 	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; a = a * 16
-	RLF	D88_Denum + 2, F
+	RLFc	D88_Denum	; a = a * 16
 	
 	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; a = a * 32
-	RLF	D88_Denum + 2, F
+	RLFc	D88_Denum	; a = a * 32
 	
-	MOVF	D88_Denum, W
-	ADDWF	D88_Num, F
-	SK_NC
-	INCF	D88_Num + 1, F	
-	MOVF	D88_Denum + 1, W
-	ADDWF	D88_Num + 1, F	; D88_Num = a + 32*a = 33*a
-	SK_NC
-	INCF	D88_Num + 2, F	
+	ADDc	D88_Num, D88_Denum 	; D88_Num = a + 32*a = 33*a
 	
 	RETURN
 
 	
-MULT10s: ; D88_Num = D88_Denum * 10
-	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; *2
-	
-	MOVF	D88_Denum, W 
-	MOVWF	D88_Num
-	MOVF	D88_Denum + 1, W
-	MOVWF	D88_Num + 1
+MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
+	CLRF	D88_Denum + 2
 	
 	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; *4
-	BCF	STATUS, C
-	RLF	D88_Denum, F
-	RLF	D88_Denum + 1, F	; *8
+	RLFc	D88_Denum	; *2
 	
-	MOVF	D88_Denum, W 
-	ADDWF	D88_Num, F
-	SK_NC
-	INCF	D88_Num, F
-	MOVF	D88_Denum + 1, W
-	ADDWF	D88_Num + 1, F	; D88_Num = 2*a + 8*a
+	MOVc	D88_Denum, D88_Num 	; D88_Num = 2*a
+	
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *4
+	
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *8
+	
+	ADDc	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
 	
 	RETURN
 

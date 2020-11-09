@@ -1968,7 +1968,7 @@ ADDc	MACRO	a, b	; a = a + b
 	BSF	SCRATCH, Z
 	SK_NC
 	INCF	a + 1, F
-	SK_NC
+	SK_NZ
 	INCF	a + 2, F
 	
 	MOVF	b + 1, W
@@ -1997,9 +1997,9 @@ ADDi	MACRO	a, b	; a = a + b
 	BSF	SCRATCH, Z	; save #Z flag for this byte
 	BR_NC	_b1
 	INCF	a + 1, F	; propagate Carry
-	SK_NC
+	SK_NZ
 	INCF	a + 2, F
-	SK_NC
+	SK_NZ
 	INCF	a + 3, F
 _b1:
 	MOVF	b + 1, W	; load next byte
@@ -2009,7 +2009,7 @@ _b1:
 	BSF	SCRATCH, Z	; save #Z flag
 	SK_NC
 	INCF	a + 2, F	; propagate Carry
-	SK_NC
+	SK_NZ
 	INCF	a + 3, F
 	
 	MOVF	b + 2, W
