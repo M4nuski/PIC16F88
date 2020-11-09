@@ -61,7 +61,7 @@
 #DEFINE Mode_Select_b1	PORTB, 4
 
 #DEFINE	END_MARKER		0xFF
-#DEFINE	CONV_END_MARKER	END_MARKER - '0'
+;#DEFINE	CONV_END_MARKER	END_MARKER - '0'
 #DEFINE	CONV_DOT		'.' - '0'
 #DEFINE	CONV_MINUS		'-' - '0'
 
@@ -668,7 +668,7 @@ MAIN_ALT_Meter_Convert_1:
 	
 	CMP_lf	CONV_DOT, D88_Modulo
 	BR_EQ	MAIN_ALT_Meter_Convert_2; if next is dot stop converting to int
-	CMP_lf	CONV_END_MARKER, D88_Modulo
+	CMP_lf	END_MARKER, D88_Modulo
 	BR_EQ	MAIN_ALT_Meter_Convert_2; to be safe also check for end of string marker
 
 	; else D88_Denum = D88_Denum * 10
@@ -688,6 +688,10 @@ MAIN_ALT_Meter_Convert_2:
 	
 	MOVc	D88_Num, IntToConvert
 	CALL	WriteHexColor
+	WRITE_SERIAL_L	'B'
+	CALL	ColorToBCD
+	MOVi	BCD_Result, IntToConvert
+	CALL	WriteHexInteger
 	;CALL	DIV10s ; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
 	; convert D88_Num to bcd in BCD_Result
 	
@@ -1487,9 +1491,65 @@ ColorToBCD_CheckNext:
 ; expand BCD_Result to serial_data
 ; 32 bit packed bcd (16 77 72 15) to 1 byte per BCD 1 6 7 7 7 2 1 5
 ;	skipping first destination char if '-'
-;	adding a '.' before last char
-;	skipping leading 0s
+;	unpack to bytes in destination
+;	add '.' before last char
+;	add END_MARKER at the end
+;	skipping leading 0s by bubbling data back to the start of destination
 ExpandBCD:
+	STR	BCD_Result, NixieVarX		; X = @bcd
+	STR	serial_data, NixieVarY	; Y = @data	
+	
+	MOVF	serial_data, F	; skip "-" in data
+	CMP_lw	CONV_MINUS
+	BR_NE	ExpandBCD_1
+	INCF	NixieVarY, F	; skip first byte of data if "-"
+	
+ExpandBCD_1:	; Expand
+	MOV	NixieVarY, FSR
+	SWAPF	BCD_Result + 3, W
+	ANDLW	0x0F
+	MOVWF	INDF	
+	INCF	FSR, F
+	MOVF	BCD_Result + 3, W
+	ANDLW	0x0F
+	MOVWF	INDF
+	
+	INCF	FSR, F
+	SWAPF	BCD_Result + 2, W
+	ANDLW	0x0F
+	MOVWF	INDF	
+	INCF	FSR, F
+	MOVF	BCD_Result + 2, W
+	ANDLW	0x0F
+	MOVWF	INDF
+	
+	INCF	FSR, F
+	SWAPF	BCD_Result + 1, W
+	ANDLW	0x0F
+	MOVWF	INDF	
+	INCF	FSR, F
+	MOVF	BCD_Result + 1, W
+	ANDLW	0x0F
+	MOVWF	INDF
+	
+	INCF	FSR, F
+	SWAPF	BCD_Result, W
+	ANDLW	0x0F
+	MOVWF	INDF
+	
+	INCF	FSR, F
+	STR	CONV_DOT, INDF
+		
+	INCF	FSR, F
+	MOVF	BCD_Result, W
+	ANDLW	0x0F
+	MOVWF	INDF
+	
+	INCF	FSR, F
+	STR	END_MARKER, INDF
+	
+	; skip leading 0s
+
 
 	RETURN
 
