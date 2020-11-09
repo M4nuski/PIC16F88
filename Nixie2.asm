@@ -96,7 +96,7 @@ TZ_offset		EQU	0x27 ; for TZ adjust
 WriteLoop		EQU	0x28 ; for NixieSerial and WriteString
 TX_Temp			EQU	0x29 ; for RX/TX buffer address calculation
 
-data_buffer		EQU	0x2A ; 0x2A to 0x39
+data_buffer		EQU	0x2A ; 0x2A to 0x3E -> 20 bytes
 
 ; alias for static buffer positions
 data_H10			EQU	0x2A
@@ -493,7 +493,7 @@ LOOP:
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,10.0,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,100.0,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1023.0,M,-32.4,M,,*59
-	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,10000.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,000.0,M,-32.4,M,,*59
 	; Negative Meters
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1.2,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12.3,M,-32.4,M,,*59
@@ -634,6 +634,8 @@ MAIN_ALT:
 	WRITE_SERIAL_FITOA	data_buffer + 5
 	WRITE_SERIAL_FITOA	data_buffer + 6
 	WRITE_SERIAL_FITOA	data_buffer + 7
+	WRITE_SERIAL_FITOA	data_buffer + 8
+	WRITE_SERIAL_FITOA	data_buffer + 9
 	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
@@ -692,6 +694,18 @@ MAIN_ALT_Meter_Convert_2:
 	CALL	ColorToBCD
 	MOVi	BCD_Result, IntToConvert
 	CALL	WriteHexInteger
+	WRITE_SERIAL_L	'D'
+	WRITE_SERIAL_FITOA	data_buffer
+	WRITE_SERIAL_FITOA	data_buffer + 1
+	WRITE_SERIAL_FITOA	data_buffer + 2
+	WRITE_SERIAL_FITOA	data_buffer + 3
+	WRITE_SERIAL_FITOA	data_buffer + 4
+	WRITE_SERIAL_FITOA	data_buffer + 5
+	WRITE_SERIAL_FITOA	data_buffer + 6
+	WRITE_SERIAL_FITOA	data_buffer + 7
+	WRITE_SERIAL_FITOA	data_buffer + 8
+	WRITE_SERIAL_FITOA	data_buffer + 9
+
 	;CALL	DIV10s ; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
 	; convert D88_Num to bcd in BCD_Result
 	
@@ -1486,7 +1500,7 @@ ColorToBCD_CheckNext:
 	RLF	BCD_Result + 2, F
 	RLF	BCD_Result + 3, F
 	
-	RETURN
+	;RETURN
 
 ; expand BCD_Result to serial_data
 ; 32 bit packed bcd (16 77 72 15) to 1 byte per BCD 1 6 7 7 7 2 1 5
@@ -1495,16 +1509,16 @@ ColorToBCD_CheckNext:
 ;	add '.' before last char
 ;	add END_MARKER at the end
 ;	skipping leading 0s by bubbling data back to the start of destination
-ExpandBCD:
-	STR	BCD_Result, NixieVarX		; X = @bcd
-	STR	serial_data, NixieVarY	; Y = @data	
+ExpandBCD_10th:
+	;STR	BCD_Result, NixieVarX		; X = @bcd
+	STR	data_buffer, NixieVarY	; Y = @data	
 	
-	MOVF	serial_data, F	; skip "-" in data
-	CMP_lw	CONV_MINUS
-	BR_NE	ExpandBCD_1
+;	MOVF	serial_data, F	; skip "-" in data
+	CMP_lf	CONV_MINUS, data_buffer
+	SK_NE
 	INCF	NixieVarY, F	; skip first byte of data if "-"
 	
-ExpandBCD_1:	; Expand
+	; Expand
 	MOV	NixieVarY, FSR
 	SWAPF	BCD_Result + 3, W
 	ANDLW	0x0F
@@ -1550,9 +1564,28 @@ ExpandBCD_1:	; Expand
 	
 	; skip leading 0s
 
-
+ExpandBCD_10th_loop1:
+	MOV	NixieVarY, FSR
+	MOVF	INDF, W		; until not 0
+	SK_ZE
 	RETURN
+	CMP_lf	END_MARKER, INDF ; or end marker
+	SK_NE
+	RETURN
+	
+	MOV	NixieVarY, FSR	; start of buffer
+ExpandBCD_10th_loop2:	; move next byte to previous location
+	INCF	FSR, F; next
+	MOVF	INDF, W
+	DECF	FSR, F; previous
+	MOVWF	INDF
+	INCF	FSR, F; next
+	
+	CMP_lf	END_MARKER, INDF ; until end marker
+	SK_EQ
+	GOTO	ExpandBCD_10th_loop2
 
+	GOTO	ExpandBCD_10th_loop1
 ;#############################################################################
 ;	Tables
 ;#############################################################################
