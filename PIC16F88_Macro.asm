@@ -695,6 +695,24 @@ PC0x0800SKIP	MACRO	; Skip to the next 2K instruction boundary
 _NEXT_BOUNDARY:
 	ENDM
 	
+FAR_CALL	MACRO	dest
+	LOCAL	_end
+	GOTO	$ + 2	; to make skippable
+	GOTO	_end
+	BSF	PCLATH, 3
+	CALL	dest
+_end:
+	ENDM
+	
+FAR_RETURN	MACRO
+	LOCAL	_end
+	GOTO	$ + 2	; to make skippable
+	GOTO	_end
+	BCF	PCLATH, 3
+	RETURN	
+_end:
+	ENDM
+	
 PC0x0100ALIGN	MACRO	TableLabel; Align next instruction on a 256 instruction boundary (for small table reads)
 	if	( ( $ & 0x000000FF ) != 0 )
 	ORG	( $ & 0xFFFFFF00 ) + 0x0100
