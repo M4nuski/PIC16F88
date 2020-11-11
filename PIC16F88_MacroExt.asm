@@ -1941,6 +1941,7 @@ SWAPi	MACRO	a, b
 ;#############################################################################
 
 ADDs	MACRO	a, b	; a = a + b
+	LOCAL	_nc0
 	CLRF	SCRATCH		; scratch register to keep track of STATUS Z flag, inverted to reduce setup time
 	
 	MOVF	b, W
@@ -1948,17 +1949,23 @@ ADDs	MACRO	a, b	; a = a + b
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NC
-	INCF	a + 1, F
 	
+	BR_NC	_nc0
+	INCF	a + 1, F	; if increasing the highest byte cause a 0, set the carry flag
+	SK_NZ
+	BSF	SCRATCH, C
+_nc0:
 	MOVF	b + 1, W
 	ADDWF	a + 1, F
 	
+	BTFSC	SCRATCH, C
+	BSF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z	; clear status Z flag if any one of the add instruction didn't produce a Z
 	ENDM
 
 ADDc	MACRO	a, b	; a = a + b
+	LOCAL	_nc0, _nc1	
 	CLRF	SCRATCH	
 	
 	MOVF	b, W
@@ -1966,28 +1973,36 @@ ADDc	MACRO	a, b	; a = a + b
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NC
+	
+	BR_NC	_nc0
 	INCF	a + 1, F
 	SK_NZ
 	INCF	a + 2, F
-	
+	SK_NZ
+	BSF	SCRATCH, C
+_nc0:
 	MOVF	b + 1, W
 	ADDWF	a + 1, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NC
-	INCF	a + 2, F
 	
+	BR_NC	_nc1
+	INCF	a + 2, F
+	SK_NZ
+	BSF	SCRATCH, C
+_nc1:
 	MOVF	b + 2, W
 	ADDWF	a + 2, F
 	
+	BTFSC	SCRATCH, C
+	BSF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z	
 	ENDM
 
 ADDi	MACRO	a, b	; a = a + b
-	LOCAL	_b1
+	LOCAL	_nc0, _nc1, _nc2
 	CLRF	SCRATCH	
 	
 	MOVF	b, W
@@ -1995,34 +2010,45 @@ ADDi	MACRO	a, b	; a = a + b
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
-	BR_NC	_b1
+	
+	BR_NC	_nc0
 	INCF	a + 1, F	; propagate Carry
 	SK_NZ
 	INCF	a + 2, F
 	SK_NZ
 	INCF	a + 3, F
-_b1:
+	SK_NZ
+	BSF	SCRATCH, C
+_nc0:
 	MOVF	b + 1, W	; load next byte
 	ADDWF	a + 1, F	; add
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag
-	SK_NC
+	
+	BR_NC	_nc1
 	INCF	a + 2, F	; propagate Carry
 	SK_NZ
 	INCF	a + 3, F
-	
+	SK_NZ
+	BSF	SCRATCH, C
+_nc1:
 	MOVF	b + 2, W
 	ADDWF	a + 2, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NC	
-	INCF	a + 3, F
 	
+	BR_NC	_nc2	
+	INCF	a + 3, F
+	SK_NZ
+	BSF	SCRATCH, C
+_nc2:
 	MOVF	b + 3, W
 	ADDWF	a + 3, F
 	
+	BTFSC	SCRATCH, C
+	BSF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
@@ -2035,24 +2061,6 @@ _b1:
 ;#############################################################################
 
 SUBs	MACRO	a, b	; a = a - b
-	CLRF	SCRATCH	
-	
-	MOVF	b, W
-	SUBWF	a, F
-	
-	SK_ZE
-	BSF	SCRATCH, Z
-	SK_NB	
-	DECF	a + 1, F
-	
-	MOVF	b + 1, W
-	SUBWF	a + 1, F
-	
-	BTFSC	SCRATCH, Z
-	BCF	STATUS, Z
-	ENDM
-	
-SUBc	MACRO	a, b	; a = a - b
 	LOCAL	_nb0
 	CLRF	SCRATCH	
 	
@@ -2061,29 +2069,63 @@ SUBc	MACRO	a, b	; a = a - b
 	
 	SK_ZE
 	BSF	SCRATCH, Z
+	
 	BR_NB	_nb0
 	MOVLW	0x01
 	SUBWF	a + 1, F
 	SK_NB
-	SUBWF	a + 2, F
-_nb0
+	BSF	SCRATCH, C
+_nb0:
 	MOVF	b + 1, W
+	SUBWF	a + 1, F
+	
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
+	BTFSC	SCRATCH, Z
+	BCF	STATUS, Z
+	ENDM
+
+SUBc	MACRO	a, b	; a = a - b
+	LOCAL	_nb0, _nb1
+	CLRF	SCRATCH	
+	
+	MOVF	b, W		; sub byte 0
+	SUBWF	a, F
+	
+	SK_ZE
+	BSF	SCRATCH, Z
+	
+	BR_NB	_nb0		; if no borrow sub next byte
+	MOVLW	0x01		; propagate carry
+	SUBWF	a + 1, F
+	SK_NB
+	SUBWF	a + 2, F
+	SK_NB
+	BSF	SCRATCH, C	; set borrow
+_nb0:
+	MOVF	b + 1, W	; sub byte 1
 	SUBWF	a + 1, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NB
-	DECF	a + 2, F
 	
+	BR_NB	_nb1
+	MOVLW	0x01	
+	SUBWF	a + 2, F
+	SK_NB
+	BSF	SCRATCH, C	; set borrow
+_nb1:
 	MOVF	b + 2, W
 	SUBWF	a + 2, F
 	
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 	
 SUBi	MACRO	a, b	; a = a - b
-	LOCAL	_nb0, _nb1
+	LOCAL	_nb0, _nb1, _nb2
 	CLRF	SCRATCH	
 	
 	MOVF	b, W
@@ -2091,37 +2133,48 @@ SUBi	MACRO	a, b	; a = a - b
 	
 	SK_ZE			; save #Z flag
 	BSF	SCRATCH, Z
-	BR_NB	_nb0		; propagate Borrow
 	
+	BR_NB	_nb0		; propagate Borrow	
 	MOVLW	0x01
 	SUBWF	a + 1, F
 	SK_NB
 	SUBWF	a + 2, F
 	SK_NB
 	SUBWF	a + 3, F
+	SK_NB
+	BSF	SCRATCH, C
 _nb0:
 	MOVF	b + 1, W	; next byte
 	SUBWF	a + 1, F	; sub
 	
 	SK_ZE			; save #Z
 	BSF	SCRATCH, Z
+	
 	BR_NB	_nb1		; propagate Borrow
 	MOVLW	0x01
 	SUBWF	a + 2, F
 	SK_NB
 	SUBWF	a + 3, F
+	SK_NB
+	BSF	SCRATCH, C
 _nb1:
 	MOVF	b + 2, W
 	SUBWF	a + 2, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NB
-	DECF	a + 3, F
 	
+	BR_NB	_nb2
+	MOVLW	0x01
+	SUBWF	a + 3, F
+	SK_NB
+	BSF	SCRATCH, C
+_nb2:
 	MOVF	b + 3, W
 	SUBWF	a + 3, F
 	
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
@@ -2134,6 +2187,7 @@ _nb1:
 ;#############################################################################
 
 ADDLs	MACRO	a, lit	; a = a + lit
+	LOCAL	_nc0
 	CLRF	SCRATCH	
 	
 	MOVLW	( lit & 0x00FF ) >> 0
@@ -2141,17 +2195,23 @@ ADDLs	MACRO	a, lit	; a = a + lit
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
-	SK_NC
+	
+	BR_NC	_nc0
 	INCF	a + 1, F	; propagate Carry
-
+	SK_NZ
+	BSF	SCRATCH, C
+_nc0:
 	MOVLW	( lit & 0xFF00 ) >> 8
 	ADDWF	a + 1, F
 	
+	BTFSC	SCRATCH, C
+	BSF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 	
 ADDLc	MACRO	a, lit	; a = a + lit
+	LOCAL	_nc0, _nc1
 	CLRF	SCRATCH	
 	
 	MOVLW	( lit & 0x0000FF ) >> 0
@@ -2159,28 +2219,36 @@ ADDLc	MACRO	a, lit	; a = a + lit
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
-	SK_NC
+	
+	BR_NC	_nc0
 	INCF	a + 1, F	; propagate Carry
 	SK_NZ
 	INCF	a + 2, F
-	
+	SK_NZ
+	BSF	SCRATCH, C
+_nc0:
 	MOVLW	( lit & 0x00FF00 ) >> 8; load next byte
 	ADDWF	a + 1, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NC
+	
+	BR_NC	_nc1
 	INCF	a + 2, F
-
+	SK_NZ
+	BSF	SCRATCH, C
+_nc1:
 	MOVLW	( lit & 0xFF0000 ) >> 16
 	ADDWF	a + 2, F
 	
+	BTFSC	SCRATCH, C
+	BSF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 
 ADDLi	MACRO	a, lit	; a = a + lit
-	LOCAL	_b1
+	LOCAL	_nc0, _nc1, _nc2
 	CLRF	SCRATCH	
 	
 	MOVLW	( lit & 0x000000FF ) >> 0
@@ -2188,34 +2256,44 @@ ADDLi	MACRO	a, lit	; a = a + lit
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
-	BR_NC	_b1
+	
+	BR_NC	_nc0
 	INCF	a + 1, F	; propagate Carry
 	SK_NZ
 	INCF	a + 2, F
 	SK_NZ
 	INCF	a + 3, F
-_b1:
+	SK_NZ
+	BSF	SCRATCH, C
+_nc0:
 	MOVLW	( lit & 0x0000FF00 ) >> 8; load next byte
 	ADDWF	a + 1, F	; add
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag
-	SK_NC
+	
+	BR_NC	_nc1
 	INCF	a + 2, F	; propagate Carry
 	SK_NZ
 	INCF	a + 3, F
-	
+	SK_NZ	SCRATCH, C
+_nc1:
 	MOVLW	( lit & 0x00FF0000 ) >> 16
 	ADDWF	a + 2, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NC	
-	INCF	a + 3, F
 	
+	BR_NC	_nc2	
+	INCF	a + 3, F
+	SK_NZ
+	BSF	SCRATCH, C
+_nc2:
 	MOVLW	( lit & 0xFF000000 ) >> 24
 	ADDWF	a + 3, F
 	
+	BTFSC	SCRATCH, C
+	BSF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
@@ -2228,6 +2306,7 @@ _b1:
 ;#############################################################################
 
 SUBLs	MACRO	a, lit	; a = a - lit
+	LOCAL	_nb0
 	CLRF	SCRATCH	
 	
 	MOVLW	( lit & 0x00FF ) >> 0
@@ -2235,18 +2314,24 @@ SUBLs	MACRO	a, lit	; a = a - lit
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
-	SK_NB
-	DECF	a + 1, F	; propagate Borrow
 	
+	BR_NB	_nb0
+	MOVLW	0x01
+	SUBWF	a + 1, F	; propagate Borrow
+	SK_NB
+	BSF	SCRATCH, C
+_nb0:
 	MOVLW	( lit & 0xFF00 ) >> 8; load next byte
 	SUBWF	a + 1, F	; subtract
 
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 	
 SUBLc	MACRO	a, lit	; a = a - lit
-	LOCAL	_nb0
+	LOCAL	_nb0, _nb1
 	CLRF	SCRATCH	
 	
 	MOVLW	( lit & 0x0000FF ) >> 0
@@ -2254,29 +2339,38 @@ SUBLc	MACRO	a, lit	; a = a - lit
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
+	
 	BR_NB	_nb0
 	MOVLW	0x01
 	SUBWF	a + 1, F	; propagate Borrow
 	SK_NB
 	SUBWF	a + 2, F
+	SK_NB
+	BSF	SCRATCH, C
 _nb0:
 	MOVLW	( lit & 0x00FF00 ) >> 8; load next byte
 	SUBWF	a + 1, F	; subtract
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NB
-	DECF	a + 2, F
 	
+	BR_NB	_nb1
+	MOVLW	0x01
+	SUBWF	a + 2, F
+	SK_NB
+	BSF	SCRATCH, C
+_nb1:
 	MOVLW	( lit & 0xFF0000 ) >> 16
 	SUBWF	a + 2, F
 	
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
 	
 SUBLi	MACRO	a, lit	; a = a - lit
-	LOCAL	_nb0, _nb1
+	LOCAL	_nb0, _nb1, _nb2
 	CLRF	SCRATCH	
 	
 	MOVLW	( lit & 0x000000FF ) >> 0	
@@ -2284,6 +2378,7 @@ SUBLi	MACRO	a, lit	; a = a - lit
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
+	
 	BR_NB	_nb0
 	MOVLW	0x01
 	SUBWF	a + 1, F	; propagate Borrow
@@ -2291,29 +2386,40 @@ SUBLi	MACRO	a, lit	; a = a - lit
 	SUBWF	a + 2, F
 	SK_NB
 	SUBWF	a + 3, F
+	SK_NB
+	SCRATCH, C
 _nb0:
 	MOVLW	( lit & 0x0000FF00 ) >> 8; load next byte
 	SUBWF	a + 1, F	; subtract
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag
+	
 	BR_NB	_nb1
 	MOVLW	0x01
 	SUBWF	a + 2, F	; propagate Borrow
 	SK_NB
 	SUBWF	a + 3, F
+	SK_NB
+	BSF	SCRATCH, C
 _nb1:
 	MOVLW	( lit & 0x00FF0000 ) >> 16
 	SUBWF	a + 2, F
 	
 	SK_ZE
 	BSF	SCRATCH, Z
-	SK_NB	
-	DECF	a + 3, F
+	
+	BR_NB	_nb2
+	MOVLW	0x01
+	SUBWF	a + 3, F
+	SK_NB
+	BSF	SCRATCH, C
 	
 	MOVLW	( lit & 0xFF000000 ) >> 24
 	SUBWF	a + 3, F
 	
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z
 	ENDM
@@ -2323,9 +2429,12 @@ _nb1:
 ;#############################################################################
 ;	Subtract target from other file
 ;	 a = b - a
+; TODO don't modify b
+; TODO propagate borrow
 ;#############################################################################
 
 SUBFs	MACRO	a, b	; a = b - a
+	LOCAL	_nb0
 	CLRF	SCRATCH	
 	
 	MOVF	a, W
@@ -2334,13 +2443,19 @@ SUBFs	MACRO	a, b	; a = b - a
 	
 	SK_ZE
 	BSF	SCRATCH, Z	; save #Z flag for this byte
+	
+	BR_NB	_nb0
+	MOVLW	0x01
+	SUBWF	b + 1, F	; propagate Borrow
 	SK_NB
-	DECF	a + 1, F	; propagate Borrow
-
+	BSF	SCRATCH, C
+_nb0:
 	MOVF	a + 1, W	; load next byte
 	SUBLW	b + 1, W	
 	MOVWF	a + 1
-
+	
+	BTFSC	SCRATCH, C
+	BCF	STATUS, C
 	BTFSC	SCRATCH, Z
 	BCF	STATUS, Z	
 	ENDM
@@ -2430,6 +2545,8 @@ _nb1:
 ;#############################################################################
 ;	Subtract file content from literal
 ;	 a = lit - a
+; TODO don't modify b
+; TODO propagate borrow
 ;#############################################################################
 
 SUBFLs	MACRO	a, lit	; a = lit - a

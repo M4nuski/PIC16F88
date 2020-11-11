@@ -478,7 +478,6 @@ LOOP:
 	GOTO	MAIN_TIME
 	
 	; TODO FT to M
-	; TODO M to FT	
 
 	;; test strings:
 	; Meters
@@ -492,8 +491,8 @@ LOOP:
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1.0,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,10.0,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,100.0,M,-32.4,M,,*59
-	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1023.0,M,-32.4,M,,*59
-	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,000.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,1000.0,M,-32.4,M,,*59
+	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,10000.0,M,-32.4,M,,*59
 	; Negative Meters
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-1.2,M,-32.4,M,,*59
 	;; $GPGGA,205654.00,4538.10504,N,07318.08944,W,1,05,5.36,-12.3,M,-32.4,M,,*59
@@ -612,20 +611,6 @@ MAIN_ALT:
 	CALL	READ_NEXT		; wait and read CSV data at index 8
 	BW_False	Draw_No_alt
 
-	; check unit
-	; check requested unit
-	; if different convert
-	
-	; Meters:
-	; draw M
-	; check if > 1000
-	; 	draw integer part
-	; else draw both parts
-	
-	; Feet:
-	; draw F
-	; draw integer part
-	
 	WRITE_SERIAL_FITOA	data_buffer
 	WRITE_SERIAL_FITOA	data_buffer + 1
 	WRITE_SERIAL_FITOA	data_buffer + 2
@@ -646,71 +631,44 @@ MAIN_ALT:
 	BR_EQ	MAIN_ALT_Feet	
 	GOTO	MAIN_ALT_draw
 
-MAIN_ALT_Meter:	; received unit is Meter
-	BTFSS	AU_Select	; if requested unit is meter check range and draw
-	GOTO	MAIN_ALT_Meter_format
+MAIN_ALT_Meter:			; received unit is Meter
+	BTFSS	AU_Select
+	GOTO	MAIN_ALT_Meter_format	; if requested unit is meter check range and draw
+	
+	WRITE_SERIAL_L		'>'
+	WRITE_SERIAL_L		'F'
+	WRITE_SERIAL_L		' '
 	; else convert to feet
 	; 3.281ft / m
 	; F = M * 33 / 10 (good enough...)	
-	; convert to u_int24_t
-	; mult 33
-	STR	data_buffer, NixieVarX	; NixieVarX = @data_buffer
-	CMP_lf	CONV_MINUS, data_buffer
-	SK_NE	
-	INCF	NixieVarX, F	; skip the Minus sign
 	
-	CLRFc	D88_Num
-	CLRFc	D88_Denum
-	READp	NixieVarX, D88_Denum	; D88_Denum = first value
+	CALL	Conv_Str_to_Int	; convert data_buffer string to int in D88_Denum
 	
-MAIN_ALT_Meter_Convert_1:
-	CLRFc	D88_Modulo
-	INCF	NixieVarX, F
-	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
-	
-	CMP_lf	CONV_DOT, D88_Modulo
-	BR_EQ	MAIN_ALT_Meter_Convert_2; if next is dot stop converting to int
-	CMP_lf	END_MARKER, D88_Modulo
-	BR_EQ	MAIN_ALT_Meter_Convert_2; to be safe also check for end of string marker
-
-	; else D88_Denum = D88_Denum * 10
-	CALL	MULT10s ; D88_Num = D88_Denum * 10
-	MOVc	D88_Num, D88_Denum
-	;      D88_Denum = D88_Denum + D88_Modulo
-	ADDc	D88_Denum, D88_Modulo
-	GOTO	MAIN_ALT_Meter_Convert_1
-	
-MAIN_ALT_Meter_Convert_2:
-
-	MOVc	D88_Denum, IntToConvert
-	CALL	WriteHexShort
-	WRITE_SERIAL_L	'>'
+	;MOVc	D88_Denum, IntToConvert
+	;CALL	WriteHexShort
+	;WRITE_SERIAL_L	'>'
 	
 	CALL	MULT33s ; D88_Num = D88_Denum * 33
 	
 	MOVc	D88_Num, IntToConvert
-	CALL	WriteHexColor
-	WRITE_SERIAL_L	'B'
+	;CALL	WriteHexColor
+	
+	;WRITE_SERIAL_L	'B'
 	CALL	ColorToBCD
-	MOVi	BCD_Result, IntToConvert
-	CALL	WriteHexInteger
-	WRITE_SERIAL_L	'D'
-	WRITE_SERIAL_FITOA	data_buffer
-	WRITE_SERIAL_FITOA	data_buffer + 1
-	WRITE_SERIAL_FITOA	data_buffer + 2
-	WRITE_SERIAL_FITOA	data_buffer + 3
-	WRITE_SERIAL_FITOA	data_buffer + 4
-	WRITE_SERIAL_FITOA	data_buffer + 5
-	WRITE_SERIAL_FITOA	data_buffer + 6
-	WRITE_SERIAL_FITOA	data_buffer + 7
-	WRITE_SERIAL_FITOA	data_buffer + 8
-	WRITE_SERIAL_FITOA	data_buffer + 9
-
-	;CALL	DIV10s ; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
-	; convert D88_Num to bcd in BCD_Result
+	;MOVi	BCD_Result, IntToConvert
+	;CALL	WriteHexInteger
 	
-	; unpack bcd to byte, place dot after last bcd nibble to stop feet conversion
-	
+	;WRITE_SERIAL_L	'D'
+	;WRITE_SERIAL_FITOA	data_buffer
+	;WRITE_SERIAL_FITOA	data_buffer + 1
+	;WRITE_SERIAL_FITOA	data_buffer + 2
+	;WRITE_SERIAL_FITOA	data_buffer + 3
+	;WRITE_SERIAL_FITOA	data_buffer + 4
+	;WRITE_SERIAL_FITOA	data_buffer + 5
+	;WRITE_SERIAL_FITOA	data_buffer + 6
+	;WRITE_SERIAL_FITOA	data_buffer + 7
+	;WRITE_SERIAL_FITOA	data_buffer + 8
+	;WRITE_SERIAL_FITOA	data_buffer + 9
 	
 	;call feet format routine
 	GOTO	MAIN_ALT_Feet_format
@@ -764,7 +722,46 @@ MAIN_ALT_Feet:		; received unit is Feet
 	BTFSC	AU_Select	; if requested unit is feet draw
 	GOTO	MAIN_ALT_Feet_format
 	;convert to meter
+	;*100
+	;/33
+	WRITE_SERIAL_L		'>'
+	WRITE_SERIAL_L		'M'
+	WRITE_SERIAL_L		' '
 	
+	CALL	Conv_Str_to_Int	; convert data_buffer string to int in D88_Denum
+	
+	WRITE_SERIAL_L	'i'
+	MOVc	D88_Denum, IntToConvert
+	CALL	WriteHexShort	
+
+	CALL	MULT100s	; D88_Num = D88_Denum * 100
+		
+	WRITE_SERIAL_L	'x'
+	MOVc	D88_Num, IntToConvert
+	CALL	WriteHexColor
+	
+	CALL	DIV33c		; D88_Fract = D88_Num / 33, D88_Num = D88_Num % 33
+	;; TODO FIX DIVISION
+	WRITE_SERIAL_L	'/'
+	MOVc	D88_Fract, IntToConvert
+	CALL	WriteHexColor
+	
+	CALL	ColorToBCD
+	WRITE_SERIAL_L	'B'
+	MOVi	BCD_Result, IntToConvert
+	CALL	WriteHexInteger
+	
+	WRITE_SERIAL_L	'D'
+	WRITE_SERIAL_FITOA	data_buffer
+	WRITE_SERIAL_FITOA	data_buffer + 1
+	WRITE_SERIAL_FITOA	data_buffer + 2
+	WRITE_SERIAL_FITOA	data_buffer + 3
+	WRITE_SERIAL_FITOA	data_buffer + 4
+	WRITE_SERIAL_FITOA	data_buffer + 5
+	WRITE_SERIAL_FITOA	data_buffer + 6
+	WRITE_SERIAL_FITOA	data_buffer + 7
+	WRITE_SERIAL_FITOA	data_buffer + 8
+	WRITE_SERIAL_FITOA	data_buffer + 9
 	
 	
 	;call meter format routine
@@ -1458,13 +1455,13 @@ ColorToBCD:
 	
 ColorToBCD_Rotate:
  	BCF	STATUS,C
-	RLF	IntToConvert, F
-	RLF	IntToConvert + 1, F
-	RLF	IntToConvert + 2, F
-	RLF	BCD_Result, F
-	RLF	BCD_Result + 1, F
-	RLF	BCD_Result + 2, F
-	RLF	BCD_Result + 3, F
+	RLFc	IntToConvert
+	;RLF	IntToConvert + 1, F
+	;RLF	IntToConvert + 2, F
+	RLFi	BCD_Result
+	;RLF	BCD_Result + 1, F
+	;RLF	BCD_Result + 2, F
+	;RLF	BCD_Result + 3, F
 
 	STR	BCD_Result, FSR
 	
@@ -1492,13 +1489,13 @@ ColorToBCD_CheckNext:
 	GOTO	ColorToBCD_Rotate
 
  	BCF	STATUS,C		;24th time Shift only, no "add 3 if > 4"
-	RLF	IntToConvert, F
-	RLF	IntToConvert + 1, F
-	RLF	IntToConvert + 2, F
-	RLF	BCD_Result, F
-	RLF	BCD_Result + 1, F
-	RLF	BCD_Result + 2, F
-	RLF	BCD_Result + 3, F
+	RLFc	IntToConvert
+	;RLF	IntToConvert + 1, F
+	;RLF	IntToConvert + 2, F
+	RLFi	BCD_Result
+	;RLF	BCD_Result + 1, F
+	;RLF	BCD_Result + 2, F
+	;RLF	BCD_Result + 3, F
 	
 	;RETURN
 
@@ -1563,9 +1560,8 @@ ExpandBCD_10th:
 	STR	END_MARKER, INDF
 	
 	; skip leading 0s
-
 ExpandBCD_10th_loop1:
-	MOV	NixieVarY, FSR
+	MOV	NixieVarY, FSR ; start of buffer
 	MOVF	INDF, W		; until not 0
 	SK_ZE
 	RETURN
@@ -1573,7 +1569,7 @@ ExpandBCD_10th_loop1:
 	SK_NE
 	RETURN
 	
-	MOV	NixieVarY, FSR	; start of buffer
+	;MOV	NixieVarY, FSR	; start of buffer
 ExpandBCD_10th_loop2:	; move next byte to previous location
 	INCF	FSR, F; next
 	MOVF	INDF, W
@@ -1586,6 +1582,39 @@ ExpandBCD_10th_loop2:	; move next byte to previous location
 	GOTO	ExpandBCD_10th_loop2
 
 	GOTO	ExpandBCD_10th_loop1
+
+
+
+; convert data_buffer string to int in D88_Denum
+Conv_Str_to_Int:	
+	STR	data_buffer, NixieVarX	; NixieVarX = @data_buffer
+	CMP_lf	CONV_MINUS, data_buffer
+	SK_NE	
+	INCF	NixieVarX, F	; skip the Minus sign
+	
+	CLRFc	D88_Num		;temp
+	CLRFc	D88_Denum	;result
+	READp	NixieVarX, D88_Denum	; D88_Denum = first value
+	
+Conv_Str_to_Int_loop:
+	CLRFc	D88_Modulo	
+	INCF	NixieVarX, F	;next char
+	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
+	
+	CMP_lf	CONV_DOT, D88_Modulo	; if next is dot stop converting to int
+	SK_NE	
+	RETURN
+	CMP_lf	END_MARKER, D88_Modulo; to be safe also check for end of string marker
+	SK_NE	
+	RETURN
+
+	CALL	MULT10s			; D88_Num = D88_Denum * 10
+	MOVc	D88_Num, D88_Denum	; D88_Denum = D88_Num
+	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo 
+	GOTO	Conv_Str_to_Int_loop
+
+
+
 ;#############################################################################
 ;	Tables
 ;#############################################################################
@@ -1672,31 +1701,34 @@ Nixie_Num_seg8:
 ; 10 '0000 0000  0000 1010' b0
 ; 10 '1010 0000  0000 0000' b12
 ;idx '0001 0000  0000 0000'
-DIV10s:	; div by 10, 16 bit; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
-	CLRFs	D88_Fract
-	STRs	b'0001000000000000', D88_Modulo
-	STRs	b'1010000000000000', D88_Denum
+DIV10c:	; div by 10, 24 bit; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
+	CLRFc	D88_Fract
+	;STRc	b'000100000000000000000000', D88_Modulo
+	;STRc	b'101000000000000000000000', D88_Denum
 	
-_DIV10s_loop:
-	SUBs	D88_Num, D88_Denum
-	BR_GT	_DIV10s_pos
-	BR_LT	_DIV10s_neg
+	STRc	0x100000, D88_Modulo
+	STRc	0xA00000, D88_Denum
+	
+_DIV10c_loop:
+	SUBc	D88_Num, D88_Denum
+	BR_GT	_DIV10c_pos
+	BR_LT	_DIV10c_neg
 ;if equal
-	ADDs	D88_Fract, D88_Modulo
+	ADDc	D88_Fract, D88_Modulo
 	RETURN
-_DIV10s_pos:
-	ADDs	D88_Fract, D88_Modulo
-	GOTO	_DIV10s_roll
-_DIV10s_neg:
-	ADDs	D88_Num, D88_Denum
-_DIV10s_roll:
+_DIV10c_pos:
+	ADDc	D88_Fract, D88_Modulo
+	GOTO	_DIV10c_roll
+_DIV10c_neg:
+	ADDc	D88_Num, D88_Denum
+_DIV10c_roll:
 	BCF	STATUS, C
-	RRFs	D88_Denum
+	RRFc	D88_Denum
 	BCF	STATUS, C
-	RRFs	D88_Modulo
+	RRFc	D88_Modulo
+	
 	BTFSS	STATUS, C
-	GOTO	_DIV10s_loop	
-
+	GOTO	_DIV10c_loop
 	RETURN
 
 
@@ -1705,31 +1737,34 @@ _DIV10s_roll:
 ; 33 '0000 0000  0010 0001' b0
 ; 33 '1000 0100  0000 0000' b10
 ;idx '0000 0100  0000 0000'
-DIV33s:	; div by 33, 16 bit ; D88_Fract = D88_Num / D88_Denum, D88_Num = D88_Num % D88_Denum
-	CLRFs	D88_Fract
-	STRs	b'0000010000000000', D88_Modulo
-	STRs	b'1000010000000000', D88_Denum
+DIV33c:	; div by 33, 24 bit ; D88_Fract = D88_Num / 33, D88_Num = D88_Num % 33
+	CLRFc	D88_Fract
+	;STRc	b'0000 0100  0000 0000  0000 0000', D88_Modulo
+	;STRc	b'1000 0100  0000 0000  0000 0000', D88_Denum
 	
-_DIV33s_loop:
-	SUBs	D88_Num, D88_Denum
-	BR_GT	_DIV33s_pos
-	BR_LT	_DIV33s_neg
+	STRc	0x040000, D88_Modulo
+	STRc	0x840000, D88_Denum
+	
+_DIV33c_loop:
+	SUBc	D88_Num, D88_Denum
+	BR_GT	_DIV33c_pos
+	BR_LT	_DIV33c_neg
 ;if equal
-	ADDs	D88_Fract, D88_Modulo
+	ADDc	D88_Fract, D88_Modulo
 	RETURN
-_DIV33s_pos:
-	ADDs	D88_Fract, D88_Modulo
-	GOTO	_DIV33s_roll
-_DIV33s_neg:
-	ADDs	D88_Num, D88_Denum
-_DIV33s_roll:
+_DIV33c_pos:
+	ADDc	D88_Fract, D88_Modulo
+	GOTO	_DIV33c_roll
+_DIV33c_neg:
+	ADDc	D88_Num, D88_Denum
+_DIV33c_roll:
 	BCF	STATUS, C
-	RRFs	D88_Denum
+	RRFc	D88_Denum
 	BCF	STATUS, C
-	RRFs	D88_Modulo
+	RRFc	D88_Modulo
+	
 	BTFSS	STATUS, C
-	GOTO	_DIV33s_loop	
-
+	GOTO	_DIV33c_loop
 	RETURN
 
 
@@ -1759,6 +1794,8 @@ MULT33s: ; 33 = 1 + 32 ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) *
 
 	
 MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
+; 0000 1010
+; *2 + *8
 	CLRF	D88_Denum + 2
 	
 	BCF	STATUS, C
@@ -1775,7 +1812,34 @@ MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
 	ADDc	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
 	
 	RETURN
-
+	
+MULT100s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 100
+; 0110 0100
+; *4 + *32 + *64
+	CLRF	D88_Denum + 2
+	
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *2
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *4
+	
+	MOVc	D88_Denum, D88_Num 	; D88_Num = 4*a
+	
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *8	
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *16
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *32
+	
+	ADDc	D88_Num, D88_Denum	; D88_Num = 4*a + 32*a
+	
+	BCF	STATUS, C
+	RLFc	D88_Denum	; *64
+	
+	ADDc	D88_Num, D88_Denum	; D88_Num = 4*a + 32*a + 64*a
+	
+	RETURN
 
 
 ;#############################################################################

@@ -28,8 +28,24 @@ var7		EQU	0x38
 var8		EQU	0x3C
 
 	ORG	0x0000
-	CLRF	INTCON
-	; no interrupt so the ISR vector is never used
+Test_Entry:
+	GOTO	Test_Setup
+	
+	ORG	0x0004
+Test_ISR:
+	STALL
+	
+Test_Setup:
+	;BSF	INTCON,	GIE
+	;BSF	INTCON,	PEIE
+	BSF	STATUS, RP0
+	;BSF	PIE1, TMR1IE
+	BCF	STATUS, RP0
+	;GOTO	Test_Start
+
+Test_Start:
+
+
 
 ;#############################################################################
 ;	Standard footer for PIC16F88
