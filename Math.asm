@@ -181,3 +181,39 @@ _DIV1616_roll:
 	GOTO	_DIV1616_loop	
 
 	RETURN
+	
+	
+;idx '0000 0000  0000 0001'
+; 10 '0000 0000  0000 1010' b0
+; 10 '1010 0000  0000 0000' b12
+;idx '0001 0000  0000 0000'
+DIV10c:	; div by 10, 24 bit; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
+	CLRFc	D88_Fract
+	;STRc	b'000100000000000000000000', D88_Modulo
+	;STRc	b'101000000000000000000000', D88_Denum
+	
+	STRc	0x100000, D88_Modulo
+	STRc	0xA00000, D88_Denum
+	
+_DIV10c_loop:
+	SUBc	D88_Num, D88_Denum
+	BR_GT	_DIV10c_pos
+	BR_LT	_DIV10c_neg
+;if equal
+	ADDc	D88_Fract, D88_Modulo
+	RETURN
+_DIV10c_pos:
+	ADDc	D88_Fract, D88_Modulo
+	GOTO	_DIV10c_roll
+_DIV10c_neg:
+	ADDc	D88_Num, D88_Denum
+_DIV10c_roll:
+	BCF	STATUS, C
+	RRFc	D88_Denum
+	BCF	STATUS, C
+	RRFc	D88_Modulo
+	
+	BTFSS	STATUS, C
+	GOTO	_DIV10c_loop
+	RETURN
+

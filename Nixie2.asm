@@ -644,31 +644,20 @@ MAIN_ALT_Meter:			; received unit is Meter
 	
 	CALL	Conv_Str_to_Int	; convert data_buffer string to int in D88_Denum
 	
-	;MOVc	D88_Denum, IntToConvert
-	;CALL	WriteHexShort
-	;WRITE_SERIAL_L	'>'
+	WRITE_SERIAL_L	'i'
+	MOVc	D88_Denum, IntToConvert
+	CALL	WriteHexShort	
 	
 	CALL	MULT33s ; D88_Num = D88_Denum * 33
 	
+	WRITE_SERIAL_L	'x'
 	MOVc	D88_Num, IntToConvert
-	;CALL	WriteHexColor
+	CALL	WriteHexColor
 	
-	;WRITE_SERIAL_L	'B'
 	CALL	ColorToBCD
-	;MOVi	BCD_Result, IntToConvert
-	;CALL	WriteHexInteger
-	
-	;WRITE_SERIAL_L	'D'
-	;WRITE_SERIAL_FITOA	data_buffer
-	;WRITE_SERIAL_FITOA	data_buffer + 1
-	;WRITE_SERIAL_FITOA	data_buffer + 2
-	;WRITE_SERIAL_FITOA	data_buffer + 3
-	;WRITE_SERIAL_FITOA	data_buffer + 4
-	;WRITE_SERIAL_FITOA	data_buffer + 5
-	;WRITE_SERIAL_FITOA	data_buffer + 6
-	;WRITE_SERIAL_FITOA	data_buffer + 7
-	;WRITE_SERIAL_FITOA	data_buffer + 8
-	;WRITE_SERIAL_FITOA	data_buffer + 9
+	WRITE_SERIAL_L	'B'
+	MOVi	BCD_Result, IntToConvert
+	CALL	WriteHexInteger
 	
 	;call feet format routine
 	GOTO	MAIN_ALT_Feet_format
@@ -741,7 +730,6 @@ MAIN_ALT_Feet:		; received unit is Feet
 	CALL	WriteHexColor
 	
 	CALL	DIV33c		; D88_Fract = D88_Num / 33, D88_Num = D88_Num % 33
-	;; TODO FIX DIVISION
 	WRITE_SERIAL_L	'/'
 	MOVc	D88_Fract, IntToConvert
 	CALL	WriteHexColor
@@ -750,19 +738,6 @@ MAIN_ALT_Feet:		; received unit is Feet
 	WRITE_SERIAL_L	'B'
 	MOVi	BCD_Result, IntToConvert
 	CALL	WriteHexInteger
-	
-	WRITE_SERIAL_L	'D'
-	WRITE_SERIAL_FITOA	data_buffer
-	WRITE_SERIAL_FITOA	data_buffer + 1
-	WRITE_SERIAL_FITOA	data_buffer + 2
-	WRITE_SERIAL_FITOA	data_buffer + 3
-	WRITE_SERIAL_FITOA	data_buffer + 4
-	WRITE_SERIAL_FITOA	data_buffer + 5
-	WRITE_SERIAL_FITOA	data_buffer + 6
-	WRITE_SERIAL_FITOA	data_buffer + 7
-	WRITE_SERIAL_FITOA	data_buffer + 8
-	WRITE_SERIAL_FITOA	data_buffer + 9
-	
 	
 	;call meter format routine
 	GOTO	MAIN_ALT_Meter_format
@@ -1353,41 +1328,29 @@ WriteHexShort:
 	
 ; Convert color (24 bit int) to hex and send over serial
 WriteHexColor:
+	STR	3, WAIT_loopCounter1
+	STR	IntToConvert + 2, WAIT_loopCounter2
+	
 	MOVLW	high (TABLE0)
-	MOVWF	PCLATH
-	
-	SWAPF	IntToConvert + 2, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	MOVF	IntToConvert + 2, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	
-	SWAPF	IntToConvert + 1, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	MOVF	IntToConvert + 1, W
+	MOVWF	PCLATH	
+WriteHexColor_loop:
+	MOV	WAIT_loopCounter2, FSR
+	SWAPF	INDF, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	
-	SWAPF	IntToConvert, W
+	MOV	WAIT_loopCounter2, FSR
+	MOVF	INDF, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	MOVF	IntToConvert, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
+	
+	DECF	WAIT_loopCounter2, F
+	DECFSZ	WAIT_loopCounter1, F
+	GOTO	WriteHexColor_loop
 	
 	MOVLW	' '
 	MOVWF	Serial_Data
@@ -1396,52 +1359,28 @@ WriteHexColor:
 	
 ; Convert int (32 bit int) to hex and send over serial
 WriteHexInteger:
+	STR	4, WAIT_loopCounter1
+	STR	IntToConvert + 3, WAIT_loopCounter2
+	
 	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
-	
-	SWAPF	IntToConvert + 3, W
+WriteHexInteger_loop:
+	MOV	WAIT_loopCounter2, FSR
+	SWAPF	INDF, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	MOVF	IntToConvert + 3, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	
-	SWAPF	IntToConvert + 2, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	MOVF	IntToConvert + 2, W
+	MOV	WAIT_loopCounter2, FSR
+	MOVF	INDF, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	
-	SWAPF	IntToConvert + 1, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	MOVF	IntToConvert + 1, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	
-	SWAPF	IntToConvert, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
-	MOVF	IntToConvert, W
-	ANDLW	0x0F
-	CALL	NibbleHex
-	MOVWF	Serial_Data
-	CALL 	Serial_TX_write
+	DECF	WAIT_loopCounter2, F
+	DECFSZ	WAIT_loopCounter1, F
+	GOTO	WriteHexInteger_loop
 	
 	MOVLW	' '
 	MOVWF	Serial_Data
@@ -1696,42 +1635,6 @@ Nixie_Num_seg8:
 ;#############################################################################
 ;	Math
 ;#############################################################################
-
-;idx '0000 0000  0000 0001'
-; 10 '0000 0000  0000 1010' b0
-; 10 '1010 0000  0000 0000' b12
-;idx '0001 0000  0000 0000'
-DIV10c:	; div by 10, 24 bit; D88_Fract = D88_Num / 10, D88_Num = D88_Num % 10
-	CLRFc	D88_Fract
-	;STRc	b'000100000000000000000000', D88_Modulo
-	;STRc	b'101000000000000000000000', D88_Denum
-	
-	STRc	0x100000, D88_Modulo
-	STRc	0xA00000, D88_Denum
-	
-_DIV10c_loop:
-	SUBc	D88_Num, D88_Denum
-	BR_GT	_DIV10c_pos
-	BR_LT	_DIV10c_neg
-;if equal
-	ADDc	D88_Fract, D88_Modulo
-	RETURN
-_DIV10c_pos:
-	ADDc	D88_Fract, D88_Modulo
-	GOTO	_DIV10c_roll
-_DIV10c_neg:
-	ADDc	D88_Num, D88_Denum
-_DIV10c_roll:
-	BCF	STATUS, C
-	RRFc	D88_Denum
-	BCF	STATUS, C
-	RRFc	D88_Modulo
-	
-	BTFSS	STATUS, C
-	GOTO	_DIV10c_loop
-	RETURN
-
-
 
 ;idx '0000 0000  0000 0001'
 ; 33 '0000 0000  0010 0001' b0
