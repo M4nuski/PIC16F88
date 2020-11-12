@@ -33,11 +33,11 @@
 
 ; pin 10 IO_ PORTB4	I Mode Select bit 1
 ; pin 11 IOT PORTB5	O TX to computer
-; pin 12 IOA PORTB6	?(PGC)
-; pin 13 IOA PORTB7	?(PGD)
+; pin 12 IOA PORTB6	I ICSP PGC
+; pin 13 IOA PORTB7	I ICSP PGD
 ; pin 14 PWR VDD	VCC
-; pin 15 _O_ PORTA6	?XT
-; pin 16 I__ PORTA7	?XT
+; pin 15 _O_ PORTA6	(XT 18.432MHz, wait_1s at 23)
+; pin 16 I__ PORTA7	(XT Low BRGH, @29 for 9600)
 ; pin 17 IOA PORTA0	O NixieSerial - Clock
 ; pin 18 IOA PORTA1	O NixieSerial - Data
 
@@ -801,6 +801,35 @@ MAIN_LAT:
 	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
+	
+	; direction
+	CMP_lf	'N', data_unit
+	BR_EQ	MAIN_LAT_1N
+	CMP_lf	'S', data_unit
+	BR_EQ	MAIN_LAT_1S
+	GOTO	MAIN_LAT_2	
+MAIN_LAT_1N:
+	WRITE_NIXIE_L	0, _char_plus
+	GOTO	MAIN_LAT_2
+MAIN_LAT_1S:
+	WRITE_NIXIE_L	0, _char_minus
+MAIN_LAT_2:
+
+	;degrees
+	; dont draw if 0
+	CMP_lf	0, data_latD10
+	BR_EQ	MAIN_LAT_2a
+	WRITE_NIXIE_F	2, data_latD10	
+	
+MAIN_LAT_2a:	
+	WRITE_NIXIE_F	3, data_latD01	
+	WRITE_NIXIE_L	4, _char_dot
+	
+	;fraction
+	;(mm + mmfraction_to_int) / 60
+	;FAR_CALL	div60c
+
+
 
 	GOTO	ErrorCheck1
 
@@ -845,6 +874,26 @@ MAIN_LONG:
 	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
+	
+	; direction
+	CMP_lf	'E', data_unit
+	BR_EQ	MAIN_LONG_1E
+	CMP_lf	'W', data_unit
+	BR_EQ	MAIN_LONG_1W
+	GOTO	MAIN_LONG_2	
+MAIN_LONG_1E:
+	WRITE_NIXIE_L	0, _char_plus
+	GOTO	MAIN_LONG_2
+MAIN_LONG_1W:
+	WRITE_NIXIE_L	0, _char_minus
+MAIN_LONG_2:
+
+	;degrees
+
+
+	;fraction
+	;(mm + mmfraction_to_int) / 60
+
 
 	GOTO	ErrorCheck1
 
@@ -1582,6 +1631,32 @@ Conv_Str_to_Int_loop:
 
 
 
+; convert data_buffer string to int in D88_Denum
+; ignoring dot, starting at position in W
+Conv_Str_to_Fract:
+	MOVWF	NixieVarX	; NixieVarX = @startAddress
+	CLRFc	D88_Num		;temp
+	CLRFc	D88_Denum	;result
+	READp	NixieVarX, D88_Denum	; D88_Denum = first value
+	
+Conv_Str_to_Fract_loop:
+	CLRFc	D88_Modulo
+	INCF	NixieVarX, F	;next char
+	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
+	
+	CMP_lf	END_MARKER, D88_Modulo; until end marker
+	SK_NE
+	RETURN
+	
+	CMP_lf	CONV_DOT, D88_Modulo	; skip if '.'
+	SK_NE	
+	GOTO	Conv_Str_to_Fract_loop
+
+	FAR_CALL	MULT10s			; D88_Num = D88_Denum * 10
+	MOVc	D88_Num, D88_Denum	; D88_Denum = D88_Num
+	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo 
+	GOTO	Conv_Str_to_Fract_loop
+
 ;#############################################################################
 ;	Tables
 ;#############################################################################
@@ -1706,6 +1781,38 @@ _DIV33c_roll:
 	GOTO	_DIV33c_loop
 	FAR_RETURN
 
+;60 = 0x3C = b'00111100'
+;01 = 0x01 = b'00000001'
+;     0xF0 = b'11110000'
+;     0x04 = b'00000100'
+DIV60c:	; div by 60, 24 bit ; D88_Fract = D88_Num / 33, D88_Num = D88_Num % 60
+	CLRFc	D88_Fract
+	
+	STRc	0x040000, D88_Modulo
+	STRc	0xF00000, D88_Denum
+	
+_DIV60c_loop:
+	SUBc	D88_Num, D88_Denum
+	BR_GT	_DIV60c_pos
+	BR_LT	_DIV60c_neg
+;if equal
+	ADDc	D88_Fract, D88_Modulo
+	FAR_RETURN
+_DIV60c_pos:
+	ADDc	D88_Fract, D88_Modulo
+	GOTO	_DIV60c_roll
+_DIV60c_neg:
+	ADDc	D88_Num, D88_Denum
+_DIV60c_roll:
+	BCF	STATUS, C
+	RRFc	D88_Denum
+	BCF	STATUS, C
+	RRFc	D88_Modulo
+	
+	BTFSS	STATUS, C
+	GOTO	_DIV60c_loop
+	FAR_RETURN
+
 
 
 MULT33s: ; 33 = 1 + 32 ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 33
@@ -1802,12 +1909,12 @@ WAIT_1s_loop2:			; 0.5ms / loop1
 WAIT_1s_loop3:			; 4 cycles per loop (2us / loop2)
 	NOP				; (1) 
 	DECFSZ	WAIT_loopCounter3, F	; (1) 
-	GOTO	WAIT_1s_loop3	; (2) 
+	GOTO	WAIT_1s_loop3		; (2) 
 	NOP				; (1) 
 	
 	NOP				; (1) 
 	DECFSZ	WAIT_loopCounter2, F	; (1) 
-	GOTO	WAIT_1s_loop2		; (2) 	
+	GOTO	WAIT_1s_loop2		; (2) 
 	
 	DECFSZ	WAIT_loopCounter1, F
 	GOTO	WAIT_1s_loop1
