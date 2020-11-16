@@ -26,8 +26,8 @@
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
 ; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
-; pin  6 IO_ PORTB0	O WaitRX_red
-; pin  7 IO_ PORTB1	
+; pin  6 IO_ PORTB0	O Step1_red
+; pin  7 IO_ PORTB1	O Step2_yellow
 ; pin  8 IOR PORTB2	I RX from GPS
 ; pin  9 IO_ PORTB3	I Mode Select bit 0
 
@@ -36,7 +36,7 @@
 ; pin 12 IOA PORTB6	I ICSP PGC
 ; pin 13 IOA PORTB7	I ICSP PGD
 ; pin 14 PWR VDD	VCC
-; pin 15 _O_ PORTA6	(XT 18.432MHz, wait_1s at 23)
+; pin 15 _O_ PORTA6	(XT 18.432MHz, wait_1s at 23) Step3_green
 ; pin 16 I__ PORTA7	(XT Low BRGH, @29 for 9600)
 ; pin 17 IOA PORTA0	O NixieSerial - Clock
 ; pin 18 IOA PORTA1	O NixieSerial - Data
@@ -56,7 +56,11 @@
 #DEFINE AU_Select		PORTA, 3
 #DEFINE TZ_Select		PORTA, 4
 
-#DEFINE WaitRX_red 		PORTB, 0
+#DEFINE Step3_green		PORTA, 6
+
+#DEFINE Step1_red 		PORTB, 0
+#DEFINE Step2_yellow		PORTB, 1
+
 
 #DEFINE Mode_Select_b0	PORTB, 3
 #DEFINE Mode_Select_b1	PORTB, 4
@@ -90,6 +94,7 @@ Serial_Status		EQU	0x24
 _Serial_bit_RX_frameError 		EQU	0	;uart module frame error
 _Serial_bit_RX_overrunError 		EQU	1	;uart module overrun error
 _Serial_bit_RX_bufferOverrun 		EQU	2	;RX circular buffer overrun error
+_Serial_bit_RX_inhibit		EQU	3	;discard RX data
 
 data_unit		EQU	0x25 ; M F N S E W
 TZ_offset		EQU	0x27 ; for TZ adjust
@@ -132,17 +137,15 @@ data_longFract			EQU	0x30
 BCD_Result		EQU	0x3F ; 0x40 0x41 0x42 for 8 bcd nibbles, up to 16 77 72 15 (24 bit to bcd)
 D88_Fract		EQU	0x43 ; 0x44 0x45 resulting fraction of div
 D88_Modulo		EQU	0x46 ; 0x47 0x48 Modulo for preset div, also index for arbitrary div
-D88_Num			EQU	0x49 ; 0x4A 0x4B numerator for div and receive modulo (remainder)
-D88_Denum		EQU	0x4C ; 0x4D 0x4E denumerator for div
-Display_Mode		EQU	0x4F 
+D88_Num			EQU	0x49 ; 0x4A 0x4B 0x4C numerator for div and receive modulo (remainder)
+D88_Denum		EQU	0x4D ; 0x4E 0x4F 0x50 denumerator for div
+Display_Mode		EQU	0x51 
 _mode_Time				EQU	0
 _mode_Alt				EQU	1
 _mode_Lat				EQU	2
 _mode_Long				EQU	3
 
-IntToConvert		EQU	0x50 ; 0x51 0x52 0x53 for convert to hex or BCD
-;			EQU	0x54
-;			EQU	0x55
+IntToConvert		EQU	0x52 ; 0x53 0x54 0x55 for convert to hex or BCD
 ;			EQU	0x56
 ;			EQU	0x57
 ;			EQU	0x58
@@ -335,6 +338,9 @@ ISR_RX:
 ISR_RX1:
 	WRITEp	RCREG, Serial_RX_buffer_wp
 	
+	BTFSC	Serial_Status, _Serial_bit_RX_inhibit	
+	GOTO	ISR_RX3
+	
 	INCF	Serial_RX_buffer_wp, F	; writePtr++	
 	CMP_lf	_Serial_RX_buffer_endAddress, Serial_RX_buffer_wp ; warp around
 	BR_NE	ISR_RX2	
@@ -345,6 +351,7 @@ ISR_RX2:
 	SK_NE		; skip if both buffer are not equal after moving the write pointer forward
 	BSF	Serial_Status, _Serial_bit_RX_bufferOverrun
 	
+ISR_RX3:
 	BTFBS	PIR1, RCIF, ISR_RX1		; loop back if interrupt flag is still set	
 	BTFBC	RCSTA, OERR, ISR_RX_END	; check for register overrun error
 	BSF	Serial_Status, _Serial_bit_RX_overrunError
@@ -357,6 +364,7 @@ ISR_RX_END:
 	BTFBC	PIR1, TXIF, ISR_END		; check if there's also a TX interrupt
 
 ISR_TX:
+	;BSF	ISR_TX_yellow
 	CMP_ff	Serial_TX_buffer_rp, Serial_TX_buffer_wp	; check for data to send
 	BR_EQ	ISR_TX_empty
 	
@@ -375,6 +383,7 @@ ISR_TX_empty:
 
 
 ISR_END:
+	;BCF	ISR_TX_yellow
 	POPfsr
 	POP
 	RETFIE
@@ -441,6 +450,8 @@ SETUP:
 	CLRF	PORTB
 	CLRF	NixieDemoCount
 	CLRF	Serial_Status
+	BSF	Serial_Status, _Serial_bit_RX_inhibit
+	
 	STR	_mode_Time, Display_Mode
 	
 ;welcome message
@@ -620,6 +631,7 @@ MAIN_ALT_Meter:			; received unit is Meter
 	CALL	WriteHexColor
 	
 	CALL	ColorToBCD
+	CALL	ExpandBCD_trimLeft
 	WRITE_SERIAL_L	'B'
 	MOVi	BCD_Result, IntToConvert
 	CALL	WriteHexInteger
@@ -781,27 +793,31 @@ MAIN_LAT:
 	CALL	READ_NEXT		; wait and read CSV data at index 3
 	BW_False	Draw_No_Lat
 	
-	WRITE_SERIAL_FITOA	data_buffer
-	WRITE_SERIAL_FITOA	data_buffer + 1
-	WRITE_SERIAL_FITOA	data_buffer + 2
-	WRITE_SERIAL_FITOA	data_buffer + 3
-	WRITE_SERIAL_FITOA	data_buffer + 4
-	WRITE_SERIAL_FITOA	data_buffer + 5
-	WRITE_SERIAL_FITOA	data_buffer + 6
-	WRITE_SERIAL_FITOA	data_buffer + 7
-	WRITE_SERIAL_FITOA	data_buffer + 8
-	WRITE_SERIAL_FITOA	data_buffer + 9
-	WRITE_SERIAL_FITOA	data_buffer + 10
-	WRITE_SERIAL_FITOA	data_buffer + 11
-	WRITE_SERIAL_FITOA	data_buffer + 12
-	WRITE_SERIAL_FITOA	data_buffer + 13
-	WRITE_SERIAL_FITOA	data_buffer + 14
-	WRITE_SERIAL_FITOA	data_buffer + 15
+	BSF	Step1_red
+;	WRITE_SERIAL_FITOA	data_buffer
+;	WRITE_SERIAL_FITOA	data_buffer + 1
+;	WRITE_SERIAL_FITOA	data_buffer + 2
+;	WRITE_SERIAL_FITOA	data_buffer + 3
+;	WRITE_SERIAL_FITOA	data_buffer + 4
+;	WRITE_SERIAL_FITOA	data_buffer + 5
+;	WRITE_SERIAL_FITOA	data_buffer + 6
+;	WRITE_SERIAL_FITOA	data_buffer + 7
+;	WRITE_SERIAL_FITOA	data_buffer + 8
+;	WRITE_SERIAL_FITOA	data_buffer + 9
+;	WRITE_SERIAL_FITOA	data_buffer + 10
+;	WRITE_SERIAL_FITOA	data_buffer + 11
+;	WRITE_SERIAL_FITOA	data_buffer + 12
+;	WRITE_SERIAL_FITOA	data_buffer + 13
+;	WRITE_SERIAL_FITOA	data_buffer + 14
+;	WRITE_SERIAL_FITOA	data_buffer + 15
 	
 	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
 	
+	BCF	Step1_red
+	
+	BSF	Step2_yellow
 	; direction
 	CMP_lf	'N', data_unit
 	BR_EQ	MAIN_LAT_1N
@@ -814,7 +830,7 @@ MAIN_LAT_1N:
 MAIN_LAT_1S:
 	WRITE_NIXIE_L	0, _char_minus
 MAIN_LAT_2:
-
+	; 4538.10504,N
 	;degrees
 	; dont draw if 0
 	CMP_lf	0, data_latD10
@@ -824,13 +840,39 @@ MAIN_LAT_2:
 MAIN_LAT_2a:	
 	WRITE_NIXIE_F	3, data_latD01	
 	WRITE_NIXIE_L	4, _char_dot
-	
+	BCF	Step2_yellow
+	BSF	Step3_green
 	;fraction
+	; 4538.10504,N
+	; max to int 5 999 999 -> 24bit (color)
 	;(mm + mmfraction_to_int) / 60
 	;FAR_CALL	div60c
+	MOVLW	data_latM10
+	CALL	Conv_Str_to_Fract
+	
+	WRITE_SERIAL_L	'i'
+	MOVc	D88_Denum, IntToConvert
+	CALL	WriteHexColor	
+	
+	FAR_CALL	DIV60c		; D88_Fract = D88_Num / 60, D88_Num = D88_Num % 60
+	
+	WRITE_SERIAL_L	'/'
+	MOVc	D88_Fract, IntToConvert
+	CALL	WriteHexColor
+	
+	CALL	ColorToBCD
+	WRITE_SERIAL_L	'B'
+	MOVi	BCD_Result, IntToConvert
+	CALL	WriteHexInteger
+
+	WRITE_NIXIE_F	5, data_buffer + 3
+	WRITE_NIXIE_F	6, data_buffer + 4
+	WRITE_NIXIE_F	7, data_buffer + 5
+	WRITE_NIXIE_F	8, data_buffer + 6
+	WRITE_NIXIE_F	9, data_buffer + 8 ; 7 is dot
 
 
-
+	BSF	Step3_green
 	GOTO	ErrorCheck1
 
 Draw_No_Lat:
@@ -957,6 +999,7 @@ ErrorCheck_End:
 ;#############################################################################
 
 WAIT_DATA:
+	BSF	Serial_Status, _Serial_bit_RX_inhibit
 	MOVLW	_char_dot
 	INCF	NixieDemoCount, F
 	BTFSC	NixieDemoCount, 0
@@ -968,14 +1011,14 @@ WAIT_DATA:
 ;	Serial TX
 ;#############################################################################
 
-; convert 0-9 value to ascii '0' to '1' bnefore sending
+; convert 0-9 value to ascii '0' to '9' before sending
 Serial_TX_write_ITOA:
 	MOVLW	'0'
 	ADDWF	Serial_Data, F
 	
 ; block wait for availble space in the TX buffer then write the byte
 Serial_TX_write:
-	;BSF	TX_green
+	;BSF	Wait_TX_red
 	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
 	MOVWF	TX_Temp
 	CMP_lf	_Serial_TX_buffer_endAddress, TX_Temp
@@ -986,15 +1029,26 @@ Serial_TX_write_2:
 	BR_EQ	Serial_TX_write
 	
 	BANK0_1
-	BCF	PIE1, TXIE	; disable tx interrupts	
+	BCF	PIE1, TXIE	; disable tx interrupts
+	;BTFSC	TXSTA, TRMT
+	;GOTO
+	;MOVF	Serial_Data, W
+	;MOVWF	TXREG
+	
+;Serial_TX_write_3:
 	BANK1_0
 	
 	WRITEp	Serial_Data, Serial_TX_buffer_wp	
 	MOV	TX_Temp, Serial_TX_buffer_wp
-
 	BANK0_1
 	BSF	PIE1, TXIE	; enable tx interrupts	
 	BANK1_0
+	
+	;BTFSS	PIR1, TXIF
+	;RETURN
+	;MOVF	Serial_Data, W
+	;MOVWF	TXREG
+	;BCF	Wait_TX_red
 	RETURN
 
 
@@ -1005,12 +1059,12 @@ Serial_TX_write_2:
 
 ; block wait for availble data then read RX buffer
 Serial_RX_waitRead:
-	BSF	WaitRX_red
+;	BSF	Wait_RX_red
 	CMP_ff	Serial_RX_buffer_wp, Serial_RX_buffer_rp
 	BR_EQ	Serial_RX_waitRead
 	READp	Serial_RX_buffer_rp, Serial_Data
 	INCF	Serial_RX_buffer_rp, F
-	BCF	WaitRX_red
+	;BCF	Wait_RX_red
 	CMP_lf	_Serial_RX_buffer_endAddress, Serial_RX_buffer_rp
 	SK_EQ
 	RETURN
@@ -1188,6 +1242,8 @@ Nixie_Send_Next_Bit:
 ;#############################################################################
 
 WAIT_GPGGA_HEADER:
+	BCF	Serial_Status, _Serial_bit_RX_inhibit
+	
 	CALL	Serial_RX_waitRead
 	CMP_lf	'$', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
@@ -1244,6 +1300,8 @@ READ_NEXT_TIME:
 	
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_s01
+	
+	BSF	Serial_Status, _Serial_bit_RX_inhibit
 	
 	MOVLW	'0'
 	SUBWF	data_H10, F
@@ -1307,6 +1365,8 @@ READ_NEXT_CONVERT_LOOP:
 	
 	CALL	Serial_RX_waitRead	; read first char of next value, usually the unit of the preceding one
 	MOV	Serial_data, data_unit
+	
+	BSF	Serial_Status, _Serial_bit_RX_inhibit
 	
 	RETLW	TRUE
 
@@ -1506,15 +1566,8 @@ ColorToBCD_CheckNext:
 
  	BCF	STATUS,C		;24th time Shift only, no "add 3 if > 4"
 	RLFc	IntToConvert
-	;RLF	IntToConvert + 1, F
-	;RLF	IntToConvert + 2, F
 	RLFi	BCD_Result
-	;RLF	BCD_Result + 1, F
-	;RLF	BCD_Result + 2, F
-	;RLF	BCD_Result + 3, F
 	
-	;RETURN
-
 ; expand BCD_Result to serial_data
 ; 32 bit packed bcd (16 77 72 15) to 1 byte per BCD 1 6 7 7 7 2 1 5
 ;	skipping first destination char if '-'
@@ -1575,8 +1628,10 @@ ExpandBCD_10th:
 	INCF	FSR, F
 	STR	END_MARKER, INDF
 	
+	RETURN
+	
 	; skip leading 0s
-ExpandBCD_10th_loop1:
+ExpandBCD_trimLeft:
 	MOV	NixieVarY, FSR ; start of buffer
 	MOVF	INDF, W		; until not 0
 	SK_ZE
@@ -1586,7 +1641,7 @@ ExpandBCD_10th_loop1:
 	RETURN
 	
 	;MOV	NixieVarY, FSR	; start of buffer
-ExpandBCD_10th_loop2:	; move next byte to previous location
+ExpandBCD_trimLeft_loop:	; move next byte to previous location
 	INCF	FSR, F; next
 	MOVF	INDF, W
 	DECF	FSR, F; previous
@@ -1595,9 +1650,9 @@ ExpandBCD_10th_loop2:	; move next byte to previous location
 	
 	CMP_lf	END_MARKER, INDF ; until end marker
 	SK_EQ
-	GOTO	ExpandBCD_10th_loop2
+	GOTO	ExpandBCD_trimLeft_loop
 
-	GOTO	ExpandBCD_10th_loop1
+	GOTO	ExpandBCD_trimLeft
 
 
 
@@ -1624,7 +1679,7 @@ Conv_Str_to_Int_loop:
 	SK_NE	
 	RETURN
 
-	FAR_CALL	MULT10s			; D88_Num = D88_Denum * 10
+	FAR_CALL	MULT10s		; D88_Num = D88_Denum * 10
 	MOVc	D88_Num, D88_Denum	; D88_Denum = D88_Num
 	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo 
 	GOTO	Conv_Str_to_Int_loop
@@ -1647,12 +1702,15 @@ Conv_Str_to_Fract_loop:
 	CMP_lf	END_MARKER, D88_Modulo; until end marker
 	SK_NE
 	RETURN
+	CMP_lf	END_MARKER - '0', D88_Modulo; until end marker
+	SK_NE
+	RETURN
 	
 	CMP_lf	CONV_DOT, D88_Modulo	; skip if '.'
 	SK_NE	
 	GOTO	Conv_Str_to_Fract_loop
 
-	FAR_CALL	MULT10s			; D88_Num = D88_Denum * 10
+	FAR_CALL	MULT10c		; D88_Num = D88_Denum * 10
 	MOVc	D88_Num, D88_Denum	; D88_Denum = D88_Num
 	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo 
 	GOTO	Conv_Str_to_Fract_loop
@@ -1858,6 +1916,27 @@ MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
 	ADDc	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
 	
 	FAR_RETURN
+	
+MULT10c: ; D88_Num (32 bit) = D88_Denum (24 bit expanded to 32) * 10
+; 0000 1010
+; *2 + *8
+	CLRF	D88_Denum + 3
+	
+	BCF	STATUS, C
+	RLFi	D88_Denum	; *2
+	
+	MOVi	D88_Denum, D88_Num 	; D88_Num = 2*a
+	
+	BCF	STATUS, C
+	RLFi	D88_Denum	; *4
+	
+	BCF	STATUS, C
+	RLFi	D88_Denum	; *8
+	
+	ADDi	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
+	
+	FAR_RETURN
+	
 	
 MULT100s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 100
 ; 0110 0100

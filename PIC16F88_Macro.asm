@@ -717,5 +717,5 @@ PC0x0100ALIGN	MACRO	TableLabel; Align next instruction on a 256 instruction boun
 	if	( ( $ & 0x000000FF ) != 0 )
 	ORG	( $ & 0xFFFFFF00 ) + 0x0100
 	endif
-TableLabel
+TableLabel:
 	ENDM
