@@ -9,6 +9,7 @@
 #INCLUDE	<P16F88.INC>		; processor specific variable definitions
 #INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
 #INCLUDE	<PIC16F88_MacroExt.asm> ; 16/24/32 bit instructions extensions
+
 ;#############################################################################
 ;	Configuration	
 ;#############################################################################
@@ -60,7 +61,6 @@
 
 #DEFINE Step1_red 		PORTB, 0
 #DEFINE Step2_yellow		PORTB, 1
-
 
 #DEFINE Mode_Select_b0	PORTB, 3
 #DEFINE Mode_Select_b1	PORTB, 4
@@ -326,6 +326,8 @@ WRITE_SERIAL_W	MACRO
 	PUSH
 	PUSHfsr
 	
+	BSF	Step1_red
+	
 	BTFBS	PIR1, RCIF, ISR_RX	; check if RX interrupt
 	BTFBS	PIR1, TXIF, ISR_TX	; check if TX interrupt
 	
@@ -383,7 +385,8 @@ ISR_TX_empty:
 
 
 ISR_END:
-	;BCF	ISR_TX_yellow
+	BCF	Step1_red
+		
 	POPfsr
 	POP
 	RETFIE
@@ -793,31 +796,9 @@ MAIN_LAT:
 	CALL	READ_NEXT		; wait and read CSV data at index 3
 	BW_False	Draw_No_Lat
 	
-	BSF	Step1_red
-;	WRITE_SERIAL_FITOA	data_buffer
-;	WRITE_SERIAL_FITOA	data_buffer + 1
-;	WRITE_SERIAL_FITOA	data_buffer + 2
-;	WRITE_SERIAL_FITOA	data_buffer + 3
-;	WRITE_SERIAL_FITOA	data_buffer + 4
-;	WRITE_SERIAL_FITOA	data_buffer + 5
-;	WRITE_SERIAL_FITOA	data_buffer + 6
-;	WRITE_SERIAL_FITOA	data_buffer + 7
-;	WRITE_SERIAL_FITOA	data_buffer + 8
-;	WRITE_SERIAL_FITOA	data_buffer + 9
-;	WRITE_SERIAL_FITOA	data_buffer + 10
-;	WRITE_SERIAL_FITOA	data_buffer + 11
-;	WRITE_SERIAL_FITOA	data_buffer + 12
-;	WRITE_SERIAL_FITOA	data_buffer + 13
-;	WRITE_SERIAL_FITOA	data_buffer + 14
-;	WRITE_SERIAL_FITOA	data_buffer + 15
-	
-	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
 	
-	BCF	Step1_red
-	
-	BSF	Step2_yellow
 	; direction
 	CMP_lf	'N', data_unit
 	BR_EQ	MAIN_LAT_1N
@@ -830,7 +811,7 @@ MAIN_LAT_1N:
 MAIN_LAT_1S:
 	WRITE_NIXIE_L	0, _char_minus
 MAIN_LAT_2:
-	; 4538.10504,N
+	; ,4538.12345,N,
 	;degrees
 	; dont draw if 0
 	CMP_lf	0, data_latD10
@@ -840,13 +821,11 @@ MAIN_LAT_2:
 MAIN_LAT_2a:	
 	WRITE_NIXIE_F	3, data_latD01	
 	WRITE_NIXIE_L	4, _char_dot
-	BCF	Step2_yellow
-	BSF	Step3_green
+	
 	;fraction
 	; 4538.10504,N
 	; max to int 5 999 999 -> 24bit (color)
 	;(mm + mmfraction_to_int) / 60
-	;FAR_CALL	div60c
 	MOVLW	data_latM10
 	CALL	Conv_Str_to_Fract
 	
@@ -871,8 +850,6 @@ MAIN_LAT_2a:
 	WRITE_NIXIE_F	8, data_buffer + 6
 	WRITE_NIXIE_F	9, data_buffer + 8 ; 7 is dot
 
-
-	BSF	Step3_green
 	GOTO	ErrorCheck1
 
 Draw_No_Lat:
@@ -896,24 +873,6 @@ MAIN_LONG:
 	CALL	READ_NEXT		; wait and read CSV data at index 1
 	BW_False	Draw_No_Long
 	
-	WRITE_SERIAL_FITOA	data_buffer
-	WRITE_SERIAL_FITOA	data_buffer + 1
-	WRITE_SERIAL_FITOA	data_buffer + 2
-	WRITE_SERIAL_FITOA	data_buffer + 3
-	WRITE_SERIAL_FITOA	data_buffer + 4
-	WRITE_SERIAL_FITOA	data_buffer + 5
-	WRITE_SERIAL_FITOA	data_buffer + 6
-	WRITE_SERIAL_FITOA	data_buffer + 7
-	WRITE_SERIAL_FITOA	data_buffer + 8
-	WRITE_SERIAL_FITOA	data_buffer + 9
-	WRITE_SERIAL_FITOA	data_buffer + 10
-	WRITE_SERIAL_FITOA	data_buffer + 11
-	WRITE_SERIAL_FITOA	data_buffer + 12
-	WRITE_SERIAL_FITOA	data_buffer + 13
-	WRITE_SERIAL_FITOA	data_buffer + 14
-	WRITE_SERIAL_FITOA	data_buffer + 15
-	
-	WRITE_SERIAL_L		' '
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
 	
@@ -929,12 +888,48 @@ MAIN_LONG_1E:
 MAIN_LONG_1W:
 	WRITE_NIXIE_L	0, _char_minus
 MAIN_LONG_2:
-
+	; ,07318.12345,W,
 	;degrees
-
+	; dont draw if 0
+	CMP_lf	0, data_longD100
+	BR_EQ	MAIN_LONG_2a
+	WRITE_NIXIE_F	1, data_longD100
+MAIN_LONG_2a:
+	CMP_lf	0, data_longD010
+	BR_EQ	MAIN_LONG_2b
+	WRITE_NIXIE_F	2, data_longD010
+MAIN_LONG_2b:
+	WRITE_NIXIE_F	3, data_longD001	
+	WRITE_NIXIE_L	4, _char_dot
 
 	;fraction
+	; 4538.10504,N
+	; max to int 5 999 999 -> 24bit (color)
 	;(mm + mmfraction_to_int) / 60
+
+	MOVLW	data_longM10
+	CALL	Conv_Str_to_Fract
+	
+	WRITE_SERIAL_L	'i'
+	MOVc	D88_Denum, IntToConvert
+	CALL	WriteHexColor	
+	
+	FAR_CALL	DIV60c		; D88_Fract = D88_Num / 60, D88_Num = D88_Num % 60
+	
+	WRITE_SERIAL_L	'/'
+	MOVc	D88_Fract, IntToConvert
+	CALL	WriteHexColor
+	
+	CALL	ColorToBCD
+	WRITE_SERIAL_L	'B'
+	MOVi	BCD_Result, IntToConvert
+	CALL	WriteHexInteger
+
+	WRITE_NIXIE_F	5, data_buffer + 3
+	WRITE_NIXIE_F	6, data_buffer + 4
+	WRITE_NIXIE_F	7, data_buffer + 5
+	WRITE_NIXIE_F	8, data_buffer + 6
+	WRITE_NIXIE_F	9, data_buffer + 8 ; 7 is dot
 
 
 	GOTO	ErrorCheck1
@@ -990,6 +985,7 @@ ErrorCheck_End:
 	
 	CLRF	Serial_Status
 	CALL	Nixie_Send
+	
 	GOTO	LOOP
 
 
@@ -1018,7 +1014,8 @@ Serial_TX_write_ITOA:
 	
 ; block wait for availble space in the TX buffer then write the byte
 Serial_TX_write:
-	;BSF	Wait_TX_red
+	BSF	Step3_green
+
 	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
 	MOVWF	TX_Temp
 	CMP_lf	_Serial_TX_buffer_endAddress, TX_Temp
@@ -1049,6 +1046,8 @@ Serial_TX_write_2:
 	;MOVF	Serial_Data, W
 	;MOVWF	TXREG
 	;BCF	Wait_TX_red
+	
+	BCF	Step3_green
 	RETURN
 
 
@@ -1270,8 +1269,9 @@ WAIT_GPGGA_HEADER:
 	
 	CALL	Serial_RX_waitRead
 	CMP_lf	',', Serial_Data
-	BR_NE	WAIT_GPGGA_HEADER	
-	
+	BR_NE	WAIT_GPGGA_HEADER
+
+	BSF	Step2_yellow
 	RETURN
 
 
@@ -1311,6 +1311,7 @@ READ_NEXT_TIME:
 	SUBWF	data_s10, F
 	SUBWF	data_s01, F
 	
+	BCF	Step2_yellow
 	RETLW	TRUE
 
 
@@ -1368,6 +1369,7 @@ READ_NEXT_CONVERT_LOOP:
 	
 	BSF	Serial_Status, _Serial_bit_RX_inhibit
 	
+	BCF	Step2_yellow
 	RETLW	TRUE
 
 
@@ -1719,8 +1721,8 @@ Conv_Str_to_Fract_loop:
 ;	Tables
 ;#############################################################################
 
-	PC0x0100ALIGN	TABLE0	; set the label and align to next 256 byte boundary in program memory
-	
+;	PC0x0100ALIGN	TABLE0	; set the label and align to next 256 byte boundary in program memory
+TABLE0:
 ; 	Int to Hex nibble char table
 NibbleHex:
 	ADDWF	PCL, F

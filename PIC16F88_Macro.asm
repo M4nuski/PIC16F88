@@ -526,20 +526,6 @@ WRITEp	MACRO	file, pointer
 	MOVWF	INDF
 	ENDM
 
-READa 	MACRO	address, file
-	MOVLW	address
-	MOVWF	FSR
-	MOVF	INDF, W
-	MOVWF	file
-	ENDM
-
-WRITEa	MACRO	file, address
-	MOVLW	address
-	MOVWF	FSR
-	MOVF	file, W
-	MOVWF	INDF
-	ENDM
-
 ; SWAP content of 2 files
 ; not the nibbles like SWAPF
 ; can be used to swap bytes in short, or shorts in integer
@@ -690,7 +676,7 @@ POPscr	MACRO
 
 PC0x0800SKIP	MACRO	; Skip to the next 2K instruction boundary
 	BSF	PCLATH, 3
-	GOTO	_NEXT_BOUNDARY
+	GOTO	( _NEXT_BOUNDARY & 0x07FF )
 	ORG	0x0800
 _NEXT_BOUNDARY:
 	ENDM
@@ -700,7 +686,7 @@ FAR_CALL	MACRO	dest
 	GOTO	$ + 2	; to make skippable
 	GOTO	_end
 	BSF	PCLATH, 3
-	CALL	dest
+	CALL	( dest & 0x07FF )
 _end:
 	ENDM
 	
