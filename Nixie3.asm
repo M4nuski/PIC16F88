@@ -27,8 +27,8 @@
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
 ; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
-; pin  6 IO_ PORTB0	O Step1_red
-; pin  7 IO_ PORTB1	O Step2_yellow
+; pin  6 IO_ PORTB0	O Step1
+; pin  7 IO_ PORTB1	O Step2
 ; pin  8 IOR PORTB2	I RX from GPS
 ; pin  9 IO_ PORTB3	I Mode Select bit 0
 
@@ -37,7 +37,7 @@
 ; pin 12 IOA PORTB6	I ICSP PGC
 ; pin 13 IOA PORTB7	I ICSP PGD
 ; pin 14 PWR VDD	VCC
-; pin 15 _O_ PORTA6	(XT 18.432MHz, wait_1s at 23) Step3_green
+; pin 15 _O_ PORTA6	(XT 18.432MHz, wait_1s at 23) Step3
 ; pin 16 I__ PORTA7	(XT Low BRGH, @29 for 9600)
 ; pin 17 IOA PORTA0	O NixieSerial - Clock
 ; pin 18 IOA PORTA1	O NixieSerial - Data
@@ -57,10 +57,10 @@
 #DEFINE AU_Select		PORTA, 3
 #DEFINE TZ_Select		PORTA, 4
 
-#DEFINE Step3_green		PORTA, 6
+#DEFINE Step3			PORTA, 6
 
-#DEFINE Step1_red 		PORTB, 0
-#DEFINE Step2_yellow		PORTB, 1
+#DEFINE Step1 			PORTB, 0
+#DEFINE Step2			PORTB, 1
 
 #DEFINE Mode_Select_b0	PORTB, 3
 #DEFINE Mode_Select_b1	PORTB, 4
@@ -326,7 +326,7 @@ WRITE_SERIAL_W	MACRO
 	PUSH
 	PUSHfsr
 	
-	BSF	Step1_red
+	BSF	Step1
 	
 	BTFBS	PIR1, RCIF, ISR_RX	; check if RX interrupt
 	BTFBS	PIR1, TXIF, ISR_TX	; check if TX interrupt
@@ -385,7 +385,7 @@ ISR_TX_empty:
 
 
 ISR_END:
-	BCF	Step1_red
+	BCF	Step1
 		
 	POPfsr
 	POP
@@ -1014,7 +1014,7 @@ Serial_TX_write_ITOA:
 	
 ; block wait for availble space in the TX buffer then write the byte
 Serial_TX_write:
-	BSF	Step3_green
+	BSF	Step3
 
 	INCF	Serial_TX_buffer_wp, W	; calculate next possible write pointer position
 	MOVWF	TX_Temp
@@ -1047,7 +1047,7 @@ Serial_TX_write_2:
 	;MOVWF	TXREG
 	;BCF	Wait_TX_red
 	
-	BCF	Step3_green
+	BCF	Step3
 	RETURN
 
 
@@ -1271,7 +1271,7 @@ WAIT_GPGGA_HEADER:
 	CMP_lf	',', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
 
-	BSF	Step2_yellow
+	BSF	Step2
 	RETURN
 
 
@@ -1311,7 +1311,7 @@ READ_NEXT_TIME:
 	SUBWF	data_s10, F
 	SUBWF	data_s01, F
 	
-	BCF	Step2_yellow
+	BCF	Step2
 	RETLW	TRUE
 
 
@@ -1369,7 +1369,7 @@ READ_NEXT_CONVERT_LOOP:
 	
 	BSF	Serial_Status, _Serial_bit_RX_inhibit
 	
-	BCF	Step2_yellow
+	BCF	Step2
 	RETLW	TRUE
 
 
@@ -1534,13 +1534,7 @@ ColorToBCD:
 ColorToBCD_Rotate:
  	BCF	STATUS,C
 	RLFc	IntToConvert
-	;RLF	IntToConvert + 1, F
-	;RLF	IntToConvert + 2, F
 	RLFi	BCD_Result
-	;RLF	BCD_Result + 1, F
-	;RLF	BCD_Result + 2, F
-	;RLF	BCD_Result + 3, F
-
 	STR	BCD_Result, FSR
 	
 ColorToBCD_HighNibble:	
@@ -1576,12 +1570,8 @@ ColorToBCD_CheckNext:
 ;	unpack to bytes in destination
 ;	add '.' before last char
 ;	add END_MARKER at the end
-;	skipping leading 0s by bubbling data back to the start of destination
-ExpandBCD_10th:
-	;STR	BCD_Result, NixieVarX		; X = @bcd
+
 	STR	data_buffer, NixieVarY	; Y = @data	
-	
-;	MOVF	serial_data, F	; skip "-" in data
 	CMP_lf	CONV_MINUS, data_buffer
 	SK_NE
 	INCF	NixieVarY, F	; skip first byte of data if "-"
@@ -1632,7 +1622,7 @@ ExpandBCD_10th:
 	
 	RETURN
 	
-	; skip leading 0s
+;	skip leading 0s by bubbling data back to the start of destination
 ExpandBCD_trimLeft:
 	MOV	NixieVarY, FSR ; start of buffer
 	MOVF	INDF, W		; until not 0
