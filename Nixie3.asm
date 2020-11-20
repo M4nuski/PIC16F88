@@ -502,7 +502,7 @@ SETUP:
 LOOP:
 	CALL	Nixie_None
 
-;	CLRF	Display_Mode
+	CLRF	Display_Mode
 	BTFSC	Mode_Select_b0
 	BSF	Display_Mode, 0
 	BTFSC	Mode_Select_b1
