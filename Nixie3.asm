@@ -11,10 +11,10 @@
 #INCLUDE	<PIC16F88_MacroExt.asm> ; 16/24/32 bit instructions extensions
 
 ;#############################################################################
-;	Configuration	
+;	Configuration
 ;#############################################################################
 
-	__CONFIG	_CONFIG1, 	_CP_OFF & _CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & _WDT_OFF & _INTRC_IO					
+	__CONFIG	_CONFIG1, 	_CP_OFF & _CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & _WDT_OFF & _INTRC_IO
 	__CONFIG	_CONFIG2, 	_IESO_OFF & _FCMEN_OFF
 
 ;#############################################################################
@@ -27,8 +27,8 @@
 ; pin  3 IOA PORTA4	I TZ_select 0=-5 (EST) 1=-4 (EDT)
 ; pin  4 I__ PORTA5	MCLR (VPP)
 ; pin  5 PWR VSS	GND
-; pin  6 IO_ PORTB0	
-; pin  7 IO_ PORTB1	
+; pin  6 IO_ PORTB0
+; pin  7 IO_ PORTB1
 ; pin  8 IOR PORTB2	I RX from GPS
 ; pin  9 IO_ PORTB3	I Mode Select bit 0
 
@@ -78,7 +78,7 @@
 ; Bank 1    0x80-0x9F     0xA0-0xEF         0xF0-0xFF  			80 + 16 shared with bank 0
 ; Bank 2    0x100-0x10F   0x110-0x16F       0x170-0x17F			16 + 80 + 16 shared with bank 0
 ; Bank 3    0x180-0x18F   0x190-0x1EF       0x1F0-0x1FF			16 + 80 + 16 shared with bank 0
-	
+
 ;#############################################################################
 ;	File Variables and Constants
 ;#############################################################################
@@ -136,7 +136,7 @@ D88_Fract		EQU	0x43 ; 0x44 0x45 resulting fraction of div
 D88_Modulo		EQU	0x46 ; 0x47 0x48 Modulo for preset div, also index for arbitrary div
 D88_Num			EQU	0x49 ; 0x4A 0x4B 0x4C numerator for div and receive modulo (remainder)
 D88_Denum		EQU	0x4D ; 0x4E 0x4F 0x50 denumerator for div
-Display_Mode		EQU	0x51 
+Display_Mode		EQU	0x51
 _mode_Time				EQU	0
 _mode_Alt				EQU	1
 _mode_Lat				EQU	2
@@ -246,7 +246,7 @@ _index_Long	EQU 3
 ;#############################################################################
 ;	MACRO
 ;#############################################################################
-	
+
 WRITESTRING_LN	MACRO string
 	;ORG	( $ & 0xFFFFFF00 ) + 0x100
 	LOCAL	_END, _TABLE, _NEXT
@@ -268,15 +268,15 @@ _TABLE:
 	DT	string, 13, 10, 0
 _END:
 	ENDM
-	
+
 WRITE_NIXIE_L	MACRO Tube, Data
 	MOVLW	Tube
 	MOVWF	NixieTube
 	MOVLW 	Data
 	MOVWF	NixieData
-	CALL	Nixie_DrawNum	
+	CALL	Nixie_DrawNum
 	ENDM
-	
+
 WRITE_NIXIE_F	MACRO Tube, Data
 	MOVLW	Tube
 	MOVWF	NixieTube
@@ -284,22 +284,22 @@ WRITE_NIXIE_F	MACRO Tube, Data
 	MOVWF	NixieData
 	CALL	Nixie_DrawNum
 	ENDM
-	
+
 WRITE_NIXIE_W	MACRO Tube
 	MOVWF	NixieData
 	MOVLW	Tube
 	MOVWF	NixieTube
-	CALL	Nixie_DrawNum	
+	CALL	Nixie_DrawNum
 	ENDM
-	
+
 WRITE_SERIAL_L	MACRO lit
 	MOVLW	lit
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	ENDM
-	
+
 WRITE_SERIAL_F	MACRO file
-	LOCAL	_invalidASCII, _end	
+	LOCAL	_invalidASCII, _end
 	MOVF	file, W
 	MOVWF	Serial_Data
 	CMP_lf	' ', Serial_Data
@@ -312,13 +312,13 @@ _invalidASCII:
 _end:
 	CALL 	Serial_TX_write
 	ENDM
-	
+
 WRITE_SERIAL_FITOA	MACRO file
 	MOVF	file, W
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write_ITOA
 	ENDM
-	
+
 WRITE_SERIAL_W	MACRO
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
@@ -351,12 +351,12 @@ ISR_RX:
 ISR_RX1:
 	WRITEp	RCREG, Serial_RX_buffer_wp
 
-	BTFSC	Serial_Status, _Serial_bit_RX_inhibit	
+	BTFSC	Serial_Status, _Serial_bit_RX_inhibit
 	GOTO	ISR_RX3
 
-	INCF	Serial_RX_buffer_wp, F	; writePtr++	
+	INCF	Serial_RX_buffer_wp, F	; writePtr++
 	CMP_lf	_Serial_RX_buffer_endAddress, Serial_RX_buffer_wp ; warp around
-	BR_NE	ISR_RX2	
+	BR_NE	ISR_RX2
 	STR	_Serial_RX_buffer_startAddress, Serial_RX_buffer_wp
 
 ISR_RX2:
@@ -365,7 +365,7 @@ ISR_RX2:
 	BSF	Serial_Status, _Serial_bit_RX_bufferOverrun
 
 ISR_RX3:
-	BTFBS	PIR1, RCIF, ISR_RX1		; loop back if interrupt flag is still set	
+	BTFBS	PIR1, RCIF, ISR_RX1		; loop back if interrupt flag is still set
 	BTFBC	RCSTA, OERR, ISR_RX_END	; check for register overrun error
 	BSF	Serial_Status, _Serial_bit_RX_overrunError
 	BCF	RCSTA, CREN		; reset rx
@@ -390,7 +390,7 @@ ISR_TX:
 
 ISR_TX_empty:
 	BANK0_1
-	BCF	PIE1, TXIE	; disable tx interrupts	
+	BCF	PIE1, TXIE	; disable tx interrupts
 	BANK1_0
 
 ISR_END:
@@ -407,12 +407,12 @@ SETUP:
 
 	BANK1
 
-	; init port directions 
-	CLRF	TRISA		; all outputs	
+	; init port directions
+	CLRF	TRISA		; all outputs
 	BSF	AU_Select	; Bit3 is input
 	BSF	TZ_Select	; Bit4 is input
 
-	CLRF	TRISB		; all outputs	
+	CLRF	TRISB		; all outputs
 	BSF	TRISB, 2	; Bit2 is input (RX)
 	BSF	Mode_Select_b0	; Bit3 is input
 	BSF	Mode_Select_b1	; Bit4 is input
@@ -432,12 +432,12 @@ SETUP:
 	BCF	TXSTA, SYNC	; async
 
 	; set 9600 baud rate for 8MHz clock
-	BSF 	TXSTA, BRGH	; high speed baud rate generator	
+	BSF 	TXSTA, BRGH	; high speed baud rate generator
 	MOVLW	51		; 9600 bauds
 	MOVWF	SPBRG
 
 	BSF	PIE1, RCIE	; enable rx interrupts
-	BCF	PIE1, TXIE	; disable tx interrupts	
+	BCF	PIE1, TXIE	; disable tx interrupts
 	BANK0
 
 	; init AUSART receiver
@@ -468,11 +468,11 @@ SETUP:
 
 	CALL	Nixie_All
 	CALL	Nixie_Send
-	FAR_CALL	WAIT_1s	
+	FAR_CALL	WAIT_1s
 
 	CALL	Nixie_None
 	CALL	Nixie_Send
-	FAR_CALL	WAIT_1s	
+	FAR_CALL	WAIT_1s
 
 	CALL	Nixie_None
 	WRITE_NIXIE_L	2, _char_E
@@ -482,11 +482,11 @@ SETUP:
 	WRITE_NIXIE_L	7, 2
 	WRITE_NIXIE_L	8, 0
 	CALL	Nixie_Send
-	FAR_CALL	WAIT_1s	
+	FAR_CALL	WAIT_1s
 
 ; enable interrupts
 	BSF	INTCON, PEIE ; peripheral int
-	BSF	INTCON, GIE  ; global int	
+	BSF	INTCON, GIE  ; global int
 
 	PC0x0100ALIGN		startUpMessage
 	WRITESTRING_LN		"Nixie 3 - Time + Alt + Lat + Long"
@@ -494,13 +494,13 @@ SETUP:
 
 
 ;#############################################################################
-;	Main Loop	
+;	Main Loop
 ;#############################################################################
 
 
 
 LOOP:
-	CALL	Nixie_None	
+	CALL	Nixie_None
 
 ;	CLRF	Display_Mode
 	BTFSC	Mode_Select_b0
@@ -528,7 +528,7 @@ LOOP:
 
 
 ;#############################################################################
-;	Time display 
+;	Time display
 ;#############################################################################
 
 MAIN_TIME:
@@ -547,12 +547,12 @@ MAIN_TIME:
 	; Draw time data on nixie tubes
 	WRITE_NIXIE_F	2, data_H10
 	WRITE_NIXIE_F	3, data_H01
-	
+
 	WRITE_NIXIE_L	4, _char_column
-	
+
 	WRITE_NIXIE_F	5, data_m10
 	WRITE_NIXIE_F	6, data_m01
-	
+
 	WRITE_NIXIE_F	8, data_s10
 	WRITE_NIXIE_F	9, data_s01
 
@@ -571,7 +571,7 @@ ENDIF
 	MOVLW	'S'
 	BTFSC	TZ_select
 	MOVLW	'D'
-	WRITE_SERIAL_W	
+	WRITE_SERIAL_W
 	WRITE_SERIAL_L	'T'
 
 	GOTO	ErrorCheck1
@@ -587,17 +587,17 @@ Draw_No_time:
 
 
 ;#############################################################################
-;	Altitude display 
+;	Altitude display
 ;#############################################################################
 
 MAIN_ALT:
 	WRITE_NIXIE_L	4, _char_column
 	WRITE_NIXIE_L	1, _char_A
-	
+
 	MOVLW	_index_Alt
 	CALL	READ_NEXT		; wait and read CSV data at index 8
 	BW_False	Draw_No_alt
-	
+
 IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer
 	WRITE_SERIAL_FITOA	data_buffer + 1
@@ -618,7 +618,7 @@ ENDIF
 	CMP_lf	'M', data_unit
 	BR_EQ	MAIN_ALT_Meter
 	CMP_lf	'F', data_unit
-	BR_EQ	MAIN_ALT_Feet	
+	BR_EQ	MAIN_ALT_Feet
 	GOTO	MAIN_ALT_draw
 
 MAIN_ALT_Meter:			; received unit is Meter
@@ -630,13 +630,13 @@ MAIN_ALT_Meter:			; received unit is Meter
 	WRITE_SERIAL_L		' '
 	; else convert to feet
 	; 3.281ft / m
-	; F = M * 33 / 10 (good enough...)	
+	; F = M * 33 / 10 (good enough...)
 
 	CALL	Conv_Str_to_Int	; convert data_buffer string to int in D88_Denum
 
 	WRITE_SERIAL_L	'i'
 	MOVc	D88_Denum, IntToConvert
-	CALL	WriteHexShort	
+	CALL	WriteHexShort
 
 	FAR_CALL	MULT33s ; D88_Num = D88_Denum * 33
 
@@ -664,7 +664,7 @@ MAIN_ALT_Meter_format:
 	CMP_lf	CONV_DOT, data_buffer + 2	; dot at buffer[2] "-0.000F"
 	BR_EQ	MAIN_ALT_draw
 	CMP_lf	CONV_DOT, data_buffer + 3	; dot at buffer[3] "-00.00F"
-	BR_EQ	MAIN_ALT_draw	
+	BR_EQ	MAIN_ALT_draw
 	CMP_lf	CONV_DOT, data_buffer + 4 	; dot at buffer[4] "-000.0F"
 	BR_EQ	MAIN_ALT_draw
 
@@ -677,7 +677,7 @@ MAIN_ALT_Meter_format_pos:
 	CMP_lf	CONV_DOT, data_buffer + 1	; dot at buffer[1] "0.000F"
 	BR_EQ	MAIN_ALT_draw
 	CMP_lf	CONV_DOT, data_buffer + 2	; dot at buffer[2] "00.00F"
-	BR_EQ	MAIN_ALT_draw	
+	BR_EQ	MAIN_ALT_draw
 	CMP_lf	CONV_DOT, data_buffer + 3	; dot at buffer[3] "000.0F"
 	BR_EQ	MAIN_ALT_draw
 
@@ -708,7 +708,7 @@ MAIN_ALT_Feet:				; received unit is Feet
 
 	WRITE_SERIAL_L	'i'
 	MOVc	D88_Denum, IntToConvert
-	CALL	WriteHexShort	
+	CALL	WriteHexShort
 
 	FAR_CALL	MULT100s	; D88_Num = D88_Denum * 100
 
@@ -790,7 +790,7 @@ Draw_No_alt:
 
 
 ;#############################################################################
-;	Latitude display 
+;	Latitude display
 ;#############################################################################
 
 MAIN_LAT:
@@ -811,19 +811,19 @@ IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer + 9
 	WRITE_SERIAL_FITOA	data_buffer + 10
 	WRITE_SERIAL_FITOA	data_buffer + 11
-	WRITE_SERIAL_FITOA	data_buffer + 12	
+	WRITE_SERIAL_FITOA	data_buffer + 12
 	WRITE_SERIAL_L		' '
 ENDIF
 
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
-	
+
 	; direction
 	CMP_lf	'N', data_unit
 	BR_EQ	MAIN_LAT_1N
 	CMP_lf	'S', data_unit
 	BR_EQ	MAIN_LAT_1S
-	GOTO	MAIN_LAT_2	
+	GOTO	MAIN_LAT_2
 MAIN_LAT_1N:
 	WRITE_NIXIE_L	0, _char_plus
 	GOTO	MAIN_LAT_2
@@ -835,10 +835,10 @@ MAIN_LAT_2:
 	; dont draw if 0
 	CMP_lf	0, data_latD10
 	BR_EQ	MAIN_LAT_2a
-	WRITE_NIXIE_F	2, data_latD10	
+	WRITE_NIXIE_F	2, data_latD10
 
-MAIN_LAT_2a:	
-	WRITE_NIXIE_F	3, data_latD01	
+MAIN_LAT_2a:
+	WRITE_NIXIE_F	3, data_latD01
 	WRITE_NIXIE_L	4, _char_dot
 
 	;fraction
@@ -850,7 +850,7 @@ MAIN_LAT_2a:
 
 	WRITE_SERIAL_L	'i'
 	MOVc	D88_Denum, IntToConvert
-	CALL	WriteHexColor	
+	CALL	WriteHexColor
 
 	FAR_CALL	DIV60c		; D88_Fract = D88_Num / 60, D88_Num = D88_Num % 60
 
@@ -884,14 +884,14 @@ Draw_No_Lat:
 
 
 ;#############################################################################
-;	Longitude display 
+;	Longitude display
 ;#############################################################################
 
 MAIN_LONG:
 	MOVLW	_index_Long
 	CALL	READ_NEXT		; wait and read CSV data at index 1
 	BW_False	Draw_No_Long
-	
+
 IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer
 	WRITE_SERIAL_FITOA	data_buffer + 1
@@ -905,7 +905,7 @@ IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer + 9
 	WRITE_SERIAL_FITOA	data_buffer + 10
 	WRITE_SERIAL_FITOA	data_buffer + 11
-	WRITE_SERIAL_FITOA	data_buffer + 12	
+	WRITE_SERIAL_FITOA	data_buffer + 12
 	WRITE_SERIAL_L		' '
 ENDIF
 
@@ -917,7 +917,7 @@ ENDIF
 	BR_EQ	MAIN_LONG_1E
 	CMP_lf	'W', data_unit
 	BR_EQ	MAIN_LONG_1W
-	GOTO	MAIN_LONG_2	
+	GOTO	MAIN_LONG_2
 MAIN_LONG_1E:
 	WRITE_NIXIE_L	0, _char_plus
 	GOTO	MAIN_LONG_2
@@ -937,7 +937,7 @@ MAIN_LONG_2a:
 	BR_EQ	MAIN_LONG_2b
 	WRITE_NIXIE_F	2, data_longD010
 MAIN_LONG_2b:
-	WRITE_NIXIE_F	3, data_longD001	
+	WRITE_NIXIE_F	3, data_longD001
 	WRITE_NIXIE_L	4, _char_dot
 
 	;fraction
@@ -947,7 +947,7 @@ MAIN_LONG_2b:
 
 	MOVLW	data_longM10
 	CALL	Conv_Str_to_Fract
-	
+
 	WRITE_SERIAL_L	'i'
 	MOVc	D88_Denum, IntToConvert
 	CALL	WriteHexColor
@@ -985,7 +985,7 @@ Draw_No_Long:
 
 
 ;#############################################################################
-;	Serial module error check and reporting 
+;	Serial module error check and reporting
 ;#############################################################################
 
 ErrorCheck1:
@@ -1060,18 +1060,18 @@ Serial_TX_write:
 Serial_TX_write_2:
 	CMP_ff	Serial_TX_buffer_rp, TX_Temp	; compare to current read pointer
 	BR_EQ	Serial_TX_write
-	
+
 	BANK0_1
 	BCF	PIE1, TXIE	; disable tx interrupts
-	BANK1_0	
-	
-	WRITEp	Serial_Data, Serial_TX_buffer_wp	
+	BANK1_0
+
+	WRITEp	Serial_Data, Serial_TX_buffer_wp
 	MOV	TX_Temp, Serial_TX_buffer_wp
-	
+
 	BANK0_1
 	BSF	PIE1, TXIE	; enable tx interrupts
 	BANK1_0
-	
+
 	RETURN
 
 
@@ -1108,8 +1108,8 @@ Nixie_All_Next:
 	CLRF	INDF
 	INCF	FSR, F
 	DECFSZ	NixieLoop, F
-	GOTO	Nixie_All_Next	
-	RETURN	
+	GOTO	Nixie_All_Next
+	RETURN
 
 ; Turn all segments off
 Nixie_None: ;()[NixieLoop]
@@ -1129,32 +1129,32 @@ Nixie_ClearTube: ;(NixieTube)[NixieLoop, WriteLoop, NixieVarX, NixieVarY]
 	MOVF	NixieTube, W
 	CALL	Nixie_MaxSeg	; get number of segments for the tube
 	MOVWF	NixieLoop
-	
+
 	MOVF	NixieTube, W
 	CALL	Nixie_Offsets	; get the bit offset for that tube
 	MOVWF	NixieVarX	; offset, will be lost each write
 	MOVWF	WriteLoop	; offset to keep original value
-	
+
 Nixie_ClearTube_Loop:
 	CLRF	NixieVarY	; to receive remainder
 	BCF	STATUS, C	; div and mod bit number to get byte and bit offsets
 	RRF	NixieVarX, F	; / 2
-	RRF	NixieVarY, F	
+	RRF	NixieVarY, F
 	BCF	STATUS, C
 	RRF	NixieVarX, F	; / 4
-	RRF	NixieVarY, F	
+	RRF	NixieVarY, F
 	BCF	STATUS, C
 	RRF	NixieVarX, F	; / 8
-	RRF	NixieVarY, F	
+	RRF	NixieVarY, F
 	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
 	RRF	NixieVarY, F
 	SWAPF	NixieVarY, F
-	
+
 	MOVLW	NixieBuffer	; @data
 	ADDWF	NixieVarX, W	; + byte offset
 	MOVWF	FSR		; FSR = @data[di]
 	BSet	INDF, 	NixieVarY ; Y = bit offset
-	
+
 	INCF	WriteLoop, F
 	MOV	WriteLoop, NixieVarX	;next segment in X
 	DECFSZ	NixieLoop, F
@@ -1166,13 +1166,13 @@ Nixie_SetSegment: ;(NixieSeg, NixieTube)[NixieVarX, NixieVarY]
 
 	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
-	
+
 	MOVF	NixieTube, W
 	CALL	Nixie_MaxSeg	; get number of segments for the tube
 	SUBWF	NixieSeg, W	; w = seg# - max, borrow should be set (carry cleared)
 	BTFSC	STATUS, C
-	RETURN	
-	
+	RETURN
+
 	MOVF	NixieTube, W
 	CALL	Nixie_Offsets	; get the bit offset for that tube
 	ADDWF	NixieSeg, W	; NixieVarX = offset + seg#
@@ -1181,21 +1181,21 @@ Nixie_SetSegment: ;(NixieSeg, NixieTube)[NixieVarX, NixieVarY]
 	CLRF	NixieVarY	; to receive remainder
 	BCF	STATUS, C
 	RRF	NixieVarX, F	; / 2
-	RRF	NixieVarY, F	
+	RRF	NixieVarY, F
 	BCF	STATUS, C
 	RRF	NixieVarX, F	; / 4
-	RRF	NixieVarY, F	
+	RRF	NixieVarY, F
 	BCF	STATUS, C
 	RRF	NixieVarX, F	; / 8
-	RRF	NixieVarY, F	
+	RRF	NixieVarY, F
 	BCF	STATUS, C	; shift modulo 1 more time to align with nibble
 	RRF	NixieVarY, F
 	SWAPF	NixieVarY, F
-	
+
 	MOVLW	NixieBuffer	; @data
 	ADDWF	NixieVarX, W
 	MOVWF	FSR		; FSR = @data[di]
-	BClear	INDF, 	NixieVarY	
+	BClear	INDF, 	NixieVarY
 	RETURN
 
 ; Draw a num [0-9], char code in NixieData, tube in NixieTube
@@ -1203,15 +1203,15 @@ Nixie_DrawNum:	;(NixieData) [NixieLoop]
 ; CALL	Nixie_SetSegment:(NixieSeg, NixieTube)[NixieVarX, NixieVarY]
 
 	MOVLW	high (TABLE0)
-	MOVWF	PCLATH	
+	MOVWF	PCLATH
 	MOVF	NixieData, W
 	CALL	Nixie_Num_seg8
 	MOVWF	NixieLoop
-	
-	STR	8, NixieSeg	
+
+	STR	8, NixieSeg
 	BTFSC	NixieLoop, 0 ; test seg 8
 	CALL	Nixie_SetSegment
-	
+
 	MOVF	NixieData, W
 	CALL	Nixie_Num_seg0_7
 	MOVWF	NixieLoop
@@ -1224,8 +1224,8 @@ Nixie_DrawNum_loop:
 	INCF	NixieSeg, F
 	DECFSZ	NixieSeg, F
 	GOTO	Nixie_DrawNum_loop
-	
-	RETURN	
+
+	RETURN
 
 ;Send the data to the SIPO buffers, LSBit of LSByte first
 Nixie_Send: ;()[WriteLoop, NixieLoop]
@@ -1235,7 +1235,7 @@ Nixie_Send: ;()[WriteLoop, NixieLoop]
 	STR	10, WriteLoop
 Nixie_Send_Next_Byte:
 	STR	8, NixieLoop
-	
+
 Nixie_Send_Next_Bit:
 	BCF	NixieSerial_Data
 	RRF	INDF, F
@@ -1265,11 +1265,11 @@ Nixie_Send_Next_Bit:
 
 WAIT_GPGGA_HEADER:
 	BCF	Serial_Status, _Serial_bit_RX_inhibit
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	'$', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	'G', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
@@ -1277,19 +1277,19 @@ WAIT_GPGGA_HEADER:
 	CALL	Serial_RX_waitRead
 	CMP_lf	'P', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	'G', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	'G', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	'A', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	',', Serial_Data
 	BR_NE	WAIT_GPGGA_HEADER
@@ -1301,30 +1301,30 @@ WAIT_GPGGA_HEADER:
 ; $GPGGA,205654.00,
 READ_NEXT_TIME:
 	CALL	WAIT_GPGGA_HEADER
-		
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	',', Serial_Data
 	SK_NE
 	RETLW	FALSE
 	MOV	Serial_Data, data_H10
-	
+
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_H01
-	
+
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_m10
-	
+
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_m01
-	
+
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_s10
-	
+
 	CALL	Serial_RX_waitRead
 	MOV	Serial_Data, data_s01
-	
+
 	BSF	Serial_Status, _Serial_bit_RX_inhibit
-	
+
 	MOVLW	'0'
 	SUBWF	data_H10, F
 	SUBWF	data_H01, F
@@ -1332,7 +1332,7 @@ READ_NEXT_TIME:
 	SUBWF	data_m01, F
 	SUBWF	data_s10, F
 	SUBWF	data_s01, F
-	
+
 	RETLW	TRUE
 
 
@@ -1343,53 +1343,53 @@ READ_NEXT_TIME:
 ;          0        1         2  3          4 5 6   7     8  9
 ; read next GPGGA CSV data, requested index is passed in W, index 0 is the time, fetched in READ_NEXT_TIME
 READ_NEXT:
-	MOVWF	NixieVarX		; save index 
+	MOVWF	NixieVarX		; save index
 	CALL	WAIT_GPGGA_HEADER
-	
+
 READ_NEXT_SEEK:
 	CALL	Serial_RX_waitRead	; wait for next ','
 	CMP_lf	',', Serial_Data
-	BR_NE	READ_NEXT_SEEK	
+	BR_NE	READ_NEXT_SEEK
 
 	DECFSZ	NixieVarX, F		; dec index
 	GOTO	READ_NEXT_SEEK		; if not 0 seek another ','
-	
+
 	CALL	Serial_RX_waitRead
 	CMP_lf	',', Serial_Data	; if already another ',' return false
 	SK_NE
 	RETLW	FALSE
-	
+
 	MOV	Serial_Data, data_buffer	; data_buffer[0] = Serial_Data
-	
+
 	STR	data_buffer, NixieVarX	; x = @data_buffer
 	INCF	NixieVarX, F			; x++
 
 READ_NEXT_READ_DATA:
-	CALL	Serial_RX_waitRead	
-	
+	CALL	Serial_RX_waitRead
+
 	CMP_lf	',', Serial_Data
 	BR_EQ	READ_NEXT_CONVERT		; convert after receiving a ','
-	
+
 	WRITEp	Serial_Data, NixieVarX	; data_buffer[x] = Serial_Data
 	INCF	NixieVarX, F			; ptr++
-	GOTO	READ_NEXT_READ_DATA	
-	
+	GOTO	READ_NEXT_READ_DATA
+
 READ_NEXT_CONVERT:
 	MOV	NixieVarX, FSR
 	STR	END_MARKER, INDF
-	
+
 READ_NEXT_CONVERT_LOOP:
 	DECF	FSR, F			; ptr--
 	MOVLW	'0'			; subtract ord('0') from each bytes until pointer is back to @data_buffer
 	SUBWF	INDF, F
 	CMP_lf	data_buffer, FSR
 	BR_NE	READ_NEXT_CONVERT_LOOP
-	
+
 	CALL	Serial_RX_waitRead	; read first char of next value, usually the unit of the preceding one
 	MOV	Serial_data, data_unit
-	
+
 	BSF	Serial_Status, _Serial_bit_RX_inhibit
-	
+
 	RETLW	TRUE
 
 
@@ -1406,9 +1406,9 @@ ADJUST_TZ:
 	RLF	data_H10, F ; h10  = 4*h10
 	RLF	data_H10, F ; h10  = 8*h10
 	ADDWF	data_H10, W
-	
+
 	ADDWF	data_H01, F ; h01 = 10*h10 + h01 = HH(utc)
-	
+
 	SUB	data_H01, TZ_offset ; h01 = HH(EDT/EST)
 	BR_NB	ADJUST_TZ_NB
 	ADDL	data_H01, 24 ; if borrow, roll hour over
@@ -1420,7 +1420,7 @@ ADJUST_TZ_NB:
 ADJUST_TZ_10:
 	INCF	data_H10, F
 	SUBL	data_H01, 10
-	
+
 	CMP_lf	10, data_H01
 	BR_LE	ADJUST_TZ_20	; if 10 <= H01
 	RETURN			; else return
@@ -1468,7 +1468,7 @@ WriteHexShort:
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	
+
 	SWAPF	IntToConvert, W
 	ANDLW	0x0F
 	CALL	NibbleHex
@@ -1479,19 +1479,19 @@ WriteHexShort:
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	
+
 	MOVLW	' '
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	RETURN
-	
+
 ; Convert color (24 bit int) to hex and send over serial
 WriteHexColor:
 	STR	3, WAIT_loopCounter1
 	STR	IntToConvert + 2, WAIT_loopCounter2
-	
+
 	MOVLW	high (TABLE0)
-	MOVWF	PCLATH	
+	MOVWF	PCLATH
 WriteHexColor_loop:
 	MOV	WAIT_loopCounter2, FSR
 	SWAPF	INDF, W
@@ -1499,28 +1499,28 @@ WriteHexColor_loop:
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	
+
 	MOV	WAIT_loopCounter2, FSR
 	MOVF	INDF, W
 	ANDLW	0x0F
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	
+
 	DECF	WAIT_loopCounter2, F
 	DECFSZ	WAIT_loopCounter1, F
 	GOTO	WriteHexColor_loop
-	
+
 	MOVLW	' '
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	RETURN
-	
+
 ; Convert int (32 bit int) to hex and send over serial
 WriteHexInteger:
 	STR	4, WAIT_loopCounter1
 	STR	IntToConvert + 3, WAIT_loopCounter2
-	
+
 	MOVLW	high (TABLE0)
 	MOVWF	PCLATH
 WriteHexInteger_loop:
@@ -1536,41 +1536,41 @@ WriteHexInteger_loop:
 	CALL	NibbleHex
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
-	
+
 	DECF	WAIT_loopCounter2, F
 	DECFSZ	WAIT_loopCounter1, F
 	GOTO	WriteHexInteger_loop
-	
+
 	MOVLW	' '
 	MOVWF	Serial_Data
 	CALL 	Serial_TX_write
 	RETURN
 
 ; 24 bit int -> 32 bit packed bcd 16 77 72 15
-ColorToBCD:	
+ColorToBCD:
 	CLRFi	BCD_Result
 	STR	23, NixieLoop	;Rotate and Increment 23 time
-	
+
 ColorToBCD_Rotate:
  	BCF	STATUS,C
 	RLFc	IntToConvert
 	RLFi	BCD_Result
 	STR	BCD_Result, FSR
-	
-ColorToBCD_HighNibble:	
+
+ColorToBCD_HighNibble:
 	SWAPF	INDF, W
 	ANDLW	0x0F
 	SUBLW	4
 	BR_NB	ColorToBCD_LowNibble
 	ADDL	INDF, 0x30
-	
+
 ColorToBCD_LowNibble:
 	MOVF	INDF, W
 	ANDLW	0x0F
 	SUBLW	4
 	BR_NB	ColorToBCD_CheckNext
 	ADDL	INDF, 0x03
-	
+
 ColorToBCD_CheckNext:
 	INCF	FSR, F
 	CMP_lf	BCD_Result + 4, FSR
@@ -1583,7 +1583,7 @@ ColorToBCD_CheckNext:
  	BCF	STATUS,C		;24th time Shift only, no "add 3 if > 4"
 	RLFc	IntToConvert
 	RLFi	BCD_Result
-	
+
 ; expand BCD_Result to serial_data
 ; 32 bit packed bcd (16 77 72 15) to 1 byte per BCD 1 6 7 7 7 2 1 5
 ;	skipping first destination char if '-'
@@ -1591,57 +1591,57 @@ ColorToBCD_CheckNext:
 ;	add '.' before last char
 ;	add END_MARKER at the end
 
-	STR	data_buffer, NixieVarY	; Y = @data	
+	STR	data_buffer, NixieVarY	; Y = @data
 	CMP_lf	CONV_MINUS, data_buffer
 	SK_NE
 	INCF	NixieVarY, F	; skip first byte of data if "-"
-	
+
 	; Expand
 	MOV	NixieVarY, FSR
 	SWAPF	BCD_Result + 3, W
 	ANDLW	0x0F
-	MOVWF	INDF	
+	MOVWF	INDF
 	INCF	FSR, F
 	MOVF	BCD_Result + 3, W
 	ANDLW	0x0F
 	MOVWF	INDF
-	
+
 	INCF	FSR, F
 	SWAPF	BCD_Result + 2, W
 	ANDLW	0x0F
-	MOVWF	INDF	
+	MOVWF	INDF
 	INCF	FSR, F
 	MOVF	BCD_Result + 2, W
 	ANDLW	0x0F
 	MOVWF	INDF
-	
+
 	INCF	FSR, F
 	SWAPF	BCD_Result + 1, W
 	ANDLW	0x0F
-	MOVWF	INDF	
+	MOVWF	INDF
 	INCF	FSR, F
 	MOVF	BCD_Result + 1, W
 	ANDLW	0x0F
 	MOVWF	INDF
-	
+
 	INCF	FSR, F
 	SWAPF	BCD_Result, W
 	ANDLW	0x0F
 	MOVWF	INDF
-	
+
 	INCF	FSR, F
 	STR	CONV_DOT, INDF
-		
+
 	INCF	FSR, F
 	MOVF	BCD_Result, W
 	ANDLW	0x0F
 	MOVWF	INDF
-	
+
 	INCF	FSR, F
 	STR	END_MARKER, INDF
-	
+
 	RETURN
-	
+
 ;	skip leading 0s by bubbling data back to the start of destination
 ExpandBCD_trimLeft:
 	MOV	NixieVarY, FSR ; start of buffer
@@ -1651,7 +1651,7 @@ ExpandBCD_trimLeft:
 	CMP_lf	END_MARKER, INDF ; or end marker
 	SK_NE
 	RETURN
-	
+
 ExpandBCD_trimLeft_loop:	; move next byte to previous location
 	INCF	FSR, F; next
 	MOVF	INDF, W
@@ -1668,32 +1668,32 @@ ExpandBCD_trimLeft_loop:	; move next byte to previous location
 
 
 ; convert data_buffer string to int in D88_Denum
-Conv_Str_to_Int:	
+Conv_Str_to_Int:
 	STR	data_buffer, NixieVarX	; NixieVarX = @data_buffer
 	CMP_lf	CONV_MINUS, data_buffer
-	SK_NE	
+	SK_NE
 	INCF	NixieVarX, F	; skip the Minus sign
-	
+
 	CLRFc	D88_Num		;temp
 	CLRFc	D88_Denum	;result
 	READp	NixieVarX, D88_Denum	; D88_Denum = first value
-	
+
 Conv_Str_to_Int_loop:
-	CLRFc	D88_Modulo	
+	CLRFc	D88_Modulo
 	INCF	NixieVarX, F	;next char
 	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
-	
+
 	CMP_lf	CONV_DOT, D88_Modulo	; if next is dot stop converting to int
-	SK_NE	
+	SK_NE
 	RETURN
 	CMP_lf	END_MARKER, D88_Modulo; to be safe also check for end of string marker
-	SK_NE	
+	SK_NE
 	RETURN
 
 	FAR_CALL	MULT10s		; D88_Num = D88_Denum * 10
 
 	MOVc	D88_Num, D88_Denum	; D88_Denum = D88_Num
-	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo 
+	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo
 	GOTO	Conv_Str_to_Int_loop
 
 
@@ -1705,27 +1705,27 @@ Conv_Str_to_Fract:
 	CLRFc	D88_Num		;temp
 	CLRFc	D88_Denum	;result
 	READp	NixieVarX, D88_Denum	; D88_Denum = first value
-	
+
 Conv_Str_to_Fract_loop:
 	CLRFc	D88_Modulo
 	INCF	NixieVarX, F	;next char
 	READp	NixieVarX, D88_Modulo	; D88_Modulo = next value
-	
+
 	CMP_lf	END_MARKER, D88_Modulo; until end marker
 	SK_NE
 	RETURN
 	CMP_lf	END_MARKER - '0', D88_Modulo; until end marker
 	SK_NE
 	RETURN
-	
+
 	CMP_lf	CONV_DOT, D88_Modulo	; skip if '.'
-	SK_NE	
+	SK_NE
 	GOTO	Conv_Str_to_Fract_loop
 
 	FAR_CALL	MULT10c		; D88_Num = D88_Denum * 10
 
 	MOVc	D88_Num, D88_Denum	; D88_Denum = D88_Num
-	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo 
+	ADDc	D88_Denum, D88_Modulo	; D88_Denum = D88_Denum + D88_Modulo
 	GOTO	Conv_Str_to_Fract_loop
 
 ;#############################################################################
@@ -1772,7 +1772,7 @@ Nixie_Num_seg0_7:
 	RETLW	b'00100000' ;, 19
 	RETLW	b'01001101' ;A 20
 	RETLW	b'00000101' ;T 21
-	
+
 Nixie_Num_seg8:
 	ADDWF	PCL, F
 	    ;    '       i'
@@ -1825,7 +1825,7 @@ DIV33c:	; div by 33, 24 bit ; D88_Fract = D88_Num / 33, D88_Num = D88_Num % 33
 	CLRFc	D88_Fract
 	STRc	0x040000, D88_Modulo
 	STRc	0x840000, D88_Denum
-	
+
 _DIV33c_loop:
 	SUBc	D88_Num, D88_Denum
 	BR_GT	_DIV33c_pos
@@ -1843,7 +1843,7 @@ _DIV33c_roll:
 	RRFc	D88_Denum
 	BCF	STATUS, C
 	RRFc	D88_Modulo
-	
+
 	BTFSS	STATUS, C
 	GOTO	_DIV33c_loop
 	FAR_RETURN
@@ -1854,16 +1854,16 @@ _DIV33c_roll:
 ;     0x04 = b'00000100'
 DIV60c:	; div by 60, 24 bit ; D88_Fract = D88_Num / 33, D88_Num = D88_Num % 60
 	CLRFc	D88_Fract
-	
+
 	STRc	0x040000, D88_Modulo
 	STRc	0xF00000, D88_Denum
-	
+
 _DIV60c_loop:
 	SUBc	D88_Num, D88_Denum
 	BR_GT	_DIV60c_pos
 	BR_LT	_DIV60c_neg
 ;if equal
-	ADDc	D88_Fract, D88_Modulo	
+	ADDc	D88_Fract, D88_Modulo
 	FAR_RETURN
 _DIV60c_pos:
 	ADDc	D88_Fract, D88_Modulo
@@ -1875,7 +1875,7 @@ _DIV60c_roll:
 	RRFc	D88_Denum
 	BCF	STATUS, C
 	RRFc	D88_Modulo
-	
+
 	BTFSS	STATUS, C
 	GOTO	_DIV60c_loop
 	FAR_RETURN
@@ -1883,86 +1883,86 @@ _DIV60c_roll:
 
 
 MULT33s: ; 33 = 1 + 32 ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 33
-	CLRF	D88_Denum + 2	
+	CLRF	D88_Denum + 2
 	MOVc	D88_Denum, D88_Num	; D88_Num = a
-	
+
 	BCF	STATUS, C
-	RLFc	D88_Denum	; a = a * 2		
+	RLFc	D88_Denum	; a = a * 2
 	BCF	STATUS, C
-	RLFc	D88_Denum	; a = a * 4	
+	RLFc	D88_Denum	; a = a * 4
 	BCF	STATUS, C
-	RLFc	D88_Denum	; a = a * 8	
+	RLFc	D88_Denum	; a = a * 8
 	BCF	STATUS, C
-	RLFc	D88_Denum	; a = a * 16	
+	RLFc	D88_Denum	; a = a * 16
 	BCF	STATUS, C
 	RLFc	D88_Denum	; a = a * 32
-	
-	ADDc	D88_Num, D88_Denum 	; D88_Num = a + 32*a = 33*a	
+
+	ADDc	D88_Num, D88_Denum 	; D88_Num = a + 32*a = 33*a
 	FAR_RETURN
 
-	
+
 MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
 ; 0000 1010
 ; *2 + *8
 	CLRF	D88_Denum + 2
-	
+
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *2
-	
+
 	MOVc	D88_Denum, D88_Num 	; D88_Num = 2*a
-	
+
 	BCF	STATUS, C
-	RLFc	D88_Denum	; *4	
+	RLFc	D88_Denum	; *4
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *8
-	
-	ADDc	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a	
+
+	ADDc	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
 	FAR_RETURN
-	
+
 MULT10c: ; D88_Num (32 bit) = D88_Denum (24 bit expanded to 32) * 10
 ; 0000 1010
 ; *2 + *8
 	CLRF	D88_Denum + 3
-	
+
 	BCF	STATUS, C
 	RLFi	D88_Denum	; *2
-	
+
 	MOVi	D88_Denum, D88_Num 	; D88_Num = 2*a
-	
+
 	BCF	STATUS, C
-	RLFi	D88_Denum	; *4	
+	RLFi	D88_Denum	; *4
 	BCF	STATUS, C
 	RLFi	D88_Denum	; *8
-	
+
 	ADDi	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
 	FAR_RETURN
-	
-	
+
+
 MULT100s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 100
 ; 0110 0100
 ; *4 + *32 + *64
 	CLRF	D88_Denum + 2
-	
+
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *2
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *4
-	
+
 	MOVc	D88_Denum, D88_Num 	; D88_Num = 4*a
-	
+
 	BCF	STATUS, C
-	RLFc	D88_Denum	; *8	
+	RLFc	D88_Denum	; *8
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *16
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *32
-	
+
 	ADDc	D88_Num, D88_Denum	; D88_Num = 4*a + 32*a
-	
+
 	BCF	STATUS, C
 	RLFc	D88_Denum	; *64
-	
-	ADDc	D88_Num, D88_Denum	; D88_Num = 4*a + 32*a + 64*a	
+
+	ADDc	D88_Num, D88_Denum	; D88_Num = 4*a + 32*a + 64*a
 	FAR_RETURN
 
 
@@ -1979,20 +1979,20 @@ WAIT_1s_loop1:
 	MOVWF	WAIT_loopCounter2	; (1)
 
 WAIT_1s_loop2:			; 0.5ms / loop1
-	MOVLW	250 - 2			; (1) 250 loops of 4 cycles (minus 2 loop for setup and next loop) 
-	MOVWF	WAIT_loopCounter3	; (1) 
-	NOP				; (1) 
-	NOP				; (1) 
+	MOVLW	250 - 2			; (1) 250 loops of 4 cycles (minus 2 loop for setup and next loop)
+	MOVWF	WAIT_loopCounter3	; (1)
+	NOP				; (1)
+	NOP				; (1)
 
 WAIT_1s_loop3:			; 4 cycles per loop (2us / loop2)
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter3, F	; (1) 
-	GOTO	WAIT_1s_loop3		; (2) 
-	NOP				; (1) 
+	NOP				; (1)
+	DECFSZ	WAIT_loopCounter3, F	; (1)
+	GOTO	WAIT_1s_loop3		; (2)
+	NOP				; (1)
 
-	NOP				; (1) 
-	DECFSZ	WAIT_loopCounter2, F	; (1) 
-	GOTO	WAIT_1s_loop2		; (2) 
+	NOP				; (1)
+	DECFSZ	WAIT_loopCounter2, F	; (1)
+	GOTO	WAIT_1s_loop2		; (2)
 
 	DECFSZ	WAIT_loopCounter1, F
 	GOTO	WAIT_1s_loop1
