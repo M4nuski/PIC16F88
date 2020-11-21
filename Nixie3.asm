@@ -248,8 +248,12 @@ _index_Long	EQU 3
 ;#############################################################################
 
 WRITESTRING_LN	MACRO string
-	;ORG	( $ & 0xFFFFFF00 ) + 0x100
 	LOCAL	_END, _TABLE, _NEXT
+	
+	IF 	( _END & 0xFFFFFF00 ) != ( $ & 0xFFFFFF00 )
+	ORG	( $ & 0xFFFFFF00 ) + 0x0100
+	ENDIF	; boundary check
+	
 	MOVLW	high (_TABLE)
 	MOVWF	PCLATH
 	CLRF	WriteLoop
@@ -488,7 +492,8 @@ SETUP:
 	BSF	INTCON, PEIE ; peripheral int
 	BSF	INTCON, GIE  ; global int
 
-	PC0x0100ALIGN		startUpMessage
+;	PC0x0100ALIGN		startUpMessage
+startUpMessage:
 	WRITESTRING_LN		"Nixie 3 - Time + Alt + Lat + Long"
 
 
@@ -556,7 +561,7 @@ MAIN_TIME:
 	WRITE_NIXIE_F	8, data_s10
 	WRITE_NIXIE_F	9, data_s01
 
-IFDEF	SERIAL_DEBUG
+	IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_H10
 	WRITE_SERIAL_FITOA	data_H01
 	WRITE_SERIAL_L	':'
@@ -565,7 +570,7 @@ IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_L	':'
 	WRITE_SERIAL_FITOA	data_s10
 	WRITE_SERIAL_FITOA	data_s01
-ENDIF
+	ENDIF
 
 	WRITE_SERIAL_L	'E'
 	MOVLW	'S'
@@ -598,7 +603,7 @@ MAIN_ALT:
 	CALL	READ_NEXT		; wait and read CSV data at index 8
 	BW_False	Draw_No_alt
 
-IFDEF	SERIAL_DEBUG
+	IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer
 	WRITE_SERIAL_FITOA	data_buffer + 1
 	WRITE_SERIAL_FITOA	data_buffer + 2
@@ -610,7 +615,7 @@ IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer + 8
 	WRITE_SERIAL_FITOA	data_buffer + 9
 	WRITE_SERIAL_L		' '
-ENDIF
+	ENDIF
 
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
@@ -798,7 +803,7 @@ MAIN_LAT:
 	CALL	READ_NEXT		; wait and read CSV data at index 3
 	BW_False	Draw_No_Lat
 
-IFDEF	SERIAL_DEBUG
+	IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer
 	WRITE_SERIAL_FITOA	data_buffer + 1
 	WRITE_SERIAL_FITOA	data_buffer + 2
@@ -813,7 +818,7 @@ IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer + 11
 	WRITE_SERIAL_FITOA	data_buffer + 12
 	WRITE_SERIAL_L		' '
-ENDIF
+	ENDIF
 
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
@@ -892,7 +897,7 @@ MAIN_LONG:
 	CALL	READ_NEXT		; wait and read CSV data at index 1
 	BW_False	Draw_No_Long
 
-IFDEF	SERIAL_DEBUG
+	IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer
 	WRITE_SERIAL_FITOA	data_buffer + 1
 	WRITE_SERIAL_FITOA	data_buffer + 2
@@ -907,7 +912,7 @@ IFDEF	SERIAL_DEBUG
 	WRITE_SERIAL_FITOA	data_buffer + 11
 	WRITE_SERIAL_FITOA	data_buffer + 12
 	WRITE_SERIAL_L		' '
-ENDIF
+	ENDIF
 
 	WRITE_SERIAL_F		data_unit
 	WRITE_SERIAL_L		' '
