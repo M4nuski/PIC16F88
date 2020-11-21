@@ -1837,7 +1837,7 @@ _DIV33c_loop:
 	BR_LT	_DIV33c_neg
 ;if equal
 	ADDc	D88_Fract, D88_Modulo
-	FAR_RETURN
+	RETURN
 _DIV33c_pos:
 	ADDc	D88_Fract, D88_Modulo
 	GOTO	_DIV33c_roll
@@ -1851,7 +1851,7 @@ _DIV33c_roll:
 
 	BTFSS	STATUS, C
 	GOTO	_DIV33c_loop
-	FAR_RETURN
+	RETURN
 
 ;60 = 0x3C = b'00111100'
 ;01 = 0x01 = b'00000001'
@@ -1869,7 +1869,7 @@ _DIV60c_loop:
 	BR_LT	_DIV60c_neg
 ;if equal
 	ADDc	D88_Fract, D88_Modulo
-	FAR_RETURN
+	RETURN
 _DIV60c_pos:
 	ADDc	D88_Fract, D88_Modulo
 	GOTO	_DIV60c_roll
@@ -1883,7 +1883,7 @@ _DIV60c_roll:
 
 	BTFSS	STATUS, C
 	GOTO	_DIV60c_loop
-	FAR_RETURN
+	RETURN
 
 
 
@@ -1903,7 +1903,7 @@ MULT33s: ; 33 = 1 + 32 ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) *
 	RLFc	D88_Denum	; a = a * 32
 
 	ADDc	D88_Num, D88_Denum 	; D88_Num = a + 32*a = 33*a
-	FAR_RETURN
+	RETURN
 
 
 MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
@@ -1922,7 +1922,7 @@ MULT10s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 10
 	RLFc	D88_Denum	; *8
 
 	ADDc	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
-	FAR_RETURN
+	RETURN
 
 MULT10c: ; D88_Num (32 bit) = D88_Denum (24 bit expanded to 32) * 10
 ; 0000 1010
@@ -1940,7 +1940,7 @@ MULT10c: ; D88_Num (32 bit) = D88_Denum (24 bit expanded to 32) * 10
 	RLFi	D88_Denum	; *8
 
 	ADDi	D88_Num, D88_Denum	; D88_Num = 2*a + 8*a = 10*a
-	FAR_RETURN
+	RETURN
 
 
 MULT100s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 100
@@ -1968,7 +1968,7 @@ MULT100s: ; D88_Num (24 bit) = D88_Denum (16 bit, expanded to 24) * 100
 	RLFc	D88_Denum	; *64
 
 	ADDc	D88_Num, D88_Denum	; D88_Num = 4*a + 32*a + 64*a
-	FAR_RETURN
+	RETURN
 
 
 ;#############################################################################
@@ -2001,7 +2001,7 @@ WAIT_1s_loop3:			; 4 cycles per loop (2us / loop2)
 
 	DECFSZ	WAIT_loopCounter1, F
 	GOTO	WAIT_1s_loop1
-	FAR_RETURN
+	RETURN
 
 
 

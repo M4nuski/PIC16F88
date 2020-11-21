@@ -672,7 +672,7 @@ POPscr	MACRO
 
 
 ;#############################################################################
-;	PC MSB Boundary skip
+;	PC High Byte Boundary skip
 ;#############################################################################
 
 PC0x0800SKIP	MACRO	; Skip to the next 2K instruction boundary
@@ -688,15 +688,7 @@ FAR_CALL	MACRO	dest
 	GOTO	_end
 	BSF	PCLATH, 3
 	CALL	( dest & 0x07FF )
-_end:
-	ENDM
-	
-FAR_RETURN	MACRO
-	LOCAL	_end
-	GOTO	$ + 2	; to make skippable
-	GOTO	_end
 	BCF	PCLATH, 3
-	RETURN	
 _end:
 	ENDM
 	
