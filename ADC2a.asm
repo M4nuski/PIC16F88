@@ -12,7 +12,7 @@
 ; Bank 3    0x180-0x18F   0x190-0x1EF       0x1F0-0x1FF			16 + 80 (+ top 16 shared with bank 0)
 
 ; Pinout:
-; pin  1 PORTA2	Input	AN2 VREF-
+; pin  1 PORTA2	Input	AN2
 ; pin  2 PORTA3	Input	AN3 VREF+
 ; pin  3 PORTA4	Input	AN4
 ; pin  4 PORTA5	Input	#MCLR
