@@ -24,6 +24,7 @@
 ;	ASSERTx l f
 ;	SHIFTRx f f, SHIFTLx f f, RRx f f, RLx f f 
 ;	BSetx f f, BClearx f f, BTSSx f f, BTSCx f f
+;	BSFx f, l
 ;#############################################################################
 ; TODO new instructions:
 ; 	MULT, DIV
@@ -423,6 +424,43 @@ _end:
 	ENDM
 
 
+;#############################################################################
+;	BitSetFile
+;	Set bit in file, select file offset from lit
+;#############################################################################
+
+BSFs	MACRO, file, bit
+	IF ( bit <= 7 )
+	BSF	file, bit
+	ELSE
+	BSF	file + 1, bit
+	ENDIF	
+	ENDM
+	
+BSFc	MACRO, file, bit
+	IF ( bit <= 7 )
+	BSF	file, bit
+	ENDIF
+	IF ( bit <= 15 )
+	BSF	file + 1, bit
+	ELSE
+	BSF	file + 2, bit
+	ENDIF	
+	ENDM
+	
+BSFi	MACRO, file, bit
+	IF ( bit <= 7 )
+	BSF	file, bit
+	ENDIF
+	IF ( bit <= 15 )
+	BSF	file + 1, bit
+	ENDIF
+	if ( bit <= 23 )
+	BSF	file + 2, bit
+	ELSE 
+	BSF	file + 3, bit
+	ENDIF	
+	ENDM
 
 ;#############################################################################
 ;	BitClear
@@ -2089,14 +2127,15 @@ SUBc	MACRO	a, b	; a = a - b
 	LOCAL	_nb0, _nb1
 	CLRF	SCRATCH	
 	
-	MOVF	b, W		; sub byte 0
-	SUBWF	a, F
+	; sub byte 0
+	MOVF	b, W	; w = b
+	SUBWF	a, F	; sub w from f, a = a - b
 	
 	SK_ZE
 	BSF	SCRATCH, Z
 	
 	BR_NB	_nb0		; if no borrow sub next byte
-	MOVLW	0x01		; propagate carry
+	MOVLW	0x01		; propagate borrow
 	SUBWF	a + 1, F
 	SK_NB
 	SUBWF	a + 2, F
@@ -2919,19 +2958,19 @@ RLFi	MACRO	file
 	ENDM
 	
 RRFs	MACRO	file
-	RRF	file + 1, F	
+	RRF	file + 1, F
 	RRF	file, F
 	ENDM
 	
 RRFc	MACRO	file
-	RRF	file + 2, F	
-	RRF	file + 1, F	
+	RRF	file + 2, F
+	RRF	file + 1, F
 	RRF	file, F
 	ENDM
 RRFi	MACRO	file
 	RRF	file + 3, F
-	RRF	file + 2, F	
-	RRF	file + 1, F	
+	RRF	file + 2, F
+	RRF	file + 1, F
 	RRF	file, F
 	ENDM
 

@@ -13,10 +13,11 @@
 ;	Timer1 value reader
 ;#############################################################################
 
-
-#DEFINE STALL	GOTO	$
-#DEFINE TRUE	0x00
-#DEFINE FALSE	0x01
+#include <xc.inc>
+	
+#define	    STALL	GOTO $
+#define	    TRUE	0x00
+#define	    FALSE	0x01
 
 ; GPR files in GPR for context saving
 STACK_FSR	EQU	0x6D
@@ -85,13 +86,13 @@ BANK3	MACRO
 ; 	 check if target is Zero (Result is STATUS Z)
 ;#############################################################################
 
-TEST	MACRO	file
-	MOVF	file, F
-	ENDM
+;TEST	MACRO (	file)
+;	MOVF	file, F
+;	ENDM
 	
-TESTw	MACRO
-	ANDLW	0xFF
-	ENDM
+;TESTw	MACRO
+;	ANDLW	0xFF
+;	ENDM
 	
 	
 	
@@ -100,7 +101,7 @@ TESTw	MACRO
 ; 	 a vs b (Result is STATUS Z and C)
 ;#############################################################################
 
-CMP_lf	MACRO lit, file	; literal vs file
+CMP_lf	macro	lit, file	; literal vs file
 	MOVF	file, W			; w = f
 	SUBLW	lit			; w = l - f(w)
 	ENDM
@@ -434,7 +435,7 @@ BTWSC	MACRO	bit			; skip if clear
 
 
 ;#############################################################################
-;	Branch if W is true (0) /false (not 0)
+;	Branch if W is true/false
 ;#############################################################################
 
 BW_True		MACRO	dest
@@ -689,7 +690,6 @@ ARRAYl	MACRO TableLabel, lit
 	CALL	TableLabel
 	ENDM
 	
-	
 ;#############################################################################
 ;	PC High Byte Boundary skip
 ;#############################################################################
@@ -723,12 +723,3 @@ PC0x0100SKIP	MACRO	; Align next instruction on a 256 instruction boundary
 	ORG	( $ & 0xFFFFFF00 ) + 0x0100
 	endif
 	ENDM
-	
-	
-inline_50us	MACRO			
-	MOVLW	33			; (1) 100 instruction for 50 us, 1 == 10 cycles = 5us, 2 is 14, 3 is 18, 4 is 22
-	MOVWF	WAIT_loopCounter1	; (1) (2) 4, 7, 10, 13 ... 1 + 3*l
-	DECFSZ	WAIT_loopCounter1, F	; (1)
-	GOTO	$ - 1			; (2/1)
-	ENDM
-

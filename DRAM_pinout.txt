@@ -1,0 +1,30 @@
+01 vcc
+02 #cas
+03 dq1
+04 a0
+05 a1
+06 dq2
+07 a2
+08 a3
+09 vss
+10 dq4
+11 a4
+12 a5
+13 dq3
+14 a6
+15 a7
+16 dq1b
+17 a8
+18
+19
+20 dq2b
+21 #W
+22 #G
+23 dq4b
+24 
+25 dq3b
+26 dout9
+27 #ras
+28 #casbit9
+29 din9
+30 vcc

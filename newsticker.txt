@@ -1,0 +1,604 @@
+GET https://newsapi.org/v2/everything?q=infosec&from=2024-08-01&apiKey=3f1d2ffe903b416f80b797f025855ce7&sortBy=popularity
+
+prog pw
+emmanc@
+3f1d2ffe903b416f80b797f025855ce7
+pageSize=1
+https://newsapi.org/v2/everything?q=infosec&from=2024-08-10&apiKey=3f1d2ffe903b416f80b797f025855ce7&sortBy=popularity&pageSize=1&page=1
+
+ from=2024-08-01 \
+    -d sortBy=popularity
+{
+    "status": "ok",
+    "totalResults": 45,
+    "articles": [
+        {
+            "source": {
+                "id": "ars-technica",
+                "name": "Ars Technica"
+            },
+            "author": "Nate Anderson",
+            "title": "Who are the two major hackers Russia just received in a prisoner swap?",
+            "description": "Both men committed major financial crimes—and had powerful friends.",
+            "url": "https://arstechnica.com/security/2024/08/who-are-the-two-major-hackers-russia-just-received-in-a-prisoner-swap/",
+            "urlToImage": "https://cdn.arstechnica.net/wp-content/uploads/2024/01/russia-state-hacking-760x380.jpg",
+            "publishedAt": "2024-08-02T00:14:25Z",
+            "content": "0\r\nAs part of todays blockbuster prisoner swap between the US and Russia, which freed the journalist Evan Gershkovich and several Russian opposition figures, Russia received in return a motley collec… [+5471 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Slashdot.org"
+            },
+            "author": "msmash",
+            "title": "Agile is Killing Software Innovation, Says Moxie Marlinspike",
+            "description": "There's a rot at the heart of modern software development that's destroying innovation, and infosec legend Moxie Marlinspike believes he knows exactly what's to blame: Agile development. Marlinspike argued that Agile methodologies, widely adopted over the pas…",
+            "url": "https://developers.slashdot.org/story/24/08/09/1418217/agile-is-killing-software-innovation-says-moxie-marlinspike",
+            "urlToImage": "https://a.fsdn.com/sd/topics/programming_64.png",
+            "publishedAt": "2024-08-09T18:40:00Z",
+            "content": "There's a rot at the heart of modern software development that's destroying innovation, and infosec legend Moxie Marlinspike believes he knows exactly what's to blame: Agile development. Marlinspike … [+915 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Brandon Vigliarolo",
+            "title": "Devices with insecure SSH services are everywhere, say infosec duo",
+            "description": "'Serendipitous' discovery may have you second guessing your appliances\nBlack Hat A funny thing happened to security researchers at attack surface management company runZero when they were digging into the xz backdoor earlier this year: They found a whole bunc…",
+            "url": "https://www.theregister.com/2024/08/07/vulnerable_ssh_implementations_are_everywhere/",
+            "urlToImage": "https://regmedia.co.uk/2024/08/07/ssh_shutterstock.jpg",
+            "publishedAt": "2024-08-07T23:00:08Z",
+            "content": "Black Hat A funny thing happened to security researchers at attack surface management company runZero when they were digging into the xz backdoor earlier this year: They found a whole bunch of vulner… [+3203 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Jessica Lyons",
+            "title": "That cyber-heist of 2.9B personal records? There's a class-action lawsuit looming for that",
+            "description": "Background check biz accused of negligence\nA lawsuit has accused a Florida data broker of carelessly failing to secure billions of records of people's private information, which was subsequently stolen from the biz and sold on an online criminal marketplace.……",
+            "url": "https://www.theregister.com/2024/08/05/national_public_data_lawsuit/",
+            "urlToImage": "https://regmedia.co.uk/2024/08/05/shutterstock_theft.jpg",
+            "publishedAt": "2024-08-05T17:58:11Z",
+            "content": "A lawsuit has accused a Florida data broker of carelessly failing to secure billions of records of people's private information, which was subsequently stolen from the biz and sold on an online crimi… [+3852 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Matthew Connatser",
+            "title": "SAP Core AI bugs allowed access to internal network servers, say researchers",
+            "description": "Wiz infoseccers able to promote themselves from humble customer to full-blown admin\nBlack Hat Flaws in SAP's Core AI service created a gateway to its customers' private data, including code and training materials, until they were patched earlier this year.…<!…",
+            "url": "https://www.theregister.com/2024/08/06/sap_core_ai_bugs_granted/",
+            "urlToImage": "https://regmedia.co.uk/2024/02/08/shutterstock_aipc.jpg",
+            "publishedAt": "2024-08-06T17:32:06Z",
+            "content": "Black Hat Flaws in SAP's Core AI service created a gateway to its customers' private data, including code and training materials, until they were patched earlier this year.\r\nThis is according to vuln… [+5263 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Jessica Lyons",
+            "title": "How to ingeniously and wirelessly inject malware onto someone's nearby Windows PC via Google's Quick Share",
+            "description": "Or rather could, until the web giant was tipped off\nDEF CON Ten now-fixed bugs in Google's Quick Share for Windows could have been exploited to wirelessly write new files onto victims' PCs without their approval, and ultimately execute code remotely on those …",
+            "url": "https://www.theregister.com/2024/08/10/google_quick_share_rce/",
+            "urlToImage": "https://regmedia.co.uk/2021/02/16/share.jpg",
+            "publishedAt": "2024-08-10T19:00:10Z",
+            "content": "DEF CON Ten now-fixed bugs in Google's Quick Share for Windows could have been exploited to wirelessly write new files onto victims' PCs without their approval, and ultimately execute code remotely o… [+10897 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Brandon Vigliarolo",
+            "title": "Secure Web Gateways are anything but as infosec hounds spot dozens of bypasses",
+            "description": "'Vendors can fix' this architectural failure, SquareX founder tells us\nDefcon Secure Web Gateways (SWGs) are an essential part of enterprise security, which makes it shocking to learn that every single SWG in the Gartner Magic Quadrant for SASE and SSE can re…",
+            "url": "https://www.theregister.com/2024/08/09/secure_web_gateways_are_anything/",
+            "urlToImage": "https://regmedia.co.uk/2019/09/18/shutterstock_open_door_unlocked.jpg",
+            "publishedAt": "2024-08-09T16:00:09Z",
+            "content": "Defcon Secure Web Gateways (SWGs) are an essential part of enterprise security, which makes it shocking to learn that every single SWG in the Gartner Magic Quadrant for SASE and SSE can reportedly be… [+4151 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Brandon Vigliarolo",
+            "title": "Software innovation just isn't what it used to be, and Moxie Marlinspike blames Agile",
+            "description": "Layers of abstraction and speedy development have left engineers unable to understand what lies beneath\nblack hat There's a rot at the heart of modern software development that's destroying innovation, and infosec legend Moxie Marlinspike believes he knows ex…",
+            "url": "https://www.theregister.com/2024/08/09/marlinspike/",
+            "urlToImage": "https://regmedia.co.uk/2024/08/09/moxie-marlinspike-jeff-moss-black-hat.jpg",
+            "publishedAt": "2024-08-09T13:59:14Z",
+            "content": "black hat There's a rot at the heart of modern software development that's destroying innovation, and infosec legend Moxie Marlinspike believes he knows exactly what's to blame: Agile development.\r\nM… [+3556 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Jessica Lyons",
+            "title": "Lights, camera, AI! Real-time deepfakes coming to DEF CON",
+            "description": "Red teamer finds they're easy to make, which is welcome to produce fodder for detection bots\nDEF CON Visitors to the AI Village at this year's DEF CON hacker conference will have the chance to star in their own deepfake video simply by standing in front of Br…",
+            "url": "https://www.theregister.com/2024/08/04/realtime_deepfakes_defcon/",
+            "urlToImage": "https://regmedia.co.uk/2024/01/03/deepfake_shuttterstock.jpg",
+            "publishedAt": "2024-08-04T18:42:13Z",
+            "content": "DEF CON Visitors to the AI Village at this year's DEF CON hacker conference will have the chance to star in their own deepfake video simply by standing in front of Brandon Kovacs' camera, and watchin… [+4901 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Jessica Lyons",
+            "title": "Cloud storage lockers from Microsoft and Google used to store and spread state-sponsored malware",
+            "description": "Why run your own evil infrastructure when Big Tech offers robust tools hosted at trusted URLs?\nBlack Hat State-sponsored cyber spies and criminals are increasingly using legitimate cloud services to attack their victims, according to Symantec's threat hunters…",
+            "url": "https://www.theregister.com/2024/08/08/microsoft_google_cloud_storage_malware/",
+            "urlToImage": "https://regmedia.co.uk/2024/04/05/shutterstock_backdoor.jpg",
+            "publishedAt": "2024-08-08T01:58:13Z",
+            "content": "Black Hat State-sponsored cyber spies and criminals are increasingly using legitimate cloud services to attack their victims, according to Symantec's threat hunters who have spotted three such operat… [+4231 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Brandon Vigliarolo",
+            "title": "Your victim's Windows PC is fully patched? Just force undo its updates and exploit away",
+            "description": "And this guy showed the world how today – plus or minus some caveats\nBlack Hat Techniques to forcibly remove security patches from Windows machines so that fixed vulnerabilities are exploitable again were demonstrated this week.…",
+            "url": "https://www.theregister.com/2024/08/08/microsoft_windows_updates/",
+            "urlToImage": "https://regmedia.co.uk/2022/04/19/shutterstock_blissxp.jpg",
+            "publishedAt": "2024-08-08T03:34:02Z",
+            "content": "Black Hat Techniques to forcibly remove security patches from Windows machines so that fixed vulnerabilities are exploitable again were demonstrated this week.\r\nThese methods are a handy means for ro… [+5288 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Internet"
+            },
+            "author": "info@thehackernews.com (The Hacker News)",
+            "title": "Mirai Botnet targeting OFBiz Servers Vulnerable to Directory Traversal",
+            "description": "Enterprise Resource Planning (ERP) Software is at the heart of many enterprising supporting human resources, accounting, shipping, and manufacturing. These systems can become very complex and difficult to maintain. They are often highly customized, which can …",
+            "url": "https://thehackernews.com/2024/08/mirai-botnet-targeting-ofbiz-servers.html",
+            "urlToImage": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg_n-aAUdNG2xPD3vIMSH5jU0RqRIMvXHxfYws1ZOPbnWxprnCuXiH3oEzyVfpnJkAAx_NUk-__x8zlYCBJgw04LDCqupAgShcH2Rw1kC-hgpZ4T_ihzIKxYfEj3netTOMrDwVgR-NKhtpFypZwVVvscla0Eb3JF021LAMbjMhnXr7XgfGAoy1puE22_m0/s728-rw-e365/sans.jpg",
+            "publishedAt": "2024-08-02T10:52:00Z",
+            "content": "Enterprise Resource Planning (ERP) Software is at the heart of many enterprising supporting human resources, accounting, shipping, and manufacturing. These systems can become very complex and difficu… [+5526 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "EFF"
+            },
+            "author": "Aaron Jue",
+            "title": "EFF at the Las Vegas Hacker Conferences",
+            "description": "Las Vegas is blazing hot and that means it's time for EFF to return to the hacker summer camp conferences—BSidesLV, Black Hat USA and DEF CON—to rally behind computer security researchers and tinkerers. EFF is glad to support members of this community all yea…",
+            "url": "https://www.eff.org/deeplinks/2024/07/eff-las-vegas-hacker-conferences",
+            "urlToImage": "https://www.eff.org/files/banner_library/2024_defcon32-front-banner.png",
+            "publishedAt": "2024-08-06T07:25:02Z",
+            "content": "Las Vegas is blazing hot and that means it's time for EFF to return to the hacker summer camp conferencesBSidesLV, Black Hat USA and DEF CONto rally behind computer security researchers and tinkerers… [+4571 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Forbes"
+            },
+            "author": "Jayashree Rajan, Forbes Councils Member, \n Jayashree Rajan, Forbes Councils Member\n https://www.forbes.com/sites/forbescommunicationscouncil/people/jayashreerajan/",
+            "title": "Five Factors Influencing Software Purchase Decisions Of Business Technologists",
+            "description": "So, how do you effectively communicate and position to this new class of buyers, sometimes also referred to as “shadow IT”? Here are my top five factors.",
+            "url": "https://www.forbes.com/sites/forbescommunicationscouncil/2024/08/05/five-factors-influencing-software-purchase-decisions-of-business-technologists/",
+            "urlToImage": "https://imageio.forbes.com/specials-images/imageserve/62727b19dc1908dc2c021596/0x0.jpg?format=jpg&height=900&width=1600&fit=bounds",
+            "publishedAt": "2024-08-05T11:00:00Z",
+            "content": "Jayashree Rajan is a business technologist, experienced marketer, data aficionado and CMO at Nexla. \r\ngetty\r\nThe global pandemic significantly altered B2B technology purchasing trends, particularly s… [+4805 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Biztoc.com"
+            },
+            "author": "go.theregister.com",
+            "title": "Secure Web Gateways are anything but as infosec hounds spot dozens of bypasses",
+            "description": "'Vendors can fix' this architectural failure, SquareX founder tells us\nDefcon Secure Web Gateways (SWGs) are an essential part of enterprise security, which makes it shocking to learn that every single SWG in the Gartner Magic Quadrant for SASE and SSE can re…",
+            "url": "https://biztoc.com/x/937b9e415425b745",
+            "urlToImage": "https://biztoc.com/cdn/800/og.png",
+            "publishedAt": "2024-08-09T16:12:17Z",
+            "content": "'Vendors can fix' this architectural failure, SquareX founder tells usDefcon Secure Web Gateways (SWGs) are an essential part of enterprise security, which makes it shocking to learn that every singl… [+144 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Iain Thomson",
+            "title": "Google gamed into advertising a malicious version of Authenticator",
+            "description": "Plus: CISA's AI hire; and Canuck SIM swappers busted Infosec in brief  Scammers have been using Google's own ad system to fool people into downloading a borked copy of the Chocolate Factory's Authenticator software.…",
+            "url": "https://www.theregister.com/2024/08/05/security_in_brief/",
+            "urlToImage": "https://regmedia.co.uk/2024/08/04/google_shutterstock1.jpg",
+            "publishedAt": "2024-08-05T02:00:06Z",
+            "content": "Infosec in brief Scammers have been using Google's own ad system to fool people into downloading a borked copy of the Chocolate Factory's Authenticator software.\r\nA team at security shop Malwarebytes… [+5200 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Iain Thomson",
+            "title": "Hello? Are you talking on a Cisco SPA300 or SPA500 IP phone? Now's the time to junk 'em",
+            "description": "Multiple critical flaws found and they won't be fixed A boffin from British defence contractor BAE has found three critical flaws in Cisco's Small Business SPA300 and SPA500 IP phones – and another couple of nasties – none of which will be fixed or mitigated.…",
+            "url": "https://www.theregister.com/2024/08/09/cisco_ip_phone_critical_flaws/",
+            "urlToImage": "https://regmedia.co.uk/2024/08/08/phone_shutterstock.jpg",
+            "publishedAt": "2024-08-09T00:30:15Z",
+            "content": "A boffin from British defence contractor BAE has found three critical flaws in Cisco's Small Business SPA300 and SPA500 IP phones and another couple of nasties none of which will be fixed or mitigate… [+2375 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Help Net Security"
+            },
+            "author": "Help Net Security",
+            "title": "Infosec products of the month: July 2024",
+            "description": "Here’s a look at the most interesting products from the past month, featuring releases from: AttackIQ, AuditBoard, Black Kite, BlueVoyant, Druva, GitGuardian, Invicti Security, IT-Harvest, LogRhythm, LOKKER, NordVPN, Pentera, Permit.io, Prompt Security, Quant…",
+            "url": "https://www.helpnetsecurity.com/2024/08/01/infosec-products-of-the-month-july-2024/",
+            "urlToImage": "https://img.helpnetsecurity.com/wp-content/uploads/2024/03/28092100/infosec-month-1200.webp",
+            "publishedAt": "2024-08-01T02:45:19Z",
+            "content": "Heres a look at the most interesting products from the past month, featuring releases from: AttackIQ, AuditBoard, Black Kite, BlueVoyant, Druva, GitGuardian, Invicti Security, IT-Harvest, LogRhythm, … [+8259 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Help Net Security"
+            },
+            "author": "Anamarija Pogorelec",
+            "title": "New infosec products of the week: August 2, 2024",
+            "description": "Here’s a look at the most interesting products from the past week, featuring releases from: Adaptive Shield, Fortanix, Clutch Security, Nucleus Security, Wing Security and Synack. Adaptive Shield unveils ITDR platform for SaaS Adaptive Shield has unveiled its…",
+            "url": "https://www.helpnetsecurity.com/2024/08/02/new-infosec-products-of-the-week-august-2-2024/",
+            "urlToImage": "https://img.helpnetsecurity.com/wp-content/uploads/2024/03/28091843/infosec-week-1200.webp",
+            "publishedAt": "2024-08-02T03:00:28Z",
+            "content": "Heres a look at the most interesting products from the past week, featuring releases from: Adaptive Shield, Fortanix, Clutch Security, Nucleus Security, Wing Security and Synack. \r\nAdaptive Shield un… [+2364 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Help Net Security"
+            },
+            "author": "Anamarija Pogorelec",
+            "title": "New infosec products of the week: August 9, 2024",
+            "description": "Here’s a look at the most interesting products from the past week, featuring releases from: Rapid7, AppOmni, Contrast Security, Elastic, Cequence Security, Veza, ArmorCode, and EndorLabs. Rapid7 releases Command Platform, unified attack defense and response R…",
+            "url": "https://www.helpnetsecurity.com/2024/08/09/new-infosec-products-of-the-week-august-9-2024/",
+            "urlToImage": "https://img.helpnetsecurity.com/wp-content/uploads/2024/03/28091843/infosec-week-1200.webp",
+            "publishedAt": "2024-08-09T03:00:55Z",
+            "content": "Heres a look at the most interesting products from the past week, featuring releases from: Rapid7, AppOmni, Contrast Security, Elastic, Cequence Security, Veza, ArmorCode, and EndorLabs.\r\nRapid7 rele… [+2903 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Help Net Security"
+            },
+            "author": "Help Net Security",
+            "title": "Week in review: VMware ESXi zero-day exploited, SMS Stealer malware targeting Android users",
+            "description": "Here’s an overview of some of last week’s most interesting news, articles, interviews and videos: Why a strong patch management strategy is essential for reducing business risk In this Help Net Security interview, Eran Livne, Senior Director of Product Manage…",
+            "url": "https://www.helpnetsecurity.com/2024/08/04/week-in-review-vmware-esxi-zero-day-exploited-sms-stealer-malware-targeting-android-users/",
+            "urlToImage": "https://img.helpnetsecurity.com/wp-content/uploads/2024/03/25124830/cybersecurity-week-review-1-1500.webp",
+            "publishedAt": "2024-08-04T07:21:43Z",
+            "content": "Heres an overview of some of last weeks most interesting news, articles, interviews and videos:\r\nWhy a strong patch management strategy is essential for reducing business riskIn this Help Net Securit… [+9589 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Mediafax.ro"
+            },
+            "author": "Andreea Soare",
+            "title": "Armata României se înzestreaza si cu echipamente românesti. BlueSpace Technology, prima companie româneasca producatoare de sisteme antidrone, a vândut Ministerului Apararii 30 de sisteme portabile SILENTA 6001 si 10 sisteme pasive NOCTUA 3101 pentru detectia dronelor",
+            "description": "Ministerului Apararii Nationale a achizitionat, de curând, 30 de sisteme portabile SILENTA 6001 si 10 sisteme pasive NOCTUA 3101 pentru detectia dronelor de la compania BlueSpace Technology, singura compania româneasca privata producatoare de echipamente TEMP…",
+            "url": "https://www.mediafax.ro/social/armata-romaniei-inzestreaza-echipamente-romanesti-bluespace-technology-prima-companie-romaneasca-producatoare-sisteme-antidrone-vandut-ministerului-apararii-30-sisteme-portabile-silenta-6001-10-22455178",
+            "urlToImage": "https://storage0.dms.mpinteractiv.ro/media/1/1/1688/22455178/1/1722867771556.jpg?width=640",
+            "publishedAt": "2024-08-07T12:41:15Z",
+            "content": "În luna mai a anului 2023, compania româneasc BlueSpace Technology producea primul sistem antidron românesc care folosete antene directive cu polarizare circular i lobi laterali redui.  Recent, compa… [+4014 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Tenable.com"
+            },
+            "author": "Rajiv Motwani",
+            "title": "Do You Think You Have No AI Exposures? Think Again",
+            "description": "As AI usage becomes more prevalent in organizations globally, security teams must get full visibility into these applications. Building a comprehensive inventory of AI applications in your environment is a first step. Read on to learn what we found about AI a…",
+            "url": "https://www.tenable.com/blog/do-you-think-you-have-no-ai-exposures-think-again",
+            "urlToImage": "https://www.tenable.com/sites/default/files/styles/640x360/public/images/articles/Do%20You%20Think%20You%20Have%20No%20AI%20Exposures.jpeg?itok=yOkEfryr",
+            "publishedAt": "2024-08-06T17:00:00Z",
+            "content": "As AI usage becomes more prevalent in organizations globally, security teams must get full visibility into these applications. Building a comprehensive inventory of AI applications in your environmen… [+5831 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Securitylab.ru"
+            },
+            "author": "Alexander Antipov",
+            "title": "??? ??????, ????? ??? ?????????? ????????? ??????? ????? 21 ?????? ????????????? ???????????",
+            "description": "?? ?????? 2023 ???? ??? ???????????? ????? ?????? — ????? 29 000 ?????????????????? ???????????, ??????? ???? ????? ? ???? CVE",
+            "url": "https://www.securitylab.ru/blog/personal/Business_without_danger/353980.php",
+            "urlToImage": "http://www.securitylab.ru/upload/blog/avatar/102/102d93ee9382357d62315e42e9ff6f60.gif",
+            "publishedAt": "2024-08-01T04:01:45Z",
+            "content": "2023 29 000 , CVE. 4000 , , . , CVE .\r\n Edgescan, 2022 65 (Infosec Institute 60150 ), , CISA, 15 . Rapid7, 2022 , -: 56% ; 12% , 2021 , 87% , 2020-. Palo Alto Networks, 2022 15 CVE. , , .\r\n. , . , . … [+110 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Globalsecurity.org"
+            },
+            "author": "John Pike",
+            "title": "NATO-funded project to reroute internet to space in case of disruption to critical infrastructure",
+            "description": "A new NATO-funded initiative aims to make the internet less vulnerable to disruption by rerouting the flow of information into space in the event that undersea cables are attacked or accidentally severed. The $2.5 million project, launched on 31 July 2024, wa…",
+            "url": "https://www.globalsecurity.org/military/library/news/2024/08/mil-240806-nato01.htm",
+            "urlToImage": null,
+            "publishedAt": "2024-08-07T06:09:12Z",
+            "content": "NATO - North Atlantic Treaty Organisation\r\n31 Jul. 2024Last updated: 06 Aug. 2024\r\nA new NATO-funded initiative aims to make the internet less vulnerable to disruption by rerouting the flow of inform… [+1429 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Habr.com"
+            },
+            "author": "skillfactory_school (Skillfactory)",
+            "title": "Bug Bounty ??? ????????: ????? ???????? ?????? ?? ????? ????? ????????? ? ??? ? ???? ?????????????",
+            "description": "?????? IT-???????? ?????? ????? ?? ??????????? ??????????? ? ????? ? ?? ?????, ????????, ???-?????? ??? ??????????????. ? ????? ?? ????????? ?? ??????????? ????????????? ???????????? ????? ???????? ??????????????, ??????????? ? ???????? ? ?????????, ? ??? — ?…",
+            "url": "https://habr.com/ru/companies/skillfactory/articles/832870/#post-content-body",
+            "urlToImage": "https://habrastorage.org/getpro/habr/upload_files/42b/c6d/bc9/42bc6dbc96bc757e3ec23005fe6857ba.jpeg",
+            "publishedAt": "2024-08-01T10:00:20Z",
+            "content": "Bug Bounty , , , - . \r\n « » «». , . \r\n . , - .\r\n, Bug Bounty, .\r\n Bug Bounty\r\n « ». 18 Bramah and Co., , , , .\r\n , 1790 200 , . .\r\n, 1851 - \r\n . , . \r\n IT Bug Bounty 140 , 1995 . Netscape , Netscape … [+2299 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Harihareswara.net"
+            },
+            "author": "eabando",
+            "title": "\"A Story About Jessica\" by SwiftOnSecurity | Cogito, Ergo Sumana",
+            "description": "The cybersecurity expert SwiftOnSecurity, a decade ago, wrote a parable called &quot;A Story About Jessica&quot; and posted it to their (now-deleted) Tumblr blog. I found it moving and insightful. The consultancy Superbloom pointed to it … | Cogito, Ergo Suma…",
+            "url": "https://harihareswara.net/posts/2024/a-story-about-jessica-by-swiftonsecurity/",
+            "urlToImage": null,
+            "publishedAt": "2024-08-02T05:47:01Z",
+            "content": "The cybersecurity expert SwiftOnSecurity, a decade ago, wrote a parable called \"A Story About Jessica\" and posted it to their (now-deleted) Tumblr blog. I found it moving and insightful. The consulta… [+7491 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Biztoc.com"
+            },
+            "author": "go.theregister.com",
+            "title": "Devices with insecure SSH services are everywhere, say infosec duo",
+            "description": "'Serendipitous' discovery may have you second guessing your appliances\nBlack Hat A funny thing happened to security researchers at attack surface management company runZero when they were digging into the xz backdoor earlier this year: They found a whole bunc…",
+            "url": "https://biztoc.com/x/2284e177cd9b2761",
+            "urlToImage": "https://biztoc.com/cdn/800/og.png",
+            "publishedAt": "2024-08-07T23:07:19Z",
+            "content": "'Serendipitous' discovery may have you second guessing your appliancesBlack Hat A funny thing happened to security researchers at attack surface management company runZero when they were digging into… [+143 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Biztoc.com"
+            },
+            "author": "go.theregister.com",
+            "title": "Software innovation just isn't what it used to be, and Moxie Marlinspike blames Agile",
+            "description": "Layers of abstraction and speedy development have left engineers unable to understand what lies beneath\nblack hat There's a rot at the heart of modern software development that's destroying innovation, and infosec legend Moxie Marlinspike believes he knows ex…",
+            "url": "https://biztoc.com/x/75f3c1ee6ae48890",
+            "urlToImage": "https://biztoc.com/cdn/800/og.png",
+            "publishedAt": "2024-08-09T14:11:07Z",
+            "content": "Layers of abstraction and speedy development have left engineers unable to understand what lies beneathblack hat There's a rot at the heart of modern software development that's destroying innovation… [+142 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Biztoc.com"
+            },
+            "author": "go.theregister.com",
+            "title": "Google gamed into advertising a malicious version of Authenticator",
+            "description": "Google gamed into advertising a malicious version of Authenticator\nPlus: CISA's AI hire; and Canuck SIM swappers busted\nInfosec in brief Scammers have been using Google's own ad system to fool people into downloading a borked copy of the Chocolate Factory's A…",
+            "url": "https://biztoc.com/x/64ceba8403fb772e",
+            "urlToImage": "https://biztoc.com/cdn/800/og.png",
+            "publishedAt": "2024-08-05T02:10:34Z",
+            "content": "Google gamed into advertising a malicious version of AuthenticatorPlus: CISA's AI hire; and Canuck SIM swappers bustedInfosec in brief Scammers have been using Google's own ad system to fool people i… [+141 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "PR Newswire UK"
+            },
+            "author": null,
+            "title": "Balbix Unveils BIX: the Industry's First GenAI Powered Assistant for Cyber Risk and Exposure Management",
+            "description": "BIX enables cybersecurity and business leaders to gain insight into their exposures and speed up cyber risk burn down while keeping your cyber risk data private. LAS VEGAS, Aug. 6, 2024 /PRNewswire/ -- Balbix, an AI-powered Cyber Risk and Exposure Management …",
+            "url": "https://www.prnewswire.co.uk/news-releases/balbix-unveils-bix-the-industrys-first-genai-powered-assistant-for-cyber-risk-and-exposure-management-302215686.html",
+            "urlToImage": "https://mma.prnewswire.com/media/1456946/Balbix_Logo.jpg?p=facebook",
+            "publishedAt": "2024-08-06T15:36:00Z",
+            "content": "BIX enables cybersecurity and business leaders to gain insight into their exposures and speed up cyber risk burn down while keeping your cyber risk data private.\r\nLAS VEGAS, Aug. 6, 2024 /PRNewswire/… [+6792 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Techtarget.com"
+            },
+            "author": "Arielle Waldman",
+            "title": "InfoSec community sounds off on CrowdStrike outage, next steps",
+            "description": "Security experts offered their thoughts on the recent IT outage, praising CrowdStrike's response time but saying the outage highlights issues in the software updating process.",
+            "url": "https://www.techtarget.com/searchsecurity/news/366599607/InfoSec-community-sounds-off-on-CrowdStrike-outage-next-steps",
+            "urlToImage": "https://cdn.ttgtmedia.com/rms/onlineimages/security_a303249453.jpg",
+            "publishedAt": "2024-08-01T16:00:00Z",
+            "content": "While infosec experts agree the recent global IT outage caused by a defective CrowdStrike channel file update highlights inherent problems with the way software is updated, many applauded the vendor … [+12517 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "ComputerWeekly.com"
+            },
+            "author": null,
+            "title": "CISO Singapore 2024",
+            "description": null,
+            "url": "https://www.computerweekly.com/event/CISO-Singapore-2024",
+            "urlToImage": null,
+            "publishedAt": "2024-08-01T20:54:00Z",
+            "content": "20-21 August 2024 | Equarius Hotel Sentosa, Singapore \r\nJoin us at CISO Singapore on 20-21 August at the Equarius Hotel in Sentosa and discover how to put security at the core of your organisations c… [+769 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Techtarget.com"
+            },
+            "author": "Rob Wright",
+            "title": "CrowdStrike fires back at Delta over outage allegations",
+            "description": "After Delta Air Lines said it would seek damages against CrowdStrike over last month's IT outage, the cybersecurity vendor's legal counsel warned it would 'respond aggressively.'",
+            "url": "https://www.techtarget.com/searchsecurity/news/366600052/CrowdStrike-fires-back-at-Delta-over-outage-allegations",
+            "urlToImage": "https://cdn.ttgtmedia.com/rms/onlineimages/security_a303249453.jpg",
+            "publishedAt": "2024-08-05T11:34:00Z",
+            "content": "CrowdStrike took issue with Delta Air Lines' recent allegations that the cybersecurity vendor was to blame for thousands of canceled flights in the wake of last month's massive IT outage.\r\nOn July 19… [+3616 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Techtarget.com"
+            },
+            "author": "Arielle Waldman",
+            "title": "Evolving threat landscape influencing cyber insurance market",
+            "description": "Many aspects of cyber insurance were addressed throughout Black Hat USA 2024, including changes in the threat landscape that affect policies and coverage.",
+            "url": "https://www.techtarget.com/searchsecurity/news/366602593/Evolving-threat-landscape-influencing-cyber-insurance-market",
+            "urlToImage": "https://cdn.ttgtmedia.com/ITKE/images/logos/TTlogo-379x201.png",
+            "publishedAt": "2024-08-09T11:03:00Z",
+            "content": "LAS VEGAS -- Cyber insurance trends were a major focus during Black Hat USA 2024 due to a rapidly evolving threat landscape where attackers continue to adapt to improved defenses.\r\nMultiple Black Hat… [+7676 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Techtarget.com"
+            },
+            "author": "Rob Wright",
+            "title": "CrowdStrike details errors that led to mass IT outage",
+            "description": "CrowdStrike's root cause analysis report on the defective channel file update found a 'confluence' of issues led to the release of the file last month, causing a mass IT outage.",
+            "url": "https://www.techtarget.com/searchsecurity/news/366602392/CrowdStrike-details-errors-that-led-to-mass-IT-outage",
+            "urlToImage": "https://cdn.ttgtmedia.com/rms/onlineimages/security_a385093447.jpg",
+            "publishedAt": "2024-08-07T11:12:00Z",
+            "content": "CrowdStrike on Tuesday published its full root cause analysis for last month's defective channel file update that caused more than 8 million Windows systems to enter reboot loops.\r\nThe report, title … [+7451 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Techtarget.com"
+            },
+            "author": "Rob Wright",
+            "title": "Researchers unveil AWS vulnerabilities, 'shadow resource' vector",
+            "description": "During a Black Hat USA 2024 session, Aqua Security researchers demonstrated how they discovered six cloud vulnerabilities in AWS services, as well as a new attack vector.",
+            "url": "https://www.techtarget.com/searchsecurity/news/366602412/Researchers-unveil-AWS-vulnerabilities-shadow-resource-vector",
+            "urlToImage": "https://cdn.ttgtmedia.com/rms/onlineimages/security_a303249453.jpg",
+            "publishedAt": "2024-08-07T14:00:00Z",
+            "content": "Aqua Security researchers disclosed six cloud vulnerabilities in AWS services, as well as a new attack vector they call \"shadow resources,\" during a Black Hat USA 2024 session Wednesday.\r\nThe session… [+6288 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Techtarget.com"
+            },
+            "author": "Alexander Culafi",
+            "title": "CrowdStrike, AI dominate conversation at Black Hat USA 2024",
+            "description": "Although the trend of vendors pitching AI-powered products nonstop has continued at Black Hat USA 2024, CrowdStrike and the recent IT outage was an even larger point of discussion.",
+            "url": "https://www.techtarget.com/searchsecurity/news/366602457/CrowdStrike-AI-dominate-conversation-at-Black-Hat-USA-2024",
+            "urlToImage": "https://cdn.ttgtmedia.com/rms/onlineimages/ai_a264431831.jpg",
+            "publishedAt": "2024-08-08T17:22:00Z",
+            "content": "LAS VEGAS -- The main topics of discussion at Black Hat USA 2024 this week were CrowdStrike and, as expected, generative AI.\r\nwas once again held at the Mandalay Bay Convention Center in Las Vegas. A… [+6953 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Pypi.org"
+            },
+            "author": "team@cyble.com",
+            "title": "odin-sdk added to PyPI",
+            "description": "Odin SDK provides a way to search across various services related to cybersecurity, IP services, certificates, exposed files and more",
+            "url": "https://pypi.org/project/odin-sdk/",
+            "urlToImage": "https://pypi.org/static/images/twitter.abaf4b19.webp",
+            "publishedAt": "2024-08-10T00:10:31Z",
+            "content": "ODIN's primary focus is to equip infosec teams with a precise depiction of the internet, enabling them to strengthen their security defences and proactively detect threats within their attack surface… [+5769 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Theregister.com"
+            },
+            "author": "Richard Speed",
+            "title": "Report: Tech misconceptions plague the IT world",
+            "description": "Just snapping the webcam shutter closed won't keep a user safe online New research has shown that while many Brits will snap shut a laptop camera in the name of privacy, a worrying amount will just as happily shovel all manner of personal information into an …",
+            "url": "https://www.theregister.com/2024/08/08/report_tech_misconceptions_plague_the/",
+            "urlToImage": "https://regmedia.co.uk/2017/08/30/pennywiseclownit.jpg",
+            "publishedAt": "2024-08-08T10:31:15Z",
+            "content": "New research has shown that while many Brits will snap shut a laptop camera in the name of privacy, a worrying amount will just as happily shovel all manner of personal information into an online gam… [+2657 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Kaspersky.com.br"
+            },
+            "author": "Eugene Kaspersky",
+            "title": "Uma proteção de confiança: gerenciar riscos de segurança cibernética por meio de uma abordagem baseada em evidências",
+            "description": "O mundo precisa de uma estratégia global de gerenciamento de riscos de segurança cibernética. Eugene Kaspersky propõe uma abordagem unificada para gerenciar os riscos de segurança cibernética em várias áreas da segurança de TI.",
+            "url": "https://www.kaspersky.com.br/blog/managing-cybersecurity-risks/22846/",
+            "urlToImage": "https://media.kasperskydaily.com/wp-content/uploads/sites/94/2024/08/02144706/managing-cybersecurity-risks-featured.jpg",
+            "publishedAt": "2024-08-02T18:10:38Z",
+            "content": "Já faz um mês desde que o Departamento de Comércio dos EUA emitiu sua determinação final com relação à venda e ao uso de produtos da Kaspersky por pessoas dos EUA. A decisão da agência, caso você não… [+13335 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "Securitylab.ru"
+            },
+            "author": "Alexander Antipov",
+            "title": "??????? ????????: ??? ??????, ????? ??? ?????????? ????????? ??????? ????? 21 ?????? ????????????? ???????????",
+            "description": "?? ?????? 2023 ???? ??? ???????????? ????? ?????? — ????? 29 000 ?????????????????? ???????????, ??????? ???? ????? ? ???? CVE. ??? ??????????? ?? 4000 ??????????? ??????, ??? ? ??????? ????, ? ????? ??? ? ?????? ????? ???? ?????????????. ??? ???? ?????????, …",
+            "url": "https://www.securitylab.ru/blog//Business_without_danger/353980.php",
+            "urlToImage": null,
+            "publishedAt": "2024-08-01T04:01:45Z",
+            "content": ""
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "PCMag.com"
+            },
+            "author": "Rob Pegoraro",
+            "title": "Feds Make a Pitch for Election Work: Here's What I've Learned as a Poll Worker",
+            "description": "At Black Hat, CISA Director Jen Easterly makes a pitch for people to sign up as poll workers, a job I've taken on in eight elections in Virginia. 'It's on all of us to preserve democracy,\" she says.\nLAS VEGAS—Cybersecurity and Infrastructure Security Agency (…",
+            "url": "https://uk.pcmag.com/security/153808/feds-make-a-pitch-for-election-work-heres-what-ive-learned-as-a-poll-worker",
+            "urlToImage": "https://sm.pcmag.com/t/pcmag_uk/opinion/f/feds-make-/feds-make-a-pitch-for-election-work-heres-what-ive-learned-a_hdes.1200.jpg",
+            "publishedAt": "2024-08-09T12:00:00Z",
+            "content": "LAS VEGASCybersecurity and Infrastructure Security Agency (CISA) Director Jen Easterly used part of her Wednesday-morning panel appearance at Black Hat 2024 to make a recruitment pitch, but not for h… [+5120 chars]"
+        },
+        {
+            "source": {
+                "id": null,
+                "name": "PCMag.com"
+            },
+            "author": "Rob Pegoraro",
+            "title": "Feds Make a Pitch for Election Work: Here's What I've Learned as a Poll Worker",
+            "description": "At Black Hat, CISA Director Jen Easterly makes a pitch for people to sign up as poll workers, a job I've taken on in eight elections in Virginia. 'It's on all of us to preserve democracy,\" she says.\nLAS VEGAS—Cybersecurity and Infrastructure Security Agency (…",
+            "url": "https://me.pcmag.com/en/security/25220/feds-make-a-pitch-for-election-work-heres-what-ive-learned-as-a-poll-worker",
+            "urlToImage": "https://sm.pcmag.com/t/pcmag_me/opinion/f/feds-make-/feds-make-a-pitch-for-election-work-heres-what-ive-learned-a_b5ud.1200.jpg",
+            "publishedAt": "2024-08-09T12:00:00Z",
+            "content": "LAS VEGASCybersecurity and Infrastructure Security Agency (CISA) Director Jen Easterly used part of her Wednesday-morning panel appearance at Black Hat 2024 to make a recruitment pitch, but not for h… [+5120 chars]"
+        },
+        {
+            "source": {
+                "id": "hacker-news",
+                "name": "Hacker News"
+            },
+            "author": "jamilbk",
+            "title": "Launch HN: Firezone (YC W22) – Zero-trust access platform built on WireGuard",
+            "description": "Hi HN! I'm Jamil Bou Kheir, founder of Firezone (https://www.firezone.dev), a remote access platform that is a replacement for legacy corporate VPNs. Built on WireGuard (a fast, modern VPN protocol), Firezone secures your team’s apps, networks and services us…",
+            "url": "https://news.ycombinator.com/item?id=41173330",
+            "urlToImage": null,
+            "publishedAt": "2024-08-06T17:52:32Z",
+            "content": "Hi HN! I'm Jamil Bou Kheir, founder of Firezone (https://www.firezone.dev), a remote access platform that is a replacement for legacy corporate VPNs. Built on WireGuard (a fast, modern VPN protocol),… [+3735 chars]"
+        }
+    ]
+}
+    
+    
+    
