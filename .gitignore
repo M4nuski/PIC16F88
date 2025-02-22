@@ -19,3 +19,4 @@ PIC16F88_Macro_testHex.X/nbproject/Makefile-genesis.properties
 *.O
 PIC16F88_Macro_test.X/Makefile
 *.properties
+*.fil
