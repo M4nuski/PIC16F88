@@ -2,7 +2,7 @@
 	#INCLUDE	<P16F88.INC>	; processor specific variable definitions
 	#INCLUDE	<PIC16F88_Macro.asm>
 
-	__CONFIG	_CONFIG1, _CP_OFF & _CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & _WDT_OFF & _INTRC_IO
+	__CONFIG	_CONFIG1, _CP_OFF & _CCP1_RB0 & _DEBUG_OFF & _WRT_PROTECT_OFF & _CPD_OFF & _LVP_OFF & _BODEN_OFF & _MCLR_ON & _PWRTE_OFF & _WDT_OFF & _EXTCLK; _INTRC_IO;_EXTCLK
 	__CONFIG	_CONFIG2, _IESO_OFF & _FCMEN_OFF
 
 ; Bank #    SFR           GPR               SHARED GPR's			total 368 bytes of GPR, 16 shared between banks

@@ -14,8 +14,8 @@
 #INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
 ;#INCLUDE	<PIC16F88_MacroExt.asm> ; 16/24/32 bit instructions extensions
 	ERRORLEVEL -302		; suppress "bank" warnings
-;MPASMx /c- /e+ /m+ /pPIC16F88 /rDEC ..\PIC16F88\DRO_Lathe_1b.asm
-	
+;MPASMx /c- /e+ /m+ /rDEC "$(FULL_CURRENT_PATH)"
+;cmd.exe /k ""C:/Prog/PIC/MPASM 560/MPASMx" /c- /e=CON /q+ /m+ /x- /rDEC  "$(FULL_CURRENT_PATH)""
 ;#############################################################################
 ;	Configuration
 ;#############################################################################
@@ -228,7 +228,7 @@ SETUP_OSC:
 ;#############################################################################
 ;	Program start 
 ;#############################################################################
-	nb	EQU	18
+nb	EQU	18
 MAIN:
 	STR	255, ticks
 	
