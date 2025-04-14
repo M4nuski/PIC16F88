@@ -725,10 +725,20 @@ PC0x0100SKIP	MACRO	; Align next instruction on a 256 instruction boundary
 	ENDM
 	
 	
+	; TODO MOVE TO 8MHz Timing Module
 inline_50us	MACRO			
 	MOVLW	33			; (1) 100 instruction for 50 us, 1 == 10 cycles = 5us, 2 is 14, 3 is 18, 4 is 22
 	MOVWF	WAIT_loopCounter1	; (1) (2) 4, 7, 10, 13 ... 1 + 3*l
 	DECFSZ	WAIT_loopCounter1, F	; (1)
 	GOTO	$ - 1			; (2/1)
+	ENDM
+
+inline_5us	MACRO
+	; inline 5us (10 inst cycles) ; TODO update to 20MHz
+	GOTO	$ + 1			; (2)
+	GOTO	$ + 1			; (2)
+	GOTO	$ + 1			; (2)
+	GOTO	$ + 1			; (2)
+	GOTO	$ + 1			; (2)
 	ENDM
 
