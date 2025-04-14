@@ -121,7 +121,6 @@ Pin_Data_UP	MACRO
 	IORWF	PORTB, F
 	ENDM	
 
-	
 Pin_Data_DOWN	MACRO
 	MOVF	Current_ClearMask, W
 	ANDWF	PORTB, F

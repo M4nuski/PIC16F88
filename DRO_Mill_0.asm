@@ -7,14 +7,13 @@
 ;
 ;#############################################################################
 ;
-;	Version 0
+;	Version 0.1
 ;	3 DRO scale sampling, display on 3 TM1637
 ;	SEG brightness in EEPROM config
 ;	
 ;	Convert from MM to INCHES (0.001)
 ;	Scale reverse in EEPROM config
-;	//Output on UART at 9600 bauds
-;	Keypad entry
+;	//Keypad entry
 ; 
 ;RA6	O DispClk // common display clock
 ;RB7	O DispData0 // display data
@@ -155,10 +154,13 @@
 ;#############################################################################
 
 	LIST	p=16F88			; processor model
+	ERRORLEVEL -302		; suppress "bank" warnings
+	
 #INCLUDE	<P16F88.INC>		; processor specific variable definitions
 #INCLUDE	<PIC16F88_Macro.asm>	; base macro for banks, context, branchs
 #INCLUDE	<PIC16F88_MacroExt.asm> ; 16/24/32 bit instructions extensions
-	ERRORLEVEL -302		; suppress "bank" warnings
+#INCLUDE	"PIC16F88_Timing8MHz.asm"
+
 ;MPASMx /c- /e+ /m+ /pPIC16F88 /rDEC ..\PIC16F88\DRO_Lathe_1b.asm
 	
 ;#############################################################################
@@ -223,12 +225,19 @@ mask_DRO2_DATA		EQU	0x20
 #DEFINE pin_KEYPAD_VAL2	PORTB, 4
 
 #DEFINE pin_DISP2_DATA	PORTB, 5
+#DEFINE Data2Clear	b'11011111' ; TM1637 masks
+#DEFINE Data2Set	b'00100000'
 #DEFINE pin_DISP1_DATA	PORTB, 6
+#DEFINE Data1Clear	b'10111111'
+#DEFINE Data1Set	b'01000000'
 #DEFINE pin_DISP0_DATA	PORTB, 7
+#DEFINE Data0Clear	b'01111111'
+#DEFINE Data0Set	b'10000000'
 
 ; EEPROM data byte at 0x00 is config
 ; bit 0-3 x2 axis 0-3 (for radius to diameter direct reading)
 ; bit 4-7 is reverse axis direction
+; value at 0x01 is brightness setting
 
 
 ;#############################################################################
@@ -345,7 +354,7 @@ mask_DRO_Data		EQU	0x4F
 disp_currentSetMask	EQU	0x50
 disp_currentClearMask	EQU	0x51
 disp_buffer		EQU	0x52
-PORTB_buffer		EQU	0x53
+;			EQU	0x53
 
 ;			EQU	0x54
 ;			EQU	0x55
@@ -386,19 +395,6 @@ temp_1			EQU	0x6D
 temp_2			EQU	0x6E
 ;			EQU	0x6F		
 
-; TM1637 line output masks:
-#DEFINE ClockClear	b'11111101'
-#DEFINE ClockSet	b'00000010'
-
-#DEFINE Data0Clear	b'11111110'
-#DEFINE Data0Set	b'00000001'
-
-#DEFINE Data1Clear	b'11110111'
-#DEFINE Data1Set	b'00001000'
-
-#DEFINE Data2Clear	b'11110111'
-#DEFINE Data2Set	b'00001000'
-
 ; TM1637 commands:
 #DEFINE _Data_Write	b'01000000'
 #DEFINE _Address_C3H	b'11000011'
@@ -416,62 +412,44 @@ temp_2			EQU	0x6E
 ;
 ;#############################################################################
 
-Pin_Clk_UP	MACRO
-	MOVLW	ClockClear
-	ANDWF	PORTB_buffer, F
-	ENDM
+;#############################################################################
+;	TM1637
+;#############################################################################
 
-Pin_Clk_DOWN	MACRO	
-	MOVLW	ClockSet
-	IORWF	PORTB_buffer, F
-	ENDM
-
-Pin_Data_UP	MACRO
-	MOVF	disp_currentClearMask, W
-	ANDWF	PORTB_buffer, F
+Disp_Data_UP	MACRO
+	MOVF	disp_currentSetMask, W
+	IORWF	PORTB, F
 	ENDM	
 
-Pin_Data_DOWN	MACRO
-	MOVF	disp_currentSetMask, W
-	IORWF	PORTB_buffer, F
+Disp_Data_DOWN	MACRO
+	MOVF	disp_currentClearMask, W
+	ANDWF	PORTB, F
 	ENDM
-	
-Peek_PORTB	MACRO
-	MOVF	PORTB, W
-	MOVWF	PORTB_buffer
-	ENDM
-	
-Update_PORTB	MACRO
-	MOVF	PORTB_buffer, W
-	MOVWF	PORTB
-	; inline 5us (10 inst cycles) ; TODO update to 20MHz
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	ENDM
-	
-disp_select0	MACRO
+
+Disp_select0	MACRO
 	MOVLW	Data0Clear
 	MOVWF	disp_currentClearMask
 	MOVLW	Data0Set
 	MOVWF	disp_currentSetMask
 	ENDM
 	
-disp_select1	MACRO
+Disp_select1	MACRO
 	MOVLW	Data1Clear
 	MOVWF	disp_currentClearMask
 	MOVLW	Data1Set
 	MOVWF	disp_currentSetMask
 	ENDM
 	
-SwitchData2	MACRO
+Disp_select2	MACRO
 	MOVLW	Data2Clear
 	MOVWF	disp_currentClearMask
 	MOVLW	Data2Set
 	MOVWF	disp_currentSetMask
 	ENDM
+
+;#############################################################################
+;	inline math
+;#############################################################################
 
 RNLc	MACRO	file
 	LOCAL	_top
@@ -487,7 +465,9 @@ _top:
 	ENDM
 
 ;#############################################################################
+;
 ;	Reset Vector - Main Entry Point
+;
 ;#############################################################################
 
 	ORG	0x0000
@@ -495,7 +475,9 @@ RESET:
 	GOTO	SETUP
 
 ;#############################################################################
+;
 ;	Interrupt Vector - Interrupt Service Routine
+;
 ;#############################################################################
 
 	ORG	0x0004
@@ -504,10 +486,14 @@ ISR:
 	RETFIE
 
 ;#############################################################################
+;
 ;	Initial Setup
+;
 ;#############################################################################
 
 SETUP:
+	CLRF	PORTA
+	CLRF	PORTB
 
 	BANK1
 	
@@ -539,17 +525,6 @@ SETUP:
 	BTFSS	OSCCON, IOFS
 	GOTO	$-1
 	
-	; UART at 9600, 8 bits, async
-	; ;BSF	TXSTA, CSRC	; not used in async - set as clock source master
-	; BCF 	TXSTA, TX9	; 8 bit tx
-	; BSF	TXSTA, TXEN	; enable tx
-	; BCF	TXSTA, SYNC	; async
-	
-	; ; set 9600 baud rate
-	; BSF 	TXSTA, BRGH	; high speed baud rate generator	
-	; MOVLW	51		; 9600 bauds
-	; MOVWF	SPBRG
-	
 	; timer 0
 	BCF	OPTION_REG, T0CS ; on instruction clock
 	BCF	OPTION_REG, PSA ; pre scaler assigned to tmr0
@@ -574,9 +549,7 @@ SETUP:
 	; pre scaler is 1:4, overlfow of 65536 instructions cycles is 131ms ; TODO update to 20MHz
 	BCF	T1CON, TMR1CS	; timer1 clock is FOSC/4
 	BSF	T1CON, TMR1ON	; timer1 ON
-	
-	; UART
-	;BSF	RCSTA, SPEN	; serial port enabled
+
 
 ; enable interrupts
 	BCF	INTCON, PEIE ; enable peripheral int
@@ -587,39 +560,37 @@ SETUP:
 	BCF	INTCON, GIE
 	
 ;#############################################################################
+;
 ;	Program start 
+;
 ;#############################################################################
+MAIN:
+;#############################################################################
+;	Default state for TM1637
+;#############################################################################
+	BSF	pin_DISP_CLOCK
+	BSF	pin_DISP0_DATA
+	BSF	pin_DISP1_DATA
+	BSF	pin_DISP2_DATA
+	STR	7, CFG_1
+	
 	MOVLW	HIGH (WAIT_50ms)
 	MOVWF	PCLATH
 	CALL	WAIT_50ms
-MAIN:
-
-	Peek_PORTB;;; TODO replace portb Macro with direct writes
 	
-	Pin_Clk_UP
-	
-	disp_select0
-	Pin_Data_UP
-	disp_select1
-	Pin_Data_UP
-	disp_select2
-	Pin_Data_UP
-	
-	Update_PORTB
-	
-	STR 15, CFG_1
-	
-	disp_select0
+;#############################################################################
+;	Welcome message
+;#############################################################################
+	Disp_select0
 	CALL	TM1637_PREFACE	
 
-	ARRAYl	table_hexTo7seg, 0
+	ARRAYl	table_hexTo7seg, 1
 	CALL	TM1637_data
 	
 	ARRAYl	table_hexTo7seg, 0
-	IORLW	0x80
+	IORLW	0x80 ; dot
 	CALL	TM1637_data
 	
-	;ARRAYl	table_hexTo7seg, 0
 	CLRW
 	CALL	TM1637_data
 
@@ -635,7 +606,24 @@ MAIN:
 	CALL	TM1637_ANNEX
 	
 	
-	disp_select1	
+	Disp_select1	
+	CALL	TM1637_PREFACE		
+	CLRW
+	CALL	TM1637_data
+	CLRW
+	CALL	TM1637_data
+	CLRW
+	CALL	TM1637_data
+	CLRW
+	CALL	TM1637_data
+	CLRW
+	CALL	TM1637_data
+	CLRW
+	CALL	TM1637_data
+	CALL	TM1637_ANNEX
+	
+
+	Disp_select2	
 	CALL	TM1637_PREFACE		
 
 	ARRAYl	table_hexTo7seg, 0x05
@@ -658,8 +646,10 @@ MAIN:
 
 	CALL	TM1637_ANNEX
 	
-	; read config in eeprom
-	
+;#############################################################################
+;	Read config in EEPROM
+;#############################################################################
+
 	BANKSEL	EEADR	; Select Bank of EEADR
 	MOVLW	0x00	; Address const
 	MOVWF	EEADR 	; Data Memory Address to read
@@ -683,6 +673,12 @@ MAIN:
 	MOVF	EEDATA, W ; W = EEDATA
 	BANKSEL	CFG_1
 	MOVWF	CFG_1
+	MOVLW	b'00000111'
+	ANDWF	CFG_1, F
+	
+;#############################################################################
+;	Initialise RAM files
+;#############################################################################
 
 	CLRF	data_status
 	CLRF	keypad_status
@@ -693,6 +689,10 @@ MAIN:
 	CLRFc	dro0_offset_0
 	CLRFc	dro1_offset_0
 	CLRFc	dro2_offset_0
+	
+;#############################################################################
+;	Welcome message delay
+;#############################################################################
 
 	MOVLW	20
 	MOVWF	loop_count
@@ -704,10 +704,15 @@ main_wait:
 	GOTO	main_wait
 	
 ;#############################################################################
+;
 ;	Program Loop
+;
 ;#############################################################################
 
 LOOP:
+;#############################################################################
+;	Read DRO 0 if not in data entry mode
+;#############################################################################
 	BTFSC	keypad_status, bit_keyEntry
 	GOTO	DRO0_done
 	
@@ -734,7 +739,7 @@ LOOP:
 	NEGc	data_0
 
 DRO0_done:
-	disp_select0; first display
+	Disp_select0; first display
 	
 	BTFSS	keypad_status, bit_keyEntry1
 	GOTO	DRO0_disp
@@ -748,12 +753,13 @@ DRO0_disp:
 	CALL	DISPLAY7segs
 	BSF	PCLATH, 3
 	CALL	PROCESS_KEYS
-
+	
+;#############################################################################
+;	Read DRO 1 if not in data entry mode
+;#############################################################################
 	BTFSC	keypad_status, bit_keyEntry
 	GOTO	DRO1_done
 
-
-; ACQ DRO 1
 ACQ_DRO1:
 	STR	mask_DRO1_CLOCK, mask_DRO_Clock
 	STR	mask_DRO1_DATA, mask_DRO_Data	
@@ -777,7 +783,7 @@ ACQ_DRO1:
 	NEGc	data_0	
 
 DRO1_done:
-	disp_select1; second display
+	Disp_select1; second display
 	
 	BTFSS	keypad_status, bit_keyEntry0
 	GOTO	DRO1_disp
@@ -792,14 +798,22 @@ DRO1_disp:
 	BSF	PCLATH, 3
 	CALL	PROCESS_KEYS
 	
+;#############################################################################
+;	Read DRO 2 if not in data entry mode
+;#############################################################################
 	GOTO	LOOP
 
 
 
 ;#############################################################################
+;
 ;	SUBROUTINES
+;
 ;#############################################################################
 
+;#############################################################################
+;	DRO data input
+;#############################################################################
 
 ACQ_DRO:
 	MOVLW	0x80
@@ -890,7 +904,7 @@ DRO_noReverse:
 	; RETLW	TRUE
 	
 ;#############################################################################
-;	DISPLAY 7 segs
+;	Data display
 ;#############################################################################
 	
 DISPLAY7segs:
@@ -1012,95 +1026,92 @@ DISPLAYCLEAR_loop:
 
 	
 ;#############################################################################
-; TM1637 6digits x 7segments displays
+;	TM1637 6digits x 7segments displays
 ;#############################################################################
 TM1637_PREFACE:
-	Peek_PORTB
-	Pin_Data_DOWN
-	Update_PORTB
+
+	Disp_Data_DOWN
+	inline_5us
 	
-	MOVLW	_Data_Write
+	MOVF	CFG_1, W
+	IORLW	_Display_ON
 	CALL	TM1637_data
 	
-	Pin_Data_DOWN
-	Update_PORTB
-	Pin_Clk_UP
-	Update_PORTB
-	Pin_Data_UP
-	Update_PORTB
-	inline_50us
+	Disp_Data_DOWN
+	inline_5us
+	BSF	pin_DISP_CLOCK
+	inline_5us
+	Disp_Data_UP
+	inline_5us
 	
-	Pin_Data_DOWN
-	Update_PORTB
+	Disp_Data_DOWN
+	inline_5us
 	
 	MOVLW	_Address_C3H
 	CALL	TM1637_data
 	RETURN
 	
-;loop version
+	
 TM1637_data:	; data is in W;
 	MOVWF	disp_buffer
 	MOVLW	8
 	MOVWF	loop_count
 	
 TM1637_dataLoop:
-	Pin_Clk_DOWN
-	Update_PORTB
+	BCF	pin_DISP_CLOCK
+	inline_5us
 
 	BTFSC	disp_buffer, 0
 	GOTO	TM1637_dataUP
-	
-	Pin_Data_DOWN
-	
+	Disp_Data_DOWN
 	GOTO	TM1637_dataDone
 TM1637_dataUP:
-	Pin_Data_UP
+	Disp_Data_UP
 	
 TM1637_dataDone:
-	Pin_Clk_UP
-	Update_PORTB
+	inline_5us
+	BSF	pin_DISP_CLOCK
+	inline_5us
 	
 	RRF	disp_buffer, F
-	
 	DECFSZ	loop_count, F
 	GOTO	TM1637_dataLoop
 
 	;ACK
-	Pin_Clk_DOWN
-	Pin_Data_UP
-	Update_PORTB	
+	BCF	pin_DISP_CLOCK
+	Disp_Data_UP
+	inline_5us	
 
-	Pin_Clk_UP
-	Update_PORTB
+	BSF	pin_DISP_CLOCK
+	inline_5us
 
-	Pin_Clk_DOWN
-	Pin_Data_DOWN
-	Update_PORTB
+	BCF	pin_DISP_CLOCK
+	Disp_Data_DOWN
+	inline_5us
 	RETURN
 
+
 TM1637_ANNEX:
-	Pin_Data_DOWN
-	Update_PORTB
-	Pin_Clk_UP
-	Update_PORTB
-	Pin_Data_UP
-	Update_PORTB
-	inline_50us
+	Disp_Data_DOWN
+	inline_5us
+	BSF	pin_DISP_CLOCK
+	inline_5us
+	Disp_Data_UP
+	inline_5us
 	
-	Pin_Data_DOWN
-	Update_PORTB
+	Disp_Data_DOWN
+	inline_5us
 	
 	MOVF	CFG_1, W
 	IORLW	_Display_ON
 	CALL	TM1637_data
 	
-	Pin_Data_DOWN
-	Update_PORTB
-	Pin_Clk_UP
-	Update_PORTB
-	Pin_Data_UP
-	Update_PORTB
-	inline_50us
+	Disp_Data_DOWN
+	inline_5us
+	BSF	pin_DISP_CLOCK
+	inline_5us
+	Disp_Data_UP
+	inline_5us
 	
 	RETURN
 
@@ -1507,490 +1518,17 @@ table_hexTo7seg:
 ;#############################################################################
 
 PROCESS_KEYS:
-	BTFSC	keypad_status, bit_keyEntry	; skip unit toggle in entry mode
-	GOTO	PROCESS_KEYS_s1
-	
-	BTFSC	pin_SWITCH		; clear when pressed
-	GOTO	PROCESS_KEYS_sUp
-	
-PROCESS_KEYS_sSown:
-	; check if already down
-	BTFSS	keypad_status, bit_keySwitchLast
-	GOTO	PROCESS_KEYS_s1	
-
-	MOVLW	mask_statusUnit
-	XORWF	data_status, F	; toggle current unit bit
-	;MOVLW	'K'
-	;CALL	SEND_BYTE
-	;MOVF	data_status, W	
-	;CALL	SEND_BYTE
-	BCF	keypad_status, bit_keySwitchLast
-	GOTO	PROCESS_KEYS_s1
-	
-PROCESS_KEYS_sUp:
-	BSF	keypad_status, bit_keySwitchLast
-	
-PROCESS_KEYS_s1:
-	; scan keypad
-	BSF	pin_debug2	
-	
-	CLRF	data_0
-	
-	BSF	pin_KEYPAD_OUTPUT	; read bit to 1
-	CALL	WAIT_50us
-	BCF	pin_KEYPAD_CLOCK
-	CALL	WAIT_50us
-	BSF	pin_KEYPAD_CLOCK
-	CALL	WAIT_50us
-	
-	BTFSC	pin_KEYPAD_INPUT
-	BSF	data_0, 0	
-	BCF	pin_KEYPAD_OUTPUT	; read bit to 0	
-	
-	MOVLW	7			; loop for the 7 remaining bits
-	MOVWF	loop_count
-PROCESS_KEYS_scanloop:
-	BCF	STATUS, C
-	RLF	data_0, F
-	
-	CALL	WAIT_50us
-	BCF	pin_KEYPAD_CLOCK
-	CALL	WAIT_50us
-	BSF	pin_KEYPAD_CLOCK
-	CALL	WAIT_50us
-	
-	BTFSC	pin_KEYPAD_INPUT
-	BSF	data_0, 0
-		
-	DECFSZ	loop_count, F
-	GOTO	PROCESS_KEYS_scanloop
-
-	; check data valid
-	BCF	pin_debug2
-	
-	CLRF	data_2		; clear 2 for count
-	MOVF	data_0, W	; copy data to 1, will be destroyed when counting
-	MOVWF	data_1
-	
-	MOVLW	8
-	MOVWF	loop_count
-PROCESS_KEYS_bitloop:
-	BCF	STATUS, C
-	RRF	data_1, F
-	BTFSC	STATUS, C
-	INCF	data_2, F
-	DECFSZ	loop_count, F
-	GOTO	PROCESS_KEYS_bitloop
-	
-	MOVF	data_2, W
-	SUBLW	2		; no valid key if bit count !=2
-	BR_EQ	PROCESS_KEYS_decode
-	BSF	keypad_key, bit_keyUp ; mark as different
-	GOTO	PROCESS_KEYS_validate
+	RETURN
 	
 	
-PROCESS_KEYS_decode:
-	BCF	pin_debug2
-		
-	; data_0 now has valid keypad scan
-	
-	; 0001 0001 0
-	; 0001 0010 1
-	; 0001 0100 2
-	; 0001 1000 3
-	
-	; 0010 0001 4
-	; 0010 0010 5 
-	; 0010 0100 6
-	; 0010 1000 7
-	CLRW
-	; 0 of bit 0 is implied
-	BTFSC	data_0, 1
-	MOVLW	1
-	BTFSC	data_0, 2
-	MOVLW	2
-	BTFSC	data_0, 3
-	MOVLW	3
-
-	MOVWF	keypad_key
-	
-	CLRW
-	BTFSC	data_0, 5
-	MOVLW	4
-	BTFSC	data_0, 6
-	MOVLW	8
-	BTFSC	data_0, 7
-	MOVLW	12
-	
-	ADDWF	keypad_key, F ; key now has the key number	
-	
-PROCESS_KEYS_validate:
-	MOVF	keypad_key, W
-	XORWF	keypad_last, W
-	SK_NE
-	BSF	keypad_key, bit_keyRepeat ;mark bit if repeat
-
-	MOVF	keypad_key, W
-	MOVWF	keypad_last
-	BCF	keypad_last, bit_keyRepeat
 	
 ;#############################################################################
 ;	Process Commands
 ;#############################################################################
 
-	
-	; MOVF	keypad_key, W
-; SEND_BYTEcmd:	; send byte to UART, blocking
-	; BTFSS	PIR1, TXIF
-	; GOTO	SEND_BYTEcmd
-	; MOVWF	TXREG
-
-	MOVLW	15 ; TODO update to 4x5
-	SUBWF	keypad_key, W
-	BR_GT	PROCESS_KEYS_END
-	
-
-	PC0x0100SKIP
-	MOVLW	HIGH (PROCESS_KEYS_00)
-	MOVWF	PCLATH
-
-; from PCB version 1.1 ; TODO update to 4x5 keypad
-;
-;	15[1]	11[2]	7 [3]	3 [A]
-;	14[4]	10[5]	6 [6]	2 [B]
-;	13[7]	9 [8]	5 [9]	1 [C]
-;	12[*]	8 [0]	4 [#]	0 [D]
-;
-
-	MOVF	keypad_key, W
-	ADDWF	PCL, F
-	GOTO	PROCESS_KEYS_15
-	GOTO	PROCESS_KEYS_11
-	GOTO	PROCESS_KEYS_07
-	GOTO	PROCESS_KEYS_03
-	
-	GOTO	PROCESS_KEYS_14
-	GOTO	PROCESS_KEYS_10
-	GOTO	PROCESS_KEYS_06
-	GOTO	PROCESS_KEYS_02
-	
-	GOTO	PROCESS_KEYS_13
-	GOTO	PROCESS_KEYS_09
-	GOTO	PROCESS_KEYS_05
-	GOTO	PROCESS_KEYS_01
-	
-	GOTO	PROCESS_KEYS_12
-	GOTO	PROCESS_KEYS_08
-	GOTO	PROCESS_KEYS_04
-	GOTO	PROCESS_KEYS_00
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_00:
-	; key 00[7]
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	7
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-PROCESS_KEYS_01:
-	; key 01[8]
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	8
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_02:
-	; key 00[9]
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	9
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_03:
-	; key 03[A] for DRO0 select
-
-	BTFSC	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_03_reset
-	
-	BSF	keypad_status, bit_keyEntry
-	BSF	keypad_status, bit_keyEntry0
-	BCF	keypad_status, bit_keySign
-
-	CLRF	dro_offset_0
-	CLRF	dro_offset_1
-	CLRF	dro_offset_2
-	
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_03_reset:
-	BCF	keypad_status, bit_keyEntry
-	BCF	keypad_status, bit_keyEntry0
-	BCF	keypad_status, bit_keyEntry1
-	BCF	keypad_status, bit_keyEntry2
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_04:
-	; key 04[4]
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	4
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_05:
-	; key 05[5]
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	5
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_06:
-	; key 06[6]
-
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	6
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-
-PROCESS_KEYS_07:	
-	; key 07[B] for DRO1 select
-	
-	BTFSC	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_07_reset
-	
-	BSF	keypad_status, bit_keyEntry
-	BSF	keypad_status, bit_keyEntry1
-	BCF	keypad_status, bit_keySign
-
-	CLRF	dro_offset_0
-	CLRF	dro_offset_1
-	CLRF	dro_offset_2
-	
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_07_reset:
-	BCF	keypad_status, bit_keyEntry 
-	BCF	keypad_status, bit_keyEntry0
-	BCF	keypad_status, bit_keyEntry1
-	BCF	keypad_status, bit_keyEntry2
-	GOTO	PROCESS_KEYS_END
 
 
 
-PROCESS_KEYS_08:
-	; key 08[1]
-
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	1
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_09:
-	; key 09[2]
-
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	2
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_10:
-	; key 06[3]
-
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	3
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-
-PROCESS_KEYS_11:
-
-	GOTO	PROCESS_KEYS_END
-	; NOT IMPLEMENTED
-	; BTFSC	keypad_status, bit_keyEntry
-	; GOTO	PROCESS_KEYS_11_reset
-	
-	; BSF	keypad_status, bit_keyEntry
-	; BSF	keypad_status, bit_keyEntry2
-	; BCF	keypad_status, bit_keySign
-
-	; CLRF	dro_offset_0
-	; CLRF	dro_offset_1
-	; CLRF	dro_offset_2
-	
-	; GOTO	PROCESS_KEYS_END
-	
-; PROCESS_KEYS_11_reset:
-	; BCF	keypad_status, bit_keyEntry 
-	; BCF	keypad_status, bit_keyEntry0
-	; BCF	keypad_status, bit_keyEntry1
-	; BCF	keypad_status, bit_keyEntry2
-	; GOTO	PROCESS_KEYS_END
-	
-	
-	
-PROCESS_KEYS_12:
-	; key 12[*] for 1/2 function
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	
-	BCF	keypad_status, bit_keyEntry 
-	
-	BTFSC	keypad_status, bit_keyEntry0
-	GOTO	PROCESS_KEYS_12_dro0
-	BTFSC	keypad_status, bit_keyEntry1
-	GOTO	PROCESS_KEYS_12_dro1
-	BTFSC	keypad_status, bit_keyEntry2
-	GOTO	PROCESS_KEYS_12_dro2	
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_12_dro0:
-	MOVc	dro0_0, data_0
-	ADDc	data_0, dro0_offset_0
-	BCF	STATUS, C
-	RRFc	data_0	
-	BTFSC	data_2, 6
-	BSF	data_2, 7
-	SUBc	data_0, dro0_0	
-	MOVc	data_0, dro0_offset_0
- 		
-	BCF	keypad_status, bit_keyEntry0
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_12_dro1:
-	MOVc	dro1_0, data_0
-	ADDc	data_0, dro1_offset_0
-	BCF	STATUS, C
-	RRFc	data_0	
-	BTFSC	data_2, 6
-	BSF	data_2, 7
-	SUBc	data_0, dro1_0	
-	MOVc	data_0, dro1_offset_0
-		
-	BCF	keypad_status, bit_keyEntry1
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_12_dro2:
-	MOVc	dro2_0, data_0
-	ADDc	data_0, dro2_offset_0
-	BCF	STATUS, C
-	RRFc	data_0	
-	BTFSC	data_2, 6
-	BSF	data_2, 7
-	SUBc	data_0, dro2_0	
-	MOVc	data_0, dro2_offset_0
-	BCF	keypad_status, bit_keyEntry2
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_13:
-	; key 13[0]
-
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END	
-	RNLc	dro_offset_0
-	MOVLW	0
-	IORWF	dro_offset_0, F
-
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_14:
-	; key 14[-] for minus sign
-	BTFSS	keypad_status, bit_keyEntry
-	GOTO	PROCESS_KEYS_END
-	
-	MOVLW	mask_keySign
-	XORWF	keypad_status, F
-	
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_15:
-	; key 15[D] for accept
-
-	BTFSS	keypad_status, bit_keyEntry 	; was in entry mode?
-	GOTO	PROCESS_KEYS_END
-	
-	BCF	keypad_status, bit_keyEntry 
-	
-	; convert bcd+sign to binary in 2's complement
-	MOVc	dro_offset_0, data_BCD0
-	BCF	PCLATH, 3
-	CALL	BCD2BIN
-	BSF	PCLATH, 3
-	
-	; convert to mm if input was inches
-	BTFSS	data_status, bit_statusUnit
-	GOTO	PROCESS_KEYS_15_skipM2p54
-	BCF	PCLATH, 3
-	CALL	MULT_2p54
-	BSF	PCLATH, 3
-	
-PROCESS_KEYS_15_skipM2p54:
-	BTFSS	keypad_status, bit_keySign
-	GOTO	PROCESS_KEYS_15_0
-	NEGc	data_0
-	
-PROCESS_KEYS_15_0:
-	BTFSC	keypad_status, bit_keyEntry0
-	GOTO	PROCESS_KEYS_15_accept0
-	BTFSC	keypad_status, bit_keyEntry1
-	GOTO	PROCESS_KEYS_15_accept1
-	BTFSC	keypad_status, bit_keyEntry2
-	GOTO	PROCESS_KEYS_15_accept2
-	
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_15_accept0:
-	SUBc	data_0, dro0_0	
-	MOVc	data_0, dro0_offset_0
-
-	BCF	keypad_status, bit_keyEntry0
-	GOTO	PROCESS_KEYS_END
-
-PROCESS_KEYS_15_accept1:
-	SUBc	data_0, dro1_0
-	MOVc	data_0, dro1_offset_0
-	
-	BCF	keypad_status, bit_keyEntry1
-	GOTO	PROCESS_KEYS_END
-	
-PROCESS_KEYS_15_accept2:
-	SUBc	data_0, dro2_0
-	MOVc	data_0, dro2_offset_0
-	
-	BCF	keypad_status, bit_keyEntry2
-	GOTO	PROCESS_KEYS_END	
-	
-PROCESS_KEYS_END:
-	CLRF	PCLATH
-	RETURN
-
-
-
-	
 ;#############################################################################
 ;	Delay routines	for 8MHz ; TODO update to 20MHz
 ;	 at 8MHz intrc, 2Mips, 0.5us per instruction cycle
@@ -2010,16 +1548,6 @@ WAIT_50ms_loop2:			;  5 cycles per loop (2us / loop2)
 	DECFSZ	WAIT_loopCounter1, F	; (1)
 	GOTO	WAIT_50ms_loop1	; (2)
 	CLRF	PCLATH			
-	RETURN				; (2)
-
-WAIT_50us:				; (2) call is 2 cycle
-	MOVLW	23			; (1) 100 instruction for 50 us, 1 == 10 cycles = 5us, 2 is 14, 3 is 18, 4 is 22
-	MOVWF	WAIT_loopCounter1	; (1)
-WAIT_50us_loop:
-	NOP				; (1)
-	DECFSZ	WAIT_loopCounter1, F	; (1)
-	GOTO	WAIT_50us_loop		; (2)
-	GOTO	$ + 1			; (2)
 	RETURN				; (2)
 
 
