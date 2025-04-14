@@ -574,9 +574,7 @@ MAIN:
 	BSF	pin_DISP2_DATA
 	STR	7, CFG_1
 	
-	MOVLW	HIGH (WAIT_50ms)
-	MOVWF	PCLATH
-	CALL	WAIT_50ms
+	FAR_CALL	WAIT_50ms
 	
 ;#############################################################################
 ;	Welcome message
@@ -623,7 +621,7 @@ MAIN:
 	CALL	TM1637_ANNEX
 	
 
-	Disp_select2	
+	Disp_select2
 	CALL	TM1637_PREFACE		
 
 	ARRAYl	table_hexTo7seg, 0x05
@@ -697,11 +695,16 @@ MAIN:
 	MOVLW	20
 	MOVWF	loop_count
 main_wait:
-	MOVLW	HIGH (WAIT_50ms)
-	MOVWF	PCLATH
-	CALL	WAIT_50ms
+	FAR_CALL	WAIT_50ms
 	DECFSZ	loop_count, F
 	GOTO	main_wait
+	
+	Disp_select0
+	CALL	DISPLAYCLEAR
+	Disp_select1
+	CALL	DISPLAYCLEAR
+	Disp_select2
+	CALL	DISPLAYCLEAR
 	
 ;#############################################################################
 ;
@@ -745,14 +748,12 @@ DRO0_done:
 	GOTO	DRO0_disp
 
 	CALL	DISPLAYCLEAR
-	BSF	PCLATH, 3
-	CALL	PROCESS_KEYS
+	FAR_CALL	PROCESS_KEYS
 	GOTO	ACQ_DRO1
 
 DRO0_disp:
 	CALL	DISPLAY7segs
-	BSF	PCLATH, 3
-	CALL	PROCESS_KEYS
+	FAR_CALL	PROCESS_KEYS
 	
 ;#############################################################################
 ;	Read DRO 1 if not in data entry mode
@@ -789,14 +790,12 @@ DRO1_done:
 	GOTO	DRO1_disp
 
 	CALL	DISPLAYCLEAR
-	BSF	PCLATH, 3
-	CALL	PROCESS_KEYS
+	FAR_CALL	PROCESS_KEYS
 	GOTO	LOOP
 
 DRO1_disp:
 	CALL	DISPLAY7segs
-	BSF	PCLATH, 3
-	CALL	PROCESS_KEYS
+	FAR_CALL	PROCESS_KEYS
 	
 ;#############################################################################
 ;	Read DRO 2 if not in data entry mode
@@ -895,6 +894,7 @@ DRO_noReverse:
 	RETLW	TRUE
 ; DRO_notNegative:
 	; ; apply config
+	; dia not used for MILL
 	; BTFSS	CFG, bit_CFGdia
 	; RETLW	TRUE
 
@@ -1029,24 +1029,8 @@ DISPLAYCLEAR_loop:
 ;	TM1637 6digits x 7segments displays
 ;#############################################################################
 TM1637_PREFACE:
-
 	Disp_Data_DOWN
-	inline_5us
-	
-	MOVF	CFG_1, W
-	IORLW	_Display_ON
-	CALL	TM1637_data
-	
-	Disp_Data_DOWN
-	inline_5us
-	BSF	pin_DISP_CLOCK
-	inline_5us
-	Disp_Data_UP
-	inline_5us
-	
-	Disp_Data_DOWN
-	inline_5us
-	
+	inline_WAIT_5us
 	MOVLW	_Address_C3H
 	CALL	TM1637_data
 	RETURN
@@ -1059,19 +1043,19 @@ TM1637_data:	; data is in W;
 	
 TM1637_dataLoop:
 	BCF	pin_DISP_CLOCK
-	inline_5us
+	inline_WAIT_5us
 
 	BTFSC	disp_buffer, 0
 	GOTO	TM1637_dataUP
 	Disp_Data_DOWN
-	GOTO	TM1637_dataDone
+	GOTO	TM1637_dataCLOCK
 TM1637_dataUP:
 	Disp_Data_UP
 	
-TM1637_dataDone:
-	inline_5us
+TM1637_dataCLOCK:
+	inline_WAIT_5us
 	BSF	pin_DISP_CLOCK
-	inline_5us
+	inline_WAIT_5us
 	
 	RRF	disp_buffer, F
 	DECFSZ	loop_count, F
@@ -1080,38 +1064,38 @@ TM1637_dataDone:
 	;ACK
 	BCF	pin_DISP_CLOCK
 	Disp_Data_UP
-	inline_5us	
+	inline_WAIT_5us	
 
 	BSF	pin_DISP_CLOCK
-	inline_5us
+	inline_WAIT_5us
 
 	BCF	pin_DISP_CLOCK
 	Disp_Data_DOWN
-	inline_5us
+	inline_WAIT_5us
 	RETURN
 
 
 TM1637_ANNEX:
 	Disp_Data_DOWN
-	inline_5us
+	inline_WAIT_5us
 	BSF	pin_DISP_CLOCK
-	inline_5us
+	inline_WAIT_5us
 	Disp_Data_UP
-	inline_5us
+	inline_WAIT_5us
 	
 	Disp_Data_DOWN
-	inline_5us
+	inline_WAIT_5us
 	
 	MOVF	CFG_1, W
 	IORLW	_Display_ON
 	CALL	TM1637_data
 	
 	Disp_Data_DOWN
-	inline_5us
+	inline_WAIT_5us
 	BSF	pin_DISP_CLOCK
-	inline_5us
+	inline_WAIT_5us
 	Disp_Data_UP
-	inline_5us
+	inline_WAIT_5us
 	
 	RETURN
 
@@ -1518,6 +1502,7 @@ table_hexTo7seg:
 ;#############################################################################
 
 PROCESS_KEYS:
+	NOP
 	RETURN
 	
 	
@@ -1530,33 +1515,18 @@ PROCESS_KEYS:
 
 
 ;#############################################################################
-;	Delay routines	for 8MHz ; TODO update to 20MHz
-;	 at 8MHz intrc, 2Mips, 0.5us per instruction cycle
+;	Delay routines
 ;#############################################################################
-; 2 000 000 cycles
 
-WAIT_50ms:;100006 cycles or 50.003 ms; (2) call
-	MOVLW	100			; (1)
-	MOVWF	WAIT_loopCounter1	; (1)
-WAIT_50ms_loop1:			; 0.5ms / loop1
-	MOVLW	199			; (1) 250 loops of 4 cycles (minus 2 loop for setup and next loop)
-	MOVWF	WAIT_loopCounter2	; (1)
-WAIT_50ms_loop2:			;  5 cycles per loop (2us / loop2)
-	GOTO 	$ + 1			; (2)	
-	DECFSZ	WAIT_loopCounter2, F	; (1)
-	GOTO	WAIT_50ms_loop2	; (2)
-	DECFSZ	WAIT_loopCounter1, F	; (1)
-	GOTO	WAIT_50ms_loop1	; (2)
-	CLRF	PCLATH			
-	RETURN				; (2)
-
+WAIT_50ms:
+	inline_WAIT_50ms
+	RETURN
 
 ;#############################################################################
 ;	End of memory trap, should never be reached
 ;#############################################################################
 
 	ORG	0x0FFB
-	BSF	PORTB, 4
 	BSF	PCLATH, 3
 	STALL
 	

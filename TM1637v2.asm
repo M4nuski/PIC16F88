@@ -252,7 +252,7 @@ LOOP:
 	; loop with skippable macro: 6.8 x 2ms for updating 4 displays, 291 words of program memory, 1 byte of ram
 	; loop with inline bitset: 6.5 x 2ms for updating 4 displays, 288 words of program memory, 1 byte of ram
 	
-	; straight: 2ms per display, 3 bytes of RAM
+	; straight: 1.6ms per display, 3 bytes of RAM
 	
 	INCF	Current_Offset, F
 	MOVF	Current_Offset, W
@@ -287,19 +287,19 @@ TM1637_PREFACE:
 	Pin_Data_DOWN
 	inline_5us
 	
-	MOVF	CFG_1, W
-	IORLW	_Data_Write
-	CALL	TM1637_data
+	; MOVF	CFG_1, W
+	; IORLW	_Data_Write
+	; CALL	TM1637_data
 	
-	Pin_Data_DOWN
-	inline_5us
-	BSF	pin_DISP_CLOCK
-	inline_5us
-	Pin_Data_UP
-	inline_5us;inline_50us
+	; Pin_Data_DOWN
+	; inline_5us
+	; BSF	pin_DISP_CLOCK
+	; inline_5us
+	; Pin_Data_UP
+	; inline_5us;inline_50us
 	
-	Pin_Data_DOWN
-	inline_5us
+	; Pin_Data_DOWN
+	; inline_5us
 	
 	MOVLW	_Address_C3H
 	CALL	TM1637_data
@@ -318,11 +318,11 @@ TM1637_dataLoop:
 	BTFSC	disp_buffer, 0
 	GOTO	TM1637_dataUP
 	Pin_Data_DOWN
-	GOTO	TM1637_dataDone
+	GOTO	TM1637_dataCLOCK
 TM1637_dataUP:
 	Pin_Data_UP
 	
-TM1637_dataDone:
+TM1637_dataCLOCK:
 	inline_5us
 	BSF	pin_DISP_CLOCK
 	inline_5us
@@ -471,6 +471,12 @@ table_hex:
 ; bit 76543210
 ; seg pgfedcba 
 
+;#############################################################################
+;	Timning
+;#############################################################################
+WAIT_50ms:
+	inline_WAIT_50ms
+	RETURN
 
 ;#############################################################################
 ;	PC 0x800 (1k) boundary

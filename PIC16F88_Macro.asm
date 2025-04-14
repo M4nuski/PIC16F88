@@ -2,6 +2,8 @@
 ;	PIC16F88 MACRO
 ;	Basic macros for PIC16F88
 ;
+;	NON_SKIPPABLE
+;
 ;	BANK Switching
 ;	TEST and CMP
 ;	Conditionals BRanchs, CAlls and SKips
@@ -670,7 +672,7 @@ POPscr	MACRO
 	ENDM
 
 ;#############################################################################
-;	Table read
+;	Table read, near call
 ;#############################################################################
 
 ; index in file
@@ -702,13 +704,9 @@ _NEXT_BOUNDARY:
 	ENDM
 	
 FAR_CALL	MACRO	dest
-	LOCAL	_end
-	GOTO	$ + 2	; to make skippable
-	GOTO	_end
 	BSF	PCLATH, 3
 	CALL	( dest & 0x07FF )
 	BCF	PCLATH, 3
-_end:
 	ENDM
 
 PC0x0100ALIGN	MACRO	TableLabel; Align next instruction on a 256 instruction boundary (for small table reads)
@@ -722,23 +720,5 @@ PC0x0100SKIP	MACRO	; Align next instruction on a 256 instruction boundary
 	if	( ( $ & 0x000000FF ) != 0 )
 	ORG	( $ & 0xFFFFFF00 ) + 0x0100
 	endif
-	ENDM
-	
-	
-	; TODO MOVE TO 8MHz Timing Module
-inline_50us	MACRO			
-	MOVLW	33			; (1) 100 instruction for 50 us, 1 == 10 cycles = 5us, 2 is 14, 3 is 18, 4 is 22
-	MOVWF	WAIT_loopCounter1	; (1) (2) 4, 7, 10, 13 ... 1 + 3*l
-	DECFSZ	WAIT_loopCounter1, F	; (1)
-	GOTO	$ - 1			; (2/1)
-	ENDM
-
-inline_5us	MACRO
-	; inline 5us (10 inst cycles) ; TODO update to 20MHz
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
-	GOTO	$ + 1			; (2)
 	ENDM
 
