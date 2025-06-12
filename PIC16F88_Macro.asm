@@ -703,7 +703,7 @@ PC0x0800SKIP	MACRO	; Skip to the next 2K instruction boundary
 _NEXT_BOUNDARY:
 	ENDM
 	
-FAR_CALL	MACRO	dest
+FAR_CALL	MACRO	dest ; TODO 4 possibilities: near to near, near to far, far to far, far to near
 	BSF	PCLATH, 3
 	CALL	( dest & 0x07FF )
 	BCF	PCLATH, 3

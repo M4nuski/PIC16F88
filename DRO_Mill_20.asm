@@ -19,11 +19,12 @@
 ;
 ; v2.0
 ;	Final version working on PCB for Mill
+;	Changed bit order for Keypad Value Return bits 
 ;
 ; v3.0
 ;	Both lathe and mill with config byte in EEPROM CFG_02
-; 	keypad for both
-; 	new PCB for both
+; 	cherry keypad for both
+; 	simplified PCB for both
 ; 
 ;RA6	O DispClk // common display clock
 ;RB7	O DispData0 // display data
@@ -37,9 +38,9 @@
 ;RA5	I DROdta2
 ;RB0	O KeypadSel0 // binary select row address 0 1 2 3
 ;RB1	O KeypadSel1
-;RB2	I KeypadVal0 // binary value from keypad column 1 2 3 4 5 6 7 (0 is no keydown)
+;RB2	I KeypadVal2 // binary value from keypad column 1 2 3 4 5 6 7 (0 is no keydown)
 ;RB3	I KeypadVal1
-;RB4	I KeypadVal2
+;RB4	I KeypadVal0
 ;
 ;RA7	20MHz clock
 ;
@@ -187,10 +188,10 @@
 ; pin  5 PWR VSS	GND
 ; pin  6 IO_ PORTB0	O Keypad RowSelect0
 ; pin  7 IO_ PORTB1	O Keypad RowSelect1
-; pin  8 IOR PORTB2	I Keypad ReturnValue0
+; pin  8 IOR PORTB2	I Keypad ReturnValue2
 ; pin  9 IO_ PORTB3	I Keypad ReturnValue1
 
-; pin 10 IO_ PORTB4	I Keypad ReturnValue2
+; pin 10 IO_ PORTB4	I Keypad ReturnValue0
 ; pin 11 IOT PORTB5	O Display 2 Data
 ; pin 12 IOA PORTB6	I Display 1 Data
 ; pin 13 IOA PORTB7	I Display 0 Data
@@ -225,9 +226,9 @@ mask_DRO2_DATA		EQU	0x20
 
 #DEFINE pin_KEYPAD_SEL0	PORTB, 0
 #DEFINE pin_KEYPAD_SEL1	PORTB, 1
-#DEFINE pin_KEYPAD_VAL0	PORTB, 2
+#DEFINE pin_KEYPAD_VAL2	PORTB, 2
 #DEFINE pin_KEYPAD_VAL1	PORTB, 3
-#DEFINE pin_KEYPAD_VAL2	PORTB, 4
+#DEFINE pin_KEYPAD_VAL0	PORTB, 4
 
 #DEFINE pin_DISP2_DATA	PORTB, 5
 #DEFINE Data2Clear	b'11011111' ; TM1637 masks
@@ -380,7 +381,9 @@ CFG_00_bitReverse1	EQU	5
 CFG_00_bitReverse2	EQU	6
 CFG_00_bitReverse	EQU	7 ; current for selected dro
 CFG_01			EQU	0x61 ; display brightness
+CFG_01_mask		EQU	b'00000111' ; clamp to 0-7 to avoid messing up the Write command
 CFG_02			EQU	0x62 ; bit 0 set enables 3rd axis ; TODO : implement 3axis switch
+CFG_02_bitZ		EQU	0 ; Z enabled
 ;			EQU	0x63
 ;			EQU	0x64
 ;			EQU	0x65
@@ -582,10 +585,10 @@ MAIN:
 	Disp_select0
 	CALL	TM1637_PREFACE
 
-	ARRAYl	table_hexTo7seg, 2
+	ARRAYl	table_hexTo7seg, 0
 	CALL	TM1637_data
 	
-	ARRAYl	table_hexTo7seg, 0
+	ARRAYl	table_hexTo7seg, 2
 	IORLW	0x80 ; dot
 	CALL	TM1637_data
 	
@@ -671,7 +674,7 @@ MAIN:
 	MOVF	EEDATA, W ; W = EEDATA
 	BANKSEL	CFG_01
 	MOVWF	CFG_01 ; brightness
-	MOVLW	b'00000111' ; clamp to 0-7 to avoid messing up the Write command
+	MOVLW	CFG_01_mask ; clamp to 0-7 to avoid messing up the Write command
 	ANDWF	CFG_01, F
 	
 	BANKSEL	EEADR	; Select Bank of EEADR
@@ -2136,8 +2139,8 @@ WAIT_50ms:
 
 ; EEPROM data byte at 0x00 is config (CFG_00)
 ; bit 0-2 double values for axis 0-2 (for radius to diameter direct reading)
-; bit 4-6 is reverse axis Direction
-	DE	b'00010001'
+; bit 4-6 reverse direction for axis 0-2
+	DE	b'01110000'
 		;  ZYX ZYX
 		;  RRR DDD
 ; EEPROM data byte at 0x01 is CFG_01
