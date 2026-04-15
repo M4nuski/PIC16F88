@@ -25,6 +25,7 @@
 ;	Both lathe and mill with config byte in EEPROM CFG_02
 ; 	cherry keypad for both
 ; 	simplified PCB for both
+;	2 KEYS for OK on both sides of Keypad
 ; 
 ;RA6	O DispClk // common display clock
 ;RB7	O DispData0 // display data
@@ -42,7 +43,7 @@
 ;RB3	I KeypadVal1
 ;RB4	I KeypadVal0
 ;
-;RA7	20MHz clock
+;RA7	
 ;
 ;	6 Outputs
 ;	9 Inputs
@@ -65,10 +66,10 @@
 ;
 ;      Keypad Layout: (4 rows, 5 columns)
 ;
-;      X   7   8   9   In/mm
-;      Y   4   5   6   1/2
-;      Z   1   2   3   
-;          -   0       OK
+;      X     7   8   9   In/mm
+;      Y     4   5   6   1/2
+;      Z     1   2   3   
+;      OK    -   0       OK
 ;
 ;	select In/mm to switch between In/1000 and mm/100
 ;
@@ -197,7 +198,7 @@
 ; pin 13 IOA PORTB7	I Display 0 Data
 ; pin 14 PWR VDD	VCC
 ; pin 15 _OX PORTA6	O Display Clock
-; pin 16 I_X PORTA7	20MHz clock in
+; pin 16 I_X PORTA7	NC
 ; pin 17 IOA PORTA0	I DRO 0 Clock
 ; pin 18 IOA PORTA1	I DRO 0 Data
 
@@ -1809,11 +1810,11 @@ PROCESS_COMMANDS:
 	GOTO	PROCESS_KEYS_0E ; 3
 	GOTO	PROCESS_KEYS_0F ; N/A
 	; row 3
-	GOTO	PROCESS_KEYS_10 ; N/A
+	GOTO	PROCESS_KEYS_14 ; OK (LH) PROCESS_KEYS_10 ; N/A
 	GOTO	PROCESS_KEYS_11 ; Minus
 	GOTO	PROCESS_KEYS_12 ; 0
 	GOTO	PROCESS_KEYS_13 ; N/A
-	GOTO	PROCESS_KEYS_14 ; OK
+	GOTO	PROCESS_KEYS_14 ; OK (RH)
 
 	GOTO	PROCESS_KEYS_END ; should never be reached
 	
@@ -2124,7 +2125,7 @@ PROCESS_KEYS_05:
 	GOTO	PROCESS_KEYS_END
 
 PROCESS_KEYS_0F:
-PROCESS_KEYS_10:
+;PROCESS_KEYS_10:
 PROCESS_KEYS_13:
 PROCESS_KEYS_END:
 	RETURN
