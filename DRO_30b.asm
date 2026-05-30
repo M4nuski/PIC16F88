@@ -26,7 +26,7 @@
 ; 	cherry keypad for both
 ; 	simplified PCB for both
 ;	2 KEYS for OK on both sides of Keypad
-; v3.0i
+; v3.0b
 ;	Invert X/Y and Units/Half button positions
 ; 
 ;RA6	O DispClk // common display clock
@@ -71,6 +71,13 @@
 ;      X     7   8   9   In/mm
 ;      Y     4   5   6   1/2
 ;      Z     1   2   3   
+;      OK    -   0       OK
+
+;      Keypad Layout: (4 rows, 5 columns)
+;      v3.0b
+;      In/mm 7   8   9  D
+;      1/2   4   5   6  L
+;            1   2   3   
 ;      OK    -   0       OK
 ;
 ;	select In/mm to switch between In/1000 and mm/100
@@ -631,16 +638,19 @@ MAIN:
 ;#############################################################################
 	Disp_select0
 	CALL	TM1637_PREFACE
+	
+	ARRAYl	table_hexTo7seg, 0x0B ;v3.0b
+	CALL	TM1637_data
 
 	ARRAYl	table_hexTo7seg, 0
 	CALL	TM1637_data
 	
-	ARRAYl	table_hexTo7seg, 2
+	ARRAYl	table_hexTo7seg, 3
 	IORLW	0x80 ; dot
 	CALL	TM1637_data
 	
-	CLRW
-	CALL	TM1637_data
+	;CLRW
+	;CALL	TM1637_data
 
 	ARRAYl	table_hexTo7seg, _LCD_Char_o
 	CALL	TM1637_data
@@ -1794,18 +1804,25 @@ PROCESS_COMMANDS:
 	MOVF	keypad_key, W
 	ADDWF	PCL, F
 	GOTO	PROCESS_KEYS_END ; keypad_key == 0, should never be called
+	
 	; row 0
-	GOTO	PROCESS_KEYS_01 ; X
+	;GOTO	PROCESS_KEYS_01 ; X ; v3.0b
+	GOTO	PROCESS_KEYS_05
 	GOTO	PROCESS_KEYS_02 ; 7
 	GOTO	PROCESS_KEYS_03 ; 8
 	GOTO	PROCESS_KEYS_04 ; 9
-	GOTO	PROCESS_KEYS_05 ; Units
+	;GOTO	PROCESS_KEYS_05 ; Units ; v3.0b
+	GOTO	PROCESS_KEYS_01
+	
 	; row 1
-	GOTO	PROCESS_KEYS_06 ; Y
+	;GOTO	PROCESS_KEYS_06 ; Y ; v3.0b
+	GOTO	PROCESS_KEYS_0A
 	GOTO	PROCESS_KEYS_07 ; 4
 	GOTO	PROCESS_KEYS_08 ; 5
 	GOTO	PROCESS_KEYS_09 ; 6
-	GOTO	PROCESS_KEYS_0A ; Half Function
+	;GOTO	PROCESS_KEYS_0A ; Half Function ; v3.0b
+	GOTO	PROCESS_KEYS_06
+	
 	; row 2
 	GOTO	PROCESS_KEYS_0B ; Z
 	GOTO	PROCESS_KEYS_0C ; 1
@@ -2158,7 +2175,7 @@ WAIT_50ms:
 ; EEPROM data byte at 0x00 is config (CFG_00)
 ; bit 0-2 double values for axis 0-2 (for radius to diameter direct reading)
 ; bit 4-6 reverse direction for axis 0-2
-	DE	b'00000000'
+	DE	b'00010001'
 		;  ZYX ZYX
 		;  RRR DDD
 ; EEPROM data byte at 0x01 is CFG_01
@@ -2167,7 +2184,7 @@ WAIT_50ms:
 	
 ; EEPROM data byte at 0x02 is CFG_02
 ; bit 0 set is 3rd axis (Z) enabled (for mill)
-	DE	1
+	DE	0
 	
 ;#############################################################################
 ;	End Declaration
